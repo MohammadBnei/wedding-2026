@@ -17,15 +17,114 @@ export const sql = postgres({
   connect_timeout: 10
 });
 
+/** @type {Promise<void> | undefined} */
 let ready;
+let up = false;
+let lastTry = 0;
+
+// How long to wait before trying an unreachable database again. Retrying on
+// every request would stall each one for `connect_timeout` seconds, which turns
+// "the RSVP form is off" into "the whole site hangs".
+// ponytail: a fixed interval, not exponential backoff. Thirty seconds of stale
+// "down" is invisible to a guest; add backoff if this ever fronts something
+// that charges per connection attempt.
+const RETRY_MS = 30_000;
+
+/**
+ * Is the database reachable right now?
+ *
+ * The site is an invitation first and a form second: the schedule, the address,
+ * the travel notes and the chatbot's canned answers are all in wedding.js and
+ * need no database at all. So Postgres being down must degrade the site, not
+ * take it out — the same bargain `aiConfigured()` already makes for the model
+ * provider (see chat.js).
+ *
+ * Callers: use `dbOr()` for anything a guest can live without. Use this
+ * directly for the RSVP write, which they cannot — a silently dropped RSVP is
+ * worse than an honest "not right now".
+ */
+export function dbUp() {
+  return up;
+}
+
+/**
+ * Run a query, degrading to `fallback` when the database is unreachable.
+ *
+ * For reads and for best-effort writes (the chat transcript). NOT for the RSVP:
+ * returning a fallback there would tell a guest they had replied when nothing
+ * was stored.
+ *
+ * Two type parameters on purpose: the fallback is usually a DIFFERENT shape
+ * from the query result (`null` for a row list, `[]` for rows), and collapsing
+ * them to one would erase the row type at every call site.
+ *
+ * @template T
+ * @template F
+ * @param {F} fallback
+ * @param {() => Promise<T>} run
+ * @returns {Promise<T | F>}
+ */
+export async function dbOr(fallback, run) {
+  if (!up) return fallback;
+  try {
+    return await run();
+  } catch (err) {
+    console.error('[db] query failed:', err instanceof Error ? err.message : err);
+    // Only a CONNECTION failure means "the database is down". An ordinary
+    // statement error does not, and conflating them is a denial of service:
+    // a chat message containing a NUL byte makes Postgres reject that one
+    // INSERT on a perfectly healthy connection, and if that marked the whole
+    // database down, every guest would lose the RSVP form for the next 30 s —
+    // repeatable on demand.
+    if (isConnectionError(err)) {
+      up = false;
+      lastTry = Date.now();
+    }
+    return fallback;
+  }
+}
+
+/**
+ * Did this fail because we cannot reach Postgres, or because the statement was
+ * bad? SQLSTATE class 08 is "connection exception"; postgres.js raises its own
+ * CONNECTION_* codes before a socket exists, and a dropped socket surfaces as a
+ * Node errno. Anything else is the query's fault, not the server's.
+ *
+ * @param {unknown} err
+ */
+function isConnectionError(err) {
+  const code = String(/** @type {{ code?: unknown }} */ (err)?.code ?? '');
+  return (
+    code.startsWith('08') ||
+    code.startsWith('CONNECTION_') ||
+    ['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'EPIPE', 'EHOSTUNREACH'].includes(code)
+  );
+}
 
 /**
  * ponytail: idempotent DDL at boot rather than a PreSync migration hook and a
  * second image. One replica, no race, three tables. Move to a hook (agent-fleet's
  * `migrate` shape) the day this needs a second replica or a destructive change.
+ *
+ * Never rejects, and never blocks a request for long. It is awaited by
+ * `hooks.server.js` on every request, so a throw here would be a 500 on every
+ * page including the ones that need no data — and a slow one would be a hang.
+ *
+ * A refused connection fails in milliseconds, but a black-holed host (firewall
+ * dropping packets, node evicted mid-request) does not fail at all until
+ * `connect_timeout`, ten seconds later. So callers wait GRACE_MS at most and
+ * then get on with rendering the invitation; the attempt keeps running in the
+ * background and flips `up` if and when it lands.
  */
+const GRACE_MS = 1_500;
+
 export function migrate() {
-  ready ??= (async () => {
+  if (up) return Promise.resolve();
+  if (ready) return race(ready);
+  if (Date.now() - lastTry < RETRY_MS) return Promise.resolve();
+
+  lastTry = Date.now();
+  ready = (async () => {
     await sql`
       CREATE TABLE IF NOT EXISTS rsvp (
         visitor_id  uuid PRIMARY KEY,
@@ -58,6 +157,35 @@ export function migrate() {
         name        text PRIMARY KEY,
         companion   int  NOT NULL DEFAULT 0
       )`;
-  })();
-  return ready;
+    up = true;
+  })()
+    .catch((err) => {
+      console.error(
+        '[db] unreachable — serving the invitation without RSVP or chat history:',
+        err instanceof Error ? err.message : err
+      );
+      up = false;
+    })
+    // Cleared either way: on success `up` short-circuits the fast path above,
+    // and on failure this is what lets the next attempt after RETRY_MS happen.
+    .finally(() => {
+      ready = undefined;
+    });
+
+  return race(ready);
+}
+
+/**
+ * Wait for the in-flight migrate, but not for longer than a guest will.
+ * Resolves either way — losing the race is not an error, it just means this
+ * request renders the invitation without the database and the next one, a
+ * moment later, will know the answer.
+ *
+ * @param {Promise<void>} attempt
+ */
+function race(attempt) {
+  return Promise.race([
+    attempt,
+    new Promise((resolve) => setTimeout(resolve, GRACE_MS))
+  ]).then(() => undefined);
 }

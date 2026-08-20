@@ -11,7 +11,10 @@
   import Button from './Button.svelte';
   import Ornament from './Ornament.svelte';
 
-  let { t, existing = null, form = null } = $props();
+  // `canRsvp` false means Postgres is unreachable (see server/db.js). The rest
+  // of the page is unaffected, so the form says so and stops rather than taking
+  // an answer it cannot store.
+  let { t, existing = null, form = null, canRsvp = true } = $props();
 
   // The largest invites on the guest list bring six and five, which the original
   // 1-4 picker silently under-counted. `+page.server.js` clamps to the same
@@ -28,7 +31,7 @@
 </script>
 
 {#if saved}
-  <div class="flex flex-col items-center gap-3 bg-primary-surface px-5 py-6 text-center">
+  <div class="night flex flex-col items-center gap-3 px-5 py-6 text-center">
     <Ornament kind="star" size={32} tone="blush" punch="primary-surface" />
     <p class="font-display text-xl text-primary-ink">{t.thanksTitle}</p>
     <p class="text-[13px] leading-relaxed font-light text-primary-faint">{t.thanksBody}</p>
@@ -112,10 +115,10 @@
 
     <Field label={t.fWord} name="message" rows={3} maxlength={2000} />
 
-    {#if errors.form}
-      <p class="text-xs font-light text-accent">{errors.form}</p>
+    {#if errors.form || !canRsvp}
+      <p class="text-xs font-light text-accent">{errors.form || t.rsvpOffline}</p>
     {/if}
 
-    <Button type="submit" block disabled={submitting}>{t.sendRsvp}</Button>
+    <Button type="submit" block disabled={submitting || !canRsvp}>{t.sendRsvp}</Button>
   </form>
 {/if}

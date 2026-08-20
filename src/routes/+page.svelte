@@ -28,11 +28,11 @@
   the hero arch + sticky language bar the design started from. One breakpoint.
 -->
 <div
-  class="mx-auto grid min-h-screen max-w-[1400px] bg-primary-surface lg:grid-cols-[minmax(300px,380px)_1fr]"
+  class="night mx-auto grid min-h-screen max-w-[1400px] lg:grid-cols-[minmax(300px,380px)_1fr]"
 >
   <!-- ── identity rail ─────────────────────────────────────────────── -->
   <header
-    class="flex min-h-dvh flex-col bg-primary-surface lg:sticky lg:top-0 lg:h-screen lg:min-h-0 lg:overflow-y-auto"
+    class="night flex min-h-dvh flex-col lg:sticky lg:top-0 lg:h-screen lg:min-h-0 lg:overflow-y-auto"
   >
     <div class="flex flex-1 flex-col lg:h-full lg:justify-between lg:px-9 lg:py-10">
       <!-- The mihrab arch. On desktop it drops its rounding and becomes a panel. -->
@@ -104,7 +104,7 @@
 
       <!-- Sticky control bar on mobile; just the footer of the rail on desktop. -->
       <div
-        class="sticky top-0 z-20 flex items-center justify-between gap-2 bg-primary-surface px-5 py-3.5 lg:static lg:mt-8 lg:flex-col lg:items-start lg:gap-5 lg:px-0"
+        class="night sticky top-0 z-20 flex items-center justify-between gap-2 px-5 py-3.5 lg:static lg:mt-8 lg:flex-col lg:items-start lg:gap-5 lg:px-0"
       >
         <span class="caps text-xs font-light text-primary-faint lg:hidden">{SHARED.monogram}</span>
         <div class="flex items-center gap-1.5">
@@ -149,6 +149,10 @@
           <Row lead={item.time} leadWidth="time" title={item.title}>{item.note}</Row>
         {/each}
       </div>
+      <!-- The .ics covers the garden lunch onwards only — see wedding.ics/+server.js. -->
+      <div class="mt-2">
+        <Button href="/wedding.ics" download>{t.calendarCta}</Button>
+      </div>
     </Section>
 
     <Zigzag reverse={true} />
@@ -181,11 +185,11 @@
 
     <Section title={t.rsvpTitle} id="rsvp">
       <p class="text-[13px] leading-relaxed font-light text-ink-muted">{t.rsvpSub}</p>
-      <RsvpForm {t} existing={data.rsvp} {form} />
+      <RsvpForm {t} existing={data.rsvp} {form} canRsvp={data.canRsvp} />
     </Section>
 
     <!-- Mobile footer. On desktop this content lives in the rail instead. -->
-    <footer class="flex flex-col items-center gap-3.5 bg-primary-surface px-6 py-8 text-center lg:hidden">
+    <footer class="night flex flex-col items-center gap-3.5 px-6 py-8 text-center lg:hidden">
       <p class="caps-wide text-[11px] font-light text-primary-faint">{t.address}</p>
       <p dir="ltr" class="text-sm leading-relaxed font-light text-primary-ink">
         {SHARED.addressLine1}<br />{SHARED.addressLine2}

@@ -64,7 +64,7 @@ export const STR = {
     date: "samedi 5 septembre 2026", town: "Fosses", rsvpCta: "je réponds",
     welcomeKicker: "Bienvenue",
     welcome1: "Nous nous marions dans le jardin de la maison des parents d'Amine. Il y a des arbres, de la place à l'ombre, et de quoi rester tard.",
-    welcome2: "Vous venez de Casablanca, de Téhéran, d'Alger, de Palerme ou du bout de la rue. Cette page rassemble tout ce qu'il faut savoir pour arriver tranquille.",
+    welcome2: "Vous venez d'Azrou, de Téhéran, d'Alger, de Chelghoum Laïd ou du bout de la rue. Cette page rassemble tout ce qu'il faut savoir pour arriver tranquille.",
     dayTitle: "Le déroulé",
     essTitle: "Les essentiels", planPlaceholder: "plan annoté du jardin — à fournir",
     chatTitle: "Une question ?", chatSub: "Demandez-nous ce que vous voulez. Si personne ne répond tout de suite, la réponse est probablement déjà là.",
@@ -105,7 +105,7 @@ export const STR = {
     date: "saturday 5 september 2026", town: "Fosses", rsvpCta: "i'm replying",
     welcomeKicker: "Welcome",
     welcome1: "We're getting married in the garden of Amine's parents' house. There are trees, shade, and room to stay late.",
-    welcome2: "You're coming from Casablanca, Tehran, Algiers, Palermo or just down the road. This page has everything you need to arrive without worrying.",
+    welcome2: "You're coming from Azrou, Tehran, Algiers, Chelghoum Laïd or just down the road. This page has everything you need to arrive without worrying.",
     dayTitle: "The day",
     essTitle: "The essentials", planPlaceholder: "annotated garden plan — to be supplied",
     chatTitle: "A question?", chatSub: "Ask us anything. If nobody answers right away, the answer is probably already here.",
@@ -146,7 +146,7 @@ export const STR = {
     date: "السبت ٥ سبتمبر ٢٠٢٦", town: "فوس", rsvpCta: "أؤكد حضوري",
     welcomeKicker: "أهلاً بكم",
     welcome1: "سنتزوّج في حديقة منزل والدَي أمين. هناك أشجار وظلّ ومكان يتيح البقاء حتى وقت متأخر.",
-    welcome2: "تأتون من الدار البيضاء ومن طهران ومن الجزائر ومن باليرمو ومن آخر الشارع. في هذه الصفحة كل ما تحتاجونه للوصول بسهولة.",
+    welcome2: "تأتون من أزرو ومن طهران ومن الجزائر ومن شلغوم العيد ومن آخر الشارع. في هذه الصفحة كل ما تحتاجونه للوصول بسهولة.",
     dayTitle: "برنامج اليوم",
     essTitle: "الأساسيات", planPlaceholder: "مخطط الحديقة — سيُضاف لاحقاً",
     chatTitle: "لديكم سؤال؟", chatSub: "اسألونا عمّا تريدون. إن لم يردّ أحد فوراً، فالجواب موجود هنا على الأغلب.",
@@ -187,7 +187,7 @@ export const STR = {
     date: "شنبه ۱۴ شهریور ۱۴۰۵", town: "فوس", rsvpCta: "پاسخ می‌دهم",
     welcomeKicker: "خوش آمدید",
     welcome1: "ما در باغ خانه‌ی پدر و مادر امین ازدواج می‌کنیم. درخت هست، سایه هست، و جا برای ماندن تا دیروقت.",
-    welcome2: "از کازابلانکا، تهران، الجزیره، پالرمو یا همین نزدیکی می‌آیید. هر چه برای رسیدن بی‌دغدغه لازم است در این صفحه آمده.",
+    welcome2: "از ازرو، تهران، الجزیره، شلغوم العید یا همین نزدیکی می‌آیید. هر چه برای رسیدن بی‌دغدغه لازم است در این صفحه آمده.",
     dayTitle: "برنامهٔ روز",
     essTitle: "نکته‌های ضروری", planPlaceholder: "نقشهٔ باغ — بعداً اضافه می‌شود",
     chatTitle: "سؤالی دارید؟", chatSub: "هر چه می‌خواهید بپرسید. اگر کسی فوری جواب نداد، پاسخ احتمالاً همین‌جا هست.",
@@ -239,9 +239,20 @@ export function dirOf(lang) {
   return RTL.has(lang) ? 'rtl' : 'ltr';
 }
 
-/** @param {Lang} lang */
+/**
+ * The string table for a language, EXTRA included.
+ *
+ * The cast is doing real work: `Object.assign` at the foot of this file merges
+ * EXTRA into STR at runtime, but TypeScript types STR from its literal and never
+ * sees the merge — so every EXTRA key (`photoCta`, `botNote`, `calendarCta`, …)
+ * read off `data.t` was a svelte-check error. Naming the merged shape here fixes
+ * all of them in one place instead of at each call site.
+ *
+ * @param {Lang} lang
+ * @returns {typeof STR.fr & typeof EXTRA.fr}
+ */
 export function t(lang) {
-  return STR[pickLang(lang)];
+  return /** @type {typeof STR.fr & typeof EXTRA.fr} */ (STR[pickLang(lang)]);
 }
 
 /**
@@ -255,28 +266,56 @@ const EXTRA = {
     photoTitle: 'Les photos',
     photoCta: 'déposer vos photos',
     rateLimited: 'Vous avez posé beaucoup de questions — reprenons dans un moment.',
-    botNote: 'Réponses automatiques, à partir des informations de cette page.'
+    botNote: 'Réponses automatiques, à partir des informations de cette page.',
+    calendarCta: 'ajouter au calendrier',
+    eventKind: 'Un mariage',
+    rsvpOffline: "Les réponses ne peuvent pas être enregistrées pour le moment. Réessayez un peu plus tard — tout le reste de la page fonctionne.",
+    icsSummary: 'Mariage de Leïla & Mohammad-Amine',
+    lostTitle: 'Page introuvable',
+    lostBody: "Ce lien ne mène nulle part. Tout se trouve sur la page d'accueil.",
+    lostCta: "retour à l'invitation"
   },
   en: {
     editReply: 'change my reply',
     photoTitle: 'The photos',
     photoCta: 'drop your photos here',
     rateLimited: "That's a lot of questions — let's pick this up in a little while.",
-    botNote: 'Answered automatically, from the information on this page.'
+    botNote: 'Answered automatically, from the information on this page.',
+    calendarCta: 'add to calendar',
+    eventKind: 'A wedding',
+    rsvpOffline: 'Replies cannot be recorded just now. Try again a little later — the rest of the page works.',
+    icsSummary: 'Wedding of Leïla & Mohammad-Amine',
+    lostTitle: 'Page not found',
+    lostBody: 'That link goes nowhere. Everything is on the front page.',
+    lostCta: 'back to the invitation'
   },
   ar: {
     editReply: 'تعديل ردّي',
     photoTitle: 'الصور',
     photoCta: 'شاركوا صوركم',
     rateLimited: 'طرحتم أسئلة كثيرة — لنكمل بعد قليل.',
-    botNote: 'إجابات آلية مبنية على المعلومات الواردة في هذه الصفحة.'
+    botNote: 'إجابات آلية مبنية على المعلومات الواردة في هذه الصفحة.',
+    calendarCta: 'أضيفوه إلى التقويم',
+    eventKind: 'زفاف',
+    rsvpOffline: 'لا يمكن تسجيل الردود في الوقت الحالي. أعيدوا المحاولة بعد قليل — بقية الصفحة تعمل.',
+    icsSummary: 'زفاف ليلى و محمد أمين',
+    lostTitle: 'الصفحة غير موجودة',
+    lostBody: 'هذا الرابط لا يؤدي إلى شيء. كل شيء في الصفحة الرئيسية.',
+    lostCta: 'العودة إلى الدعوة'
   },
   fa: {
     editReply: 'ویرایش پاسخم',
     photoTitle: 'عکس‌ها',
     photoCta: 'عکس‌هایتان را اینجا بگذارید',
     rateLimited: 'سؤال‌های زیادی پرسیدید — کمی بعد ادامه دهیم.',
-    botNote: 'پاسخ‌ها خودکار و بر پایهٔ اطلاعات همین صفحه است.'
+    botNote: 'پاسخ‌ها خودکار و بر پایهٔ اطلاعات همین صفحه است.',
+    calendarCta: 'افزودن به تقویم',
+    eventKind: 'یک عروسی',
+    rsvpOffline: 'پاسخ‌ها در حال حاضر ثبت نمی‌شوند. کمی بعد دوباره تلاش کنید — بقیهٔ صفحه کار می‌کند.',
+    icsSummary: 'عروسی لیلا و محمدامین',
+    lostTitle: 'صفحه پیدا نشد',
+    lostBody: 'این پیوند به جایی نمی‌رسد. همه‌چیز در صفحهٔ اصلی است.',
+    lostCta: 'بازگشت به دعوت‌نامه'
   }
 };
 
