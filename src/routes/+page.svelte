@@ -44,11 +44,11 @@
         -->
         <div class="relative lg:contents">
           <div
-            class="absolute left-1/2 top-0 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-surface lg:hidden"
+            class="absolute left-1/2 top-0 h-[clamp(12px,4.4vw,24px)] w-[clamp(12px,4.4vw,24px)] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-surface lg:hidden"
             aria-hidden="true"
           ></div>
           <div
-            class="flex flex-col items-center gap-4 bg-surface px-7 pt-14 pb-8 [border-radius:50%_50%_0_0/46px_46px_0_0] lg:items-start lg:rounded-none lg:bg-transparent lg:px-0 lg:pt-0 lg:text-start"
+            class="flex flex-col items-center gap-4 bg-surface px-7 pt-[clamp(48px,15.5vw,84px)] pb-8 [border-radius:50%_50%_0_0/clamp(40px,13.5vw,78px)_clamp(40px,13.5vw,78px)_0_0] lg:items-start lg:rounded-none lg:bg-transparent lg:px-0 lg:pt-0 lg:text-start"
           >
             <Ornament kind="star" size={44} tone="accent" punch="surface" />
 
