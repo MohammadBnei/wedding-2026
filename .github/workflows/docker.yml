@@ -1,0 +1,95 @@
+# Build on the build-runner LXC and push to the in-cluster Zot registry, then
+# bump the pinned tag so ArgoCD picks it up. Shape copied from agent-fleet's
+# workflow, whose comments record gotchas already paid for once:
+#   - every buildah call goes through sudo (rootless splits the auth file)
+#   - --tls-verify=false on login AND push (plain HTTP; LE can't issue for .lan)
+#   - read the version with jq, not node -p (no Node on that box)
+#   - the deploy job needs always() && result == 'success', not the implicit default
+name: image
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '*'
+
+env:
+  REGISTRY: registry.bnei.lan:5000
+  # Not a secret, and an empty secret cost agent-fleet a release once.
+  REGISTRY_USER: ci
+  IMAGE: wedding-2026
+
+jobs:
+  build-push:
+    runs-on: [self-hosted, ukubi-build]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute the image tag
+        id: tag
+        run: |
+          set -euo pipefail
+          version=$(jq -r '.version' package.json)
+          [ -n "$version" ] && [ "$version" != "null" ] || { echo "no .version in package.json"; exit 1; }
+          if [ "${{ github.event_name }}" = "push" ] && [ "$version" != "${{ github.ref_name }}" ]; then
+            echo "::error::package.json version ($version) does not match the tag (${{ github.ref_name }})"
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Registry login
+        run: |
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | sudo buildah login \
+            --tls-verify=false \
+            --username "$REGISTRY_USER" \
+            --password-stdin "$REGISTRY"
+
+      - name: Build and push
+        env:
+          TAG: ${{ steps.tag.outputs.value }}
+        run: |
+          set -euo pipefail
+          sudo buildah bud \
+            --isolation chroot \
+            --format docker \
+            -f Dockerfile \
+            -t "$REGISTRY/$IMAGE:$TAG" \
+            -t "$REGISTRY/$IMAGE:latest" \
+            .
+          for t in "$TAG" latest; do
+            sudo buildah push --tls-verify=false "$REGISTRY/$IMAGE:$t"
+          done
+          sudo buildah rmi "$REGISTRY/$IMAGE:$TAG" "$REGISTRY/$IMAGE:latest" || true
+
+  deploy:
+    needs: build-push
+    if: always() && github.event_name == 'push' && needs.build-push.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Bump the pinned image tag
+        run: |
+          set -euo pipefail
+          sed -i -E "s|^(\s*tag: \")[^\"]+(\")|\1${GITHUB_REF_NAME}\2|" helm/values.yaml
+          # A no-op sed is the real failure mode here: it commits nothing and the
+          # deploy looks green while the cluster keeps the old image.
+          grep -q "tag: \"${GITHUB_REF_NAME}\"" helm/values.yaml \
+            || { echo "::error::tag bump did not land in helm/values.yaml"; exit 1; }
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "wedding-2026-ci"
+          git config user.email "noreply@bnei.dev"
+          git add helm/values.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(deploy): bump image tag to ${GITHUB_REF_NAME}"
+          git push origin HEAD:main

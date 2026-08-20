@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: weddingdb
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      WEDDING_DB_HOST: localhost
+      WEDDING_DB_PORT: '5432'
+      WEDDING_DB_NAME: weddingdb
+      WEDDING_DB_USER: postgres
+      WEDDING_DB_PASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bun run build
+      - run: bunx playwright install --with-deps chromium
+      - name: End-to-end
+        run: |
+          bun run dev --port 5188 &
+          until curl -sf -o /dev/null http://localhost:5188/; do sleep 1; done
+          bunx playwright test

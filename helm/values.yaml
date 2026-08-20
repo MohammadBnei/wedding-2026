@@ -1,0 +1,106 @@
+# Deployed via infra-bootstrap's common-app-chart.
+# Registry entry: gitops/apps/registry.yaml -> name: wedding-2026
+#
+# ingress.hostname is set by the ApplicationSet's Helm parameter and always wins
+# over anything written here, so it is deliberately not repeated.
+
+image:
+  repository: registry.bnei.lan:5000/wedding-2026
+  tag: "0.1.0"
+
+service:
+  port: 3000
+
+# wedding.bnei.dev is one label deep, so the proxied *.bnei.dev record and the
+# le-dns wildcard default cert already cover it. Nothing to do at Cloudflare.
+# Baseline middlewares (Cloudflare origin lock, rate limit, security headers)
+# stay at their defaults because the record is proxied.
+ingress:
+  enabled: true
+  certResolver: le
+
+infisical:
+  enabled: true
+  projectSlug: "wedding-2026"
+  envSlug: dev
+  # DB credentials and the LLM endpoint arrive as env vars, so a rotation needs a
+  # restart to take — without this the pod silently keeps the old value.
+  autoReload: true
+
+livenessProbe:
+  enabled: true
+  type: http
+  path: /healthz
+  port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  type: http
+  path: /healthz
+  port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# No PVC: all state lives in Pigsty.
+
+extraManifests:
+  # weding.bnei.dev -> wedding.bnei.dev. The wildcard DNS record and certificate
+  # already cover the typo host, so this only needs a router and a redirect.
+  - |
+    apiVersion: traefik.io/v1alpha1
+    kind: Middleware
+    metadata:
+      name: {{ .Release.Name }}-typo-redirect
+      namespace: {{ .Release.Namespace }}
+    spec:
+      redirectRegex:
+        regex: "^https://weding\\.bnei\\.dev/(.*)"
+        replacement: "https://wedding.bnei.dev/${1}"
+        permanent: true
+  - |
+    apiVersion: traefik.io/v1alpha1
+    kind: IngressRoute
+    metadata:
+      name: {{ .Release.Name }}-typo
+      namespace: {{ .Release.Namespace }}
+    spec:
+      entryPoints:
+        - websecure
+      routes:
+        - kind: Rule
+          match: Host(`weding.bnei.dev`)
+          middlewares:
+            - name: {{ .Release.Name }}-typo-redirect
+          services:
+            # The redirect fires before the backend is reached; the service
+            # reference only has to resolve so Traefik will build the router.
+            - kind: Service
+              name: {{ .Release.Name }}
+              port: {{ .Values.service.port }}
+      tls:
+        certResolver: {{ .Values.ingress.certResolver }}
+
+logAlerts:
+  enabled: true
+  datasourceUid: ds-loki
+  rules:
+    - uid: wedding-provider-errors
+      title: Wedding chatbot provider failing
+      expr: 'sum(count_over_time({namespace="wedding-2026"} |= "[chat] provider call failed" [10m]))'
+      threshold: 3
+      for: 10m
+      severity: warning

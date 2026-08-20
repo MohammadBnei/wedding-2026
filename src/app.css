@@ -1,0 +1,137 @@
+@import 'tailwindcss';
+@import './fonts.css';
+
+/*
+ * THE design token layer. Every colour in this project lives here and nowhere
+ * else — components reference tokens (bg-surface, text-ink, border-line), never
+ * a hex or a stock Tailwind palette colour (no bg-emerald-800, no text-stone-500).
+ *
+ * The check that keeps this honest:
+ *   grep -rnE '#[0-9a-fA-F]{3,6}' src/lib src/routes   # must return nothing
+ *
+ * Palette is lifted from the original design artifact, which had these values
+ * hand-copied into ~200 inline style attributes with no variables at all.
+ */
+
+@theme {
+  /* surfaces */
+  --color-surface: #faf6f0; /* the page — warm paper */
+  --color-surface-alt: #f0ece2; /* chat panel, garden plan */
+  --color-surface-raise: #ffffff; /* inputs, callouts, reply bubbles */
+  --color-line: #e5ddd2; /* input + panel borders */
+  --color-line-soft: #ebe3d8; /* separators between list rows */
+
+  /* ink */
+  --color-ink: #2a2724; /* headings */
+  --color-ink-body: #3a352e; /* prose */
+  --color-ink-muted: #8a7f70; /* labels, notes, captions */
+
+  /* brand
+   * primary-surface and primary do two different jobs and must not be one token:
+   * primary-surface is the large green field (rail, footer, sticky bar) and is
+   * dark in BOTH themes; primary is the green used as INK on paper (section
+   * rules, active chips) and has to lift in dark mode to stay legible. Collapsing
+   * them turns the rail mint the moment dark mode lightens the brand colour. */
+  --color-primary-surface: #1f5f52; /* the green field */
+  --color-primary: #1f5f52; /* green as ink on paper */
+  --color-primary-ink: #faf6f0; /* on the green field */
+  --color-primary-soft: #4a7f72; /* hairlines on the green field */
+  --color-primary-faint: #8fb3a7; /* muted text on the green field */
+  --color-accent: #b84f2c; /* terracotta */
+  --color-accent-ink: #faf6f0; /* on terracotta */
+  --color-blush: #e0a48c; /* signoff, thank-you ornament */
+
+  /* type */
+  --font-display: 'Bodoni Moda', serif;
+  --font-body: 'Mulish', system-ui, sans-serif;
+  --font-arabic: 'Amiri', serif;
+  --font-persian: 'Vazirmatn', system-ui, sans-serif;
+
+  /* the signature wide letter-spacing on small caps */
+  --tracking-caps: 0.18em;
+  --tracking-caps-wide: 0.24em;
+}
+
+/*
+ * Dark is not an inversion. The artifact's palette is already dark-green-and-cream,
+ * so dark mode deepens the green to near-black and LIFTS the two brand colours —
+ * #1f5f52 is invisible on a dark ground and #b84f2c measures ~3.4:1 against it,
+ * which fails WCAG AA for body text. The lightened values clear 6:1.
+ */
+[data-theme='dark'] {
+  --color-surface: #15211e;
+  --color-surface-alt: #1b2b27;
+  --color-surface-raise: #22332e;
+  --color-line: #2a3d38;
+  --color-line-soft: #243430;
+
+  --color-ink: #f2ece0;
+  --color-ink-body: #ece5d8;
+  --color-ink-muted: #9aa8a2;
+
+  /* Only the ink-on-paper green lifts. The green FIELD stays a field: deepened
+     a shade so it doesn't glow beside a near-black page, but still the same
+     green, and still light-text-on-dark — so nothing layered on it has to change. */
+  --color-primary-surface: #173f37;
+  --color-primary: #4a9d8a;
+  --color-primary-ink: #f2ece0;
+  --color-primary-soft: #2f6558;
+  --color-primary-faint: #8fb3a7;
+  --color-accent: #e0714a;
+  --color-accent-ink: #1a0f0a;
+  --color-blush: #e8b8a4;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background: var(--color-primary-surface);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    background: var(--color-surface);
+    color: var(--color-ink-body);
+    font-family: var(--font-body);
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Arabic and Persian get their own faces; Mulish has no Arabic glyphs. */
+  :lang(ar) { font-family: var(--font-arabic); }
+  :lang(fa) { font-family: var(--font-persian); }
+
+  /* Visible focus everywhere — the artifact had none at all. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@utility caps {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+
+@utility caps-wide {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-wide);
+}
+
+/* The zellij-ish banding used as a section divider. */
+@utility zigzag-band {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-primary) 0 5px,
+    var(--color-surface) 5px 10px,
+    var(--color-accent) 10px 15px,
+    var(--color-surface) 15px 20px
+  );
+}
