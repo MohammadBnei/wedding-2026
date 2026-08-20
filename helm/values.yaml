@@ -21,16 +21,11 @@ ingress:
 
 infisical:
   enabled: true
-  # TODO(deploy): this is a GUESS. Infisical project slugs carry a random suffix
-  # (agent-fleet-nygh, searxng-l-dwt, ente-uovi), and the CLI token cannot read
-  # the workspace endpoint to resolve it. Read the real slug out of the Infisical
-  # UI URL for project 798540d3-0c3e-47ee-b447-468d65088377 and put it here — a
-  # wrong slug fails at sync time with an empty managed secret, which surfaces as
-  # the pod crash-looping on a missing WEDDING_DB_HOST rather than as an auth error.
-  #
-  # Also remember the grant: universal-auth-credentials needs access to this
-  # project added in the Infisical UI. Forgetting it is the usual first failure.
-  projectSlug: "wedding-2026"
+  # Project 798540d3-0c3e-47ee-b447-468d65088377. Holds WEDDING_DB_* and
+  # OPENAI_{API_KEY,BASE_URL,MODEL}. universal-auth-credentials needs an access
+  # grant to this project in the Infisical UI — a missing grant surfaces as the
+  # pod crash-looping on an absent WEDDING_DB_HOST, not as an auth error.
+  projectSlug: "wedding-2026-ih1x"
   envSlug: dev
   # DB credentials and the LLM endpoint arrive as env vars, so a rotation needs a
   # restart to take — without this the pod silently keeps the old value.
@@ -92,6 +87,10 @@ extraManifests:
       routes:
         - kind: Rule
           match: Host(`weding.bnei.dev`)
+          # Deliberately without the baseline chain (origin lock, rate limit,
+          # security headers): this router has no backend to protect — it only
+          # emits a 301 and never reaches the app. The real host carries the
+          # full baseline.
           middlewares:
             - name: {{ .Release.Name }}-typo-redirect
           services:
