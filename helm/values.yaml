@@ -11,6 +11,20 @@ image:
 service:
   port: 3000
 
+# REQUIRED, not cosmetic. Traefik terminates TLS and forwards plain HTTP, so
+# without this adapter-node computes its origin as http://<pod> and rejects every
+# RSVP submission with 403 "Cross-site POST form submissions are forbidden" —
+# the browser sends Origin: https://wedding.bnei.dev and they don't match. It
+# also restores the https protocol the code uses to decide whether cookies get
+# the Secure flag.
+#
+# Must equal https:// + the registry entry's hostname. The chart renders env with
+# toYaml, not tpl, so this cannot reference .Values.ingress.hostname — if the
+# hostname ever changes, change it here too.
+env:
+  - name: ORIGIN
+    value: "https://wedding.bnei.dev"
+
 # wedding.bnei.dev is one label deep, so the proxied *.bnei.dev record and the
 # le-dns wildcard default cert already cover it. Nothing to do at Cloudflare.
 # Baseline middlewares (Cloudflare origin lock, rate limit, security headers)

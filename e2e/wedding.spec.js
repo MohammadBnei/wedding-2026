@@ -203,3 +203,33 @@ test('an explicit choice outranks the browser preference on the next visit', asy
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
   await ctx.close();
 });
+
+test('cookies are not marked Secure over plain HTTP', async ({ page, context }) => {
+  // Regression: `secure: !hostname.includes('localhost')` marked cookies Secure
+  // on every non-localhost origin, including http://192.168.x.x. Browsers drop
+  // Secure cookies sent over plain HTTP, so on a phone testing over the LAN the
+  // language switch, the theme and the visitor id all silently stopped
+  // persisting — while working perfectly on localhost.
+  await visit(page);
+  await page.getByRole('button', { name: 'AR', exact: true }).click();
+  await page.locator('html[dir="rtl"]').waitFor();
+
+  const cookies = await context.cookies();
+  expect(cookies.length).toBeGreaterThan(0);
+  for (const c of cookies) {
+    expect(c.secure, `cookie "${c.name}" must not be Secure over http`).toBe(false);
+  }
+  expect(cookies.map((c) => c.name).sort()).toEqual(['lang', 'wid']);
+});
+
+test('a language choice survives a full reload', async ({ page }) => {
+  // The end-to-end shape of the same bug: if the cookie is rejected, the switch
+  // appears to work (the client re-renders) and then reverts on reload.
+  await visit(page);
+  await page.getByRole('button', { name: 'AR', exact: true }).click();
+  await page.locator('html[dir="rtl"]').waitFor();
+
+  const res = await page.reload();
+  expect(await res.text()).toContain('dir="rtl"');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+});

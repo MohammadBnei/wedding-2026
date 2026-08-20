@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - run: bun test
+      - run: bun run test          # scoped to src/ — bare `bun test` also globs e2e/*.spec.js
       - run: bun run build
       - run: bunx playwright install --with-deps chromium
       - name: End-to-end

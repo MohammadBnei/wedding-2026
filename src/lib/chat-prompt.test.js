@@ -11,15 +11,12 @@ test('the system prompt is built from the same content the page renders', () => 
     expect(prompt).toContain(item.title);
   }
   for (const fact of STR.fr.facts) expect(prompt).toContain(fact.value);
-  expect(prompt).toContain(STR.fr.contactValue);
 });
 
 test('the prompt tells the model to refuse rather than improvise', () => {
   const prompt = systemPrompt('en');
   expect(prompt).toContain('ONLY from the facts above');
   expect(prompt).toContain('Never invent');
-  // The handoff has to carry a real contact, or "I don't know" is a dead end.
-  expect(prompt).toContain(STR.en.contactValue);
 });
 
 test('every language produces a prompt in its own language', () => {
@@ -43,4 +40,21 @@ test('an unknown question falls back to the handoff line, never a guess', () => 
 test('the limits that protect the bill and the trust boundary are set', () => {
   expect(MAX_MESSAGE).toBe(500);
   expect(PER_VISITOR_HOURLY).toBe(20);
+});
+
+test('the prompt carries no contact details and forbids inventing any', () => {
+  // There are no numbers on the site or in this repo. Without an explicit ban a
+  // model asked "how do I reach you?" will format a plausible-looking one.
+  const prompt = systemPrompt('fr');
+  expect(prompt).not.toContain('Contact:');
+  expect(prompt).toContain('ask Leïla or Amine directly');
+  expect(prompt).toContain('NEVER produce a phone number');
+  // The address IS public and must still be there.
+  expect(prompt).toContain('Address:');
+});
+
+test('no locale leaks a phone-shaped string into the prompt', () => {
+  for (const lang of LANGS) {
+    expect(systemPrompt(lang)).not.toMatch(/0[0-9]( ?[0-9]{2}){4}/);
+  }
 });

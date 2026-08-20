@@ -7,5 +7,11 @@ import { t } from '$lib/content/wedding.js';
  * @type {import('./$types').LayoutServerLoad}
  */
 export async function load({ locals }) {
-  return { lang: locals.lang, theme: locals.theme, t: t(locals.lang) };
+  const strings = t(locals.lang);
+
+  return {
+    lang: locals.lang,
+    theme: locals.theme,
+    t: strings
+  };
 }

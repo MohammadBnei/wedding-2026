@@ -1,6 +1,16 @@
 import { migrate } from '$lib/server/db.js';
 import { pickLang, dirOf, LANGS } from '$lib/content/wedding.js';
 
+// Whether to mark cookies Secure. Must be the real protocol, not a hostname
+// guess: `!hostname.includes('localhost')` marks cookies Secure on ANY other
+// origin, including http://192.168.x.x during LAN testing — and browsers
+// silently drop Secure cookies sent over plain HTTP, so language, theme and the
+// visitor id all stopped persisting on a phone while working fine on localhost.
+//
+// Behind Traefik this needs ORIGIN (or PROTOCOL_HEADER) set for adapter-node,
+// or the pod sees plain http and stops marking production cookies Secure —
+// see helm/values.yaml.
+
 const YEAR = 60 * 60 * 24 * 365;
 
 /** @type {import('@sveltejs/kit').Handle} */
@@ -18,7 +28,7 @@ export async function handle({ event, resolve }) {
       path: '/',
       httpOnly: true,
       sameSite: 'lax',
-      secure: !event.url.hostname.includes('localhost'),
+      secure: event.url.protocol === 'https:',
       maxAge: YEAR
     });
   }

@@ -25,12 +25,16 @@ export const DEFAULT_LANG = 'fr';
  * TODO(content): every value marked PLACEHOLDER needs the real thing before launch.
  */
 export const SHARED = {
-  // PLACEHOLDER: the street number is missing from the artifact.
+  // The venue address is public information — guests need it, and it is printed
+  // on the page. It lives here.
+  // TODO(content): the street number is missing from the original artifact.
   addressLine1: 'rue de la Prairie de Rocourt',
   addressLine2: '95470 Fosses',
-  // PLACEHOLDER: real numbers. These are the artifact's dummies.
-  phoneLeila: '06 00 00 00 00',
-  phoneAmine: '06 00 00 00 00',
+
+  // There are deliberately NO phone numbers anywhere on this site, and none in
+  // this repo. Guests who need a person are pointed at the couple directly; the
+  // chatbot's handoff says the same and is told never to produce a number.
+  // The `contact`/`contactValue` locale keys were removed with them.
   // PLACEHOLDER: the shared album guests drop photos into. Empty hides the link.
   photoDropUrl: '',
   // Drop a hand-drawn plan at static/plan.jpg and set this to '/plan.jpg'.
@@ -67,7 +71,7 @@ export const STR = {
     fName: "votre nom", fCount: "combien serez-vous", fSong: "un morceau à passer", fSongPh: "titre, artiste…",
     fWord: "un mot pour nous", sendRsvp: "envoyer",
     thanksTitle: "C'est noté", thanksBody: "Merci. On vous attend le 5 septembre, sous les arbres.",
-    address: "l'adresse", contact: "nous joindre", contactValue: "Leïla 06 00 00 00 00 · Amine 06 00 00 00 00",
+    address: "l'adresse",
     signoff: "À très vite",
     schedule: [
       { time: "13h30", title: "La mairie", note: "En cercle restreint — nous prévenons directement les personnes concernées." },
@@ -108,7 +112,7 @@ export const STR = {
     fName: "your name", fCount: "how many of you", fSong: "a song to play", fSongPh: "title, artist…",
     fWord: "a word for us", sendRsvp: "send",
     thanksTitle: "Noted", thanksBody: "Thank you. We'll see you on 5 September, under the trees.",
-    address: "the address", contact: "reach us", contactValue: "Leïla 06 00 00 00 00 · Amine 06 00 00 00 00",
+    address: "the address",
     signoff: "See you very soon",
     schedule: [
       { time: "1.30pm", title: "The town hall", note: "A small circle only — we're telling those concerned directly." },
@@ -149,7 +153,7 @@ export const STR = {
     fName: "الاسم", fCount: "عدد الحاضرين", fSong: "أغنية تحبّون سماعها", fSongPh: "العنوان، الفنان…",
     fWord: "كلمة لنا", sendRsvp: "إرسال",
     thanksTitle: "وصلنا ردّكم", thanksBody: "شكراً لكم. نراكم في الخامس من سبتمبر، تحت الأشجار.",
-    address: "العنوان", contact: "للتواصل", contactValue: "ليلى ٠٦ ٠٠ ٠٠ ٠٠ ٠٠ · أمين ٠٦ ٠٠ ٠٠ ٠٠ ٠٠",
+    address: "العنوان",
     signoff: "إلى اللقاء قريباً",
     schedule: [
       { time: "١٣:٣٠", title: "البلدية", note: "في نطاق ضيّق — سنبلغ المعنيين مباشرة." },
@@ -190,7 +194,7 @@ export const STR = {
     fName: "نام شما", fCount: "چند نفر می‌آیید", fSong: "آهنگی برای پخش", fSongPh: "نام آهنگ، خواننده…",
     fWord: "یک کلام برای ما", sendRsvp: "ارسال",
     thanksTitle: "ثبت شد", thanksBody: "سپاسگزاریم. پنجم سپتامبر، زیر درخت‌ها می‌بینیمتان.",
-    address: "نشانی", contact: "تماس با ما", contactValue: "لیلا ۰۶ ۰۰ ۰۰ ۰۰ ۰۰ · امین ۰۶ ۰۰ ۰۰ ۰۰ ۰۰",
+    address: "نشانی",
     signoff: "به‌زودی می‌بینیمتان",
     schedule: [
       { time: "۱۳:۳۰", title: "شهرداری", note: "در جمعی کوچک — به افراد مربوط مستقیم خبر می‌دهیم." },

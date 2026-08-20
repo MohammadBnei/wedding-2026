@@ -78,14 +78,13 @@
         </div>
       </div>
 
-      <!-- Contact lives in the rail on desktop, and in the footer on mobile. -->
+      <!-- The address sits in the rail on desktop and in the footer on mobile.
+           There are deliberately no phone numbers anywhere — see wedding.js. -->
       <div class="hidden lg:mt-8 lg:block">
         <p class="caps-wide text-[11px] font-light text-primary-faint">{t.address}</p>
         <p dir="ltr" class="mt-1.5 text-sm leading-relaxed font-light text-primary-ink">
           {SHARED.addressLine1}<br />{SHARED.addressLine2}
         </p>
-        <p class="caps-wide mt-5 text-[11px] font-light text-primary-faint">{t.contact}</p>
-        <p class="mt-1.5 text-sm leading-relaxed font-light text-primary-ink">{t.contactValue}</p>
         <p class="font-display mt-5 text-[17px] italic text-blush">{t.signoff}</p>
       </div>
     </div>
@@ -145,9 +144,6 @@
       <p dir="ltr" class="text-sm leading-relaxed font-light text-primary-ink">
         {SHARED.addressLine1}<br />{SHARED.addressLine2}
       </p>
-      <div class="h-px w-6 bg-primary-soft"></div>
-      <p class="caps-wide text-[11px] font-light text-primary-faint">{t.contact}</p>
-      <p class="text-sm leading-relaxed font-light text-primary-ink">{t.contactValue}</p>
       <p class="font-display mt-1.5 text-[17px] italic text-blush">{t.signoff}</p>
     </footer>
   </main>

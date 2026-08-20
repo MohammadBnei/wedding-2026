@@ -18,7 +18,8 @@ export async function POST({ request, cookies, url }) {
     path: '/',
     httpOnly: false,
     sameSite: /** @type {const} */ ('lax'),
-    secure: !url.hostname.includes('localhost'),
+    // See the note in hooks.server.js: real protocol, not a hostname guess.
+    secure: url.protocol === 'https:',
     maxAge: YEAR
   };
 

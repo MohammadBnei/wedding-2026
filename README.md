@@ -63,12 +63,35 @@ bun test src        # prompt construction, guardrails, limits
 bun run test:e2e    # 26 browser tests, needs the dev server on :5188
 ```
 
+## Deliberately absent
+
+There are **no phone numbers** on this site and none in this repo. Guests who
+need a person are pointed at Leïla or Amine directly, and the chatbot's system
+prompt bans producing a contact detail outright — without an explicit ban a
+model asked "how do I reach you?" will format a plausible-looking number. The
+venue address *is* public and lives in `wedding.js`.
+
 ## Still to fill in
 
-`src/lib/content/wedding.js` carries these as `PLACEHOLDER`:
+`src/lib/content/wedding.js`:
 
-- **phone numbers** — both are `06 00 00 00 00`
 - **street number** — the address has none
 - **`photoDropUrl`** — empty hides the photo link entirely
 - **`gardenPlanImage`** — drop a drawing at `static/plan.jpg` and point at it;
   the four pins are positioned in percentages and scale over any image
+
+## Deployment notes worth not relearning
+
+- **`ORIGIN` in `helm/values.yaml` is required.** Traefik terminates TLS and
+  forwards plain HTTP, so without it adapter-node rejects every RSVP with
+  `403 Cross-site POST form submissions are forbidden`. It must equal `https://`
+  plus the registry hostname; the chart renders `env` with `toYaml`, not `tpl`,
+  so it cannot reference `ingress.hostname`.
+- **Cookie `Secure` comes from `url.protocol`, never the hostname.** Sniffing for
+  "localhost" marks cookies Secure on `http://192.168.x.x` too, and browsers drop
+  those — language, theme and the visitor id stop persisting on a phone while
+  everything looks fine on localhost.
+- `./dev-local.sh` runs against a throwaway Postgres with the real chatbot key.
+  Note the `env` **after** `--`: `infisical run` injects its own values over the
+  parent environment, so exporting `WEDDING_DB_HOST` beforehand is overridden by
+  `postgres.bnei.lan`, which does not resolve off-LAN.
