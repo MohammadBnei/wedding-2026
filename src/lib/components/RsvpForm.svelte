@@ -31,7 +31,7 @@
 </script>
 
 {#if saved}
-  <div class="flex flex-col items-center gap-3 bg-primary-surface px-5 py-6 text-center">
+  <div class="night flex flex-col items-center gap-3 px-5 py-6 text-center">
     <Ornament kind="star" size={32} tone="blush" punch="primary-surface" />
     <p class="font-display text-xl text-primary-ink">{t.thanksTitle}</p>
     <p class="text-[13px] leading-relaxed font-light text-primary-faint">{t.thanksBody}</p>

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { icsBody } from './ics.js';
+import { icsBody, utcStamp } from './ics.js';
 import { LANGS, t, SHARED } from './content/wedding.js';
 
 test('the calendar file is a well-formed VCALENDAR in every language', () => {
@@ -25,6 +25,16 @@ test('the times are the garden lunch in UTC, not the mairie and not floating', (
   expect(ics).not.toContain('113000');
   // The date comes from wedding.js, so changing it there changes the file.
   expect(ics).toContain(SHARED.isoDate.replace(/-/g, ''));
+});
+
+test('the venue offset is derived, not assumed — summer and winter differ', () => {
+  // The point of deriving it: move the wedding into standard time and the file
+  // has to follow. A hardcoded 13:00Z would pass the test above and be an hour
+  // wrong here, with nothing to notice it.
+  expect(utcStamp('2026-09-05', 15)).toBe('20260905T130000Z'); // CEST, UTC+2
+  expect(utcStamp('2026-01-10', 15)).toBe('20260110T140000Z'); // CET,  UTC+1
+  // Rolls the date when the local hour is near midnight.
+  expect(utcStamp('2026-09-05', 1)).toBe('20260904T230000Z');
 });
 
 test('commas in the address are escaped, not left to split the field', () => {

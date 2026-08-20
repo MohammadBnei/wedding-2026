@@ -13,7 +13,12 @@ export function GET({ locals }) {
     headers: {
       'content-type': 'text/calendar; charset=utf-8',
       'content-disposition': 'attachment; filename="leila-mohammad-amine.ics"',
-      'cache-control': 'public, max-age=3600',
+      // `private`, and Vary on the cookie: SUMMARY is localized from the `lang`
+      // cookie, so a shared cache would pin one visitor's language for everyone,
+      // and a plain `public, max-age` would hand a guest who switched language
+      // the previous language's file for the next hour.
+      'cache-control': 'private, max-age=3600',
+      vary: 'cookie',
       // This file DOES carry the address — a calendar entry without one is
       // useless. Keeping it out of search indexes is the point: the venue is
       // for guests who open the invitation, not for anyone who searches.

@@ -9,37 +9,58 @@
  * The check that keeps this honest:
  *   grep -rnE '#[0-9a-fA-F]{3,6}' src/lib src/routes   # must return nothing
  *
- * Palette is lifted from the original design artifact, which had these values
- * hand-copied into ~200 inline style attributes with no variables at all.
+ * Four surfaces cannot read CSS and therefore mirror values from here by hand.
+ * Change a brand colour below and change these in the same commit:
+ *   src/app.html            <meta name="theme-color">  = primary-surface
+ *   static/favicon.svg      the mark                   = primary-surface + blush
+ *   static/manifest.webmanifest  theme/background      = primary-surface + surface
+ *   scripts/make-og.js      the card, then `bun scripts/make-og.js` to re-render
+ *                           og.png, apple-touch-icon.png and icon-512.png
+ *
+ * The palette is anchored on three given colours. Which role each takes was not
+ * a choice — the contrast maths only permits one arrangement:
+ *
+ *   #FCFEFF  L≈99%, a hair cool of white. Only a page can be this light.
+ *   #5054B3  6.37:1 against that paper BOTH ways: it is the one value that can
+ *            be a dark field carrying light text AND ink on the light page.
+ *   #EBA9FF  1.78:1 on the paper — invisible as text there, so it cannot be the
+ *            accent. 3.57:1 on the indigo, which is decoration on the field:
+ *            exactly the blush role (signoff, thank-you ornament).
+ *
+ * Everything else is derived from those three, at or above the ratios the
+ * previous palette held. --color-accent is the one real derivation: the button
+ * and the section kickers need a pink that is legible AS INK on the page, and
+ * #EBA9FF is not, so it is that hue taken down to 4.58:1 — the terracotta it
+ * replaces measured 4.65:1.
  */
 
 @theme {
   /* surfaces */
-  --color-surface: #faf6f0; /* the page — warm paper */
-  --color-surface-alt: #f0ece2; /* chat panel, garden plan */
+  --color-surface: #fcfeff; /* the page — cool paper */
+  --color-surface-alt: #f1f3fa; /* chat panel, garden plan */
   --color-surface-raise: #ffffff; /* inputs, callouts, reply bubbles */
-  --color-line: #e5ddd2; /* input + panel borders */
-  --color-line-soft: #ebe3d8; /* separators between list rows */
+  --color-line: #dee1f0; /* input + panel borders */
+  --color-line-soft: #e9ebf6; /* separators between list rows */
 
   /* ink */
-  --color-ink: #2a2724; /* headings */
-  --color-ink-body: #3a352e; /* prose */
-  --color-ink-muted: #8a7f70; /* labels, notes, captions */
+  --color-ink: #1b1c2e; /* headings */
+  --color-ink-body: #2f3145; /* prose */
+  --color-ink-muted: #6e7191; /* labels, notes, captions — 4.68:1, was 3.65 */
 
   /* brand
    * primary-surface and primary do two different jobs and must not be one token:
-   * primary-surface is the large green field (rail, footer, sticky bar) and is
-   * dark in BOTH themes; primary is the green used as INK on paper (section
+   * primary-surface is the large indigo field (rail, footer, sticky bar) and is
+   * dark in BOTH themes; primary is the indigo used as INK on paper (section
    * rules, active chips) and has to lift in dark mode to stay legible. Collapsing
-   * them turns the rail mint the moment dark mode lightens the brand colour. */
-  --color-primary-surface: #1f5f52; /* the green field */
-  --color-primary: #1f5f52; /* green as ink on paper */
-  --color-primary-ink: #faf6f0; /* on the green field */
-  --color-primary-soft: #4a7f72; /* hairlines on the green field */
-  --color-primary-faint: #8fb3a7; /* muted text on the green field */
-  --color-accent: #b84f2c; /* terracotta */
-  --color-accent-ink: #faf6f0; /* on terracotta */
-  --color-blush: #e0a48c; /* signoff, thank-you ornament */
+   * them turns the rail pale the moment dark mode lightens the brand colour. */
+  --color-primary-surface: #1e2159; /* the night sky — see .night below */
+  --color-primary: #5054b3; /* indigo as ink on paper */
+  --color-primary-ink: #fcfeff; /* on the night field — 14.65:1 */
+  --color-primary-soft: #5054b3; /* hairlines on the night field */
+  --color-primary-faint: #c9cbee; /* muted text on the night field — 9.36:1 */
+  --color-accent: #a94bc9; /* the blush hue, taken down until it is legible ink */
+  --color-accent-ink: #fcfeff; /* on accent */
+  --color-blush: #eba9ff; /* signoff, thank-you ornament — field only */
 
   /* type */
   --font-display: 'Bodoni Moda', serif;
@@ -53,33 +74,78 @@
 }
 
 /*
- * Dark is not an inversion. The artifact's palette is already dark-green-and-cream,
- * so dark mode deepens the green to near-black and LIFTS the two brand colours —
- * #1f5f52 is invisible on a dark ground and #b84f2c measures ~3.4:1 against it,
- * which fails WCAG AA for body text. The lightened values clear 6:1.
+ * Dark is not an inversion. The page goes to a near-black carrying the indigo's
+ * hue, and the two brand colours LIFT — #5054b3 as ink on a dark ground measures
+ * 1.9:1, and #a94bc9 measures 2.0:1, both far under WCAG AA. The lifted values
+ * clear 7:1. The given #eba9ff needs no lifting: it is already the light one,
+ * and it lands at 4.88:1 on the deepened field, better than it does in light.
  */
 [data-theme='dark'] {
-  --color-surface: #15211e;
-  --color-surface-alt: #1b2b27;
-  --color-surface-raise: #22332e;
-  --color-line: #2a3d38;
-  --color-line-soft: #243430;
+  --color-surface: #14151f;
+  --color-surface-alt: #1b1d2b;
+  --color-surface-raise: #232538;
+  --color-line: #2e3145;
+  --color-line-soft: #272a3c;
 
-  --color-ink: #f2ece0;
-  --color-ink-body: #ece5d8;
-  --color-ink-muted: #9aa8a2;
+  --color-ink: #ecedf5;
+  --color-ink-body: #e4e6f0;
+  --color-ink-muted: #9ea1bc;
 
-  /* Only the ink-on-paper green lifts. The green FIELD stays a field: deepened
+  /* Only the ink-on-paper indigo lifts. The indigo FIELD stays a field: deepened
      a shade so it doesn't glow beside a near-black page, but still the same
-     green, and still light-text-on-dark — so nothing layered on it has to change. */
-  --color-primary-surface: #173f37;
-  --color-primary: #4a9d8a;
-  --color-primary-ink: #f2ece0;
-  --color-primary-soft: #2f6558;
-  --color-primary-faint: #8fb3a7;
-  --color-accent: #e0714a;
-  --color-accent-ink: #1a0f0a;
-  --color-blush: #e8b8a4;
+     indigo, and still light-text-on-dark — so nothing layered on it has to change. */
+  /* The sky deepens by a shade so it does not glow beside a near-black page.
+     It stays the same sky: light-text-on-dark in both themes, so nothing
+     layered on it — stars included — has to change. */
+  --color-primary-surface: #191c4a;
+  --color-primary: #9ba0ee;
+  --color-primary-ink: #ecedf5;
+  --color-primary-soft: #454a9e;
+  --color-primary-faint: #c9cbee;
+  --color-accent: #d98bf0;
+  --color-accent-ink: #1b0a22;
+  --color-blush: #eba9ff;
+}
+
+/*
+ * The night sky. Replaces a flat `bg-primary-surface` on the large fields —
+ * the identity rail, the mobile footer, the thank-you panel.
+ *
+ * Drawn, not photographed: four tiled radial-gradient layers, in the same spirit
+ * as Ornament.svelte's CSS-only star. No image request, nothing to art-direct at
+ * a second resolution, and it costs one class.
+ *
+ * Every tile is a prime by a DIFFERENT prime (137x89, 89x211, …), never square.
+ * Two things are going on. Coprime tile sizes mean the layers only realign after
+ * their product, which is far larger than any screen. And making width != height
+ * decouples the horizontal rhythm from the vertical one — with square tiles the
+ * eye picks out rows and columns at once, which is what the first attempt looked
+ * like: a lattice, not a sky.
+ *
+ * Deliberately static. A twinkle would be an infinite animation, and the
+ * reduced-motion block above caps iteration-count at 1 — so it would freeze
+ * mid-fade for the people who need it off, which looks broken rather than calm.
+ *
+ * The stars sit at low alpha on purpose: --color-primary-ink measures 14.65:1
+ * on this field and must keep doing so, so the sky may not lighten under text.
+ */
+.night {
+  background-color: var(--color-primary-surface);
+  background-image:
+    radial-gradient(1.5px 1.5px at 23px 31px, color-mix(in srgb, var(--color-primary-ink) 85%, transparent) 50%, transparent 50%),
+    radial-gradient(1px 1px at 96px 17px, color-mix(in srgb, var(--color-blush) 70%, transparent) 50%, transparent 50%),
+    radial-gradient(1px 1px at 41px 74px, color-mix(in srgb, var(--color-primary-ink) 55%, transparent) 50%, transparent 50%),
+    radial-gradient(2px 2px at 150px 118px, color-mix(in srgb, var(--color-primary-ink) 40%, transparent) 50%, transparent 50%),
+    radial-gradient(1px 1px at 12px 57px, color-mix(in srgb, var(--color-primary-faint) 55%, transparent) 50%, transparent 50%),
+    radial-gradient(1px 1px at 63px 9px, color-mix(in srgb, var(--color-blush) 45%, transparent) 50%, transparent 50%);
+  background-size:
+    137px 89px,
+    89px 211px,
+    211px 163px,
+    163px 71px,
+    71px 179px,
+    53px 127px;
+  background-repeat: repeat;
 }
 
 @layer base {

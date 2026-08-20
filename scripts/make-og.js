@@ -42,23 +42,23 @@ const card = `<!doctype html><meta charset="utf-8"><style>
   @font-face { font-family: Mulish; font-weight: 300; src: ${font('mulish-300-normal-latin.woff2')} }
   @font-face { font-family: Amiri;  src: ${font('amiri-400-normal-arabic.woff2')} }
   * { margin: 0; box-sizing: border-box }
-  body { position: relative; width: 1200px; height: 630px; border: 18px solid #1f5f52;
-         background: #faf6f0; color: #2a2724; font-family: Mulish, sans-serif;
+  body { position: relative; width: 1200px; height: 630px; border: 18px solid #1e2159;
+         background: #fcfeff; color: #1b1c2e; font-family: Mulish, sans-serif;
          display: flex; flex-direction: column; align-items: center;
          justify-content: center; gap: 28px }
-  /* the rail's dotted tracery, inset from the green frame */
-  .tracery { position: absolute; inset: 26px; border: 1.5px dotted #b84f2c; opacity: .55 }
+  /* the rail's dotted tracery, inset from the indigo frame */
+  .tracery { position: absolute; inset: 26px; border: 1.5px dotted #a94bc9; opacity: .55 }
   /* the 8-point star, same geometry as Ornament.svelte: two squares, one
      rotated 45deg, with the paper colour punched through the middle */
   .star { position: relative; width: 64px; height: 64px }
-  .star span { position: absolute; inset: 0; background: #b84f2c }
+  .star span { position: absolute; inset: 0; background: #a94bc9 }
   .star .rot { transform: rotate(45deg) }
-  .star .punch { inset: 20px; background: #faf6f0; transform: rotate(45deg) }
+  .star .punch { inset: 20px; background: #fcfeff; transform: rotate(45deg) }
   h1 { font: 400 76px/1.18 Bodoni, serif; text-align: center }
-  h1 em { color: #b84f2c }
-  .motto { font-family: Amiri, serif; font-size: 36px; color: #1f5f52; direction: rtl }
+  h1 em { color: #a94bc9 }
+  .motto { font-family: Amiri, serif; font-size: 36px; color: #5054b3; direction: rtl }
   .meta { font-weight: 300; font-size: 22px; letter-spacing: .24em;
-          text-transform: uppercase; color: #b84f2c }
+          text-transform: uppercase; color: #a94bc9 }
 </style>
 <div class="tracery"></div>
 <div class="star"><span></span><span class="rot"></span><span class="punch"></span></div>

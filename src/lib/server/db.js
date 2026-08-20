@@ -69,13 +69,36 @@ export async function dbOr(fallback, run) {
   try {
     return await run();
   } catch (err) {
-    // The connection died after migrate() succeeded. Mark it down so the next
-    // request short-circuits instead of paying the timeout again.
-    console.error('[db] query failed, degrading:', err instanceof Error ? err.message : err);
-    up = false;
-    lastTry = Date.now();
+    console.error('[db] query failed:', err instanceof Error ? err.message : err);
+    // Only a CONNECTION failure means "the database is down". An ordinary
+    // statement error does not, and conflating them is a denial of service:
+    // a chat message containing a NUL byte makes Postgres reject that one
+    // INSERT on a perfectly healthy connection, and if that marked the whole
+    // database down, every guest would lose the RSVP form for the next 30 s —
+    // repeatable on demand.
+    if (isConnectionError(err)) {
+      up = false;
+      lastTry = Date.now();
+    }
     return fallback;
   }
+}
+
+/**
+ * Did this fail because we cannot reach Postgres, or because the statement was
+ * bad? SQLSTATE class 08 is "connection exception"; postgres.js raises its own
+ * CONNECTION_* codes before a socket exists, and a dropped socket surfaces as a
+ * Node errno. Anything else is the query's fault, not the server's.
+ *
+ * @param {unknown} err
+ */
+function isConnectionError(err) {
+  const code = String(/** @type {{ code?: unknown }} */ (err)?.code ?? '');
+  return (
+    code.startsWith('08') ||
+    code.startsWith('CONNECTION_') ||
+    ['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'EPIPE', 'EHOSTUNREACH'].includes(code)
+  );
 }
 
 /**
@@ -83,12 +106,21 @@ export async function dbOr(fallback, run) {
  * second image. One replica, no race, three tables. Move to a hook (agent-fleet's
  * `migrate` shape) the day this needs a second replica or a destructive change.
  *
- * Never rejects. It is awaited by `hooks.server.js` on every request, so a
- * throw here would be a 500 on every page including the ones that need no data.
+ * Never rejects, and never blocks a request for long. It is awaited by
+ * `hooks.server.js` on every request, so a throw here would be a 500 on every
+ * page including the ones that need no data — and a slow one would be a hang.
+ *
+ * A refused connection fails in milliseconds, but a black-holed host (firewall
+ * dropping packets, node evicted mid-request) does not fail at all until
+ * `connect_timeout`, ten seconds later. So callers wait GRACE_MS at most and
+ * then get on with rendering the invitation; the attempt keeps running in the
+ * background and flips `up` if and when it lands.
  */
+const GRACE_MS = 1_500;
+
 export function migrate() {
   if (up) return Promise.resolve();
-  if (ready) return ready;
+  if (ready) return race(ready);
   if (Date.now() - lastTry < RETRY_MS) return Promise.resolve();
 
   lastTry = Date.now();
@@ -140,5 +172,20 @@ export function migrate() {
       ready = undefined;
     });
 
-  return ready;
+  return race(ready);
+}
+
+/**
+ * Wait for the in-flight migrate, but not for longer than a guest will.
+ * Resolves either way — losing the race is not an error, it just means this
+ * request renders the invitation without the database and the next one, a
+ * moment later, will know the answer.
+ *
+ * @param {Promise<void>} attempt
+ */
+function race(attempt) {
+  return Promise.race([
+    attempt,
+    new Promise((resolve) => setTimeout(resolve, GRACE_MS))
+  ]).then(() => undefined);
 }
