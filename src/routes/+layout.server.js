@@ -1,3 +1,4 @@
+import { env } from '$env/dynamic/private';
 import { t } from '$lib/content/wedding.js';
 
 /**
@@ -12,6 +13,10 @@ export async function load({ locals }) {
   return {
     lang: locals.lang,
     theme: locals.theme,
+    // The shared-album link. Env-driven so it can be swapped (or pulled) without
+    // a rebuild — an album URL tends to be decided late and changed after the day.
+    // Empty hides the link entirely rather than rendering a dead button.
+    photoDropUrl: env.PHOTO_DROP_URL || '',
     t: strings
   };
 }

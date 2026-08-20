@@ -26,8 +26,9 @@ const LANG_NAMES = { fr: 'French', en: 'English', ar: 'Arabic', fa: 'Persian' };
  * without that a model will happily format a plausible-looking one.
  *
  * @param {'fr'|'en'|'ar'|'fa'} lang
+ * @param {{photoDropUrl?: string}} [runtime] values that live in env, not content
  */
-export function systemPrompt(lang) {
+export function systemPrompt(lang, runtime = {}) {
   const s = t(lang);
   const facts = [
     `Couple: ${SHARED.names.latin.join(' and ')}.`,
@@ -48,6 +49,7 @@ export function systemPrompt(lang) {
     ...s.chips.map((c) => `- Q: ${c.q}\n  A: ${c.a}`),
     '',
     `RSVP: ${s.rsvpSub}`,
+    runtime.photoDropUrl ? `Shared photo album for guests: ${runtime.photoDropUrl}` : null,
   ]
     .filter(Boolean)
     .join('\n');

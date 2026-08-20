@@ -58,3 +58,9 @@ test('no locale leaks a phone-shaped string into the prompt', () => {
     expect(systemPrompt(lang)).not.toMatch(/0[0-9]( ?[0-9]{2}){4}/);
   }
 });
+
+test('the album link reaches the bot only when one is configured', () => {
+  expect(systemPrompt('fr')).not.toContain('Shared photo album');
+  const url = 'https://photos.example/abc';
+  expect(systemPrompt('fr', { photoDropUrl: url })).toContain(url);
+});

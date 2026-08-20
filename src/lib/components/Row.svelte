@@ -10,14 +10,22 @@
   let { lead = '', leadWidth = 'time', title = '', children } = $props();
 
   const widths = { time: 'w-14', label: 'w-24' };
+  // The lead column is centred on both axes within the row, so a one-line time
+  // sits opposite the middle of a three-line note rather than at its top edge.
   const leadStyle = {
-    time: 'text-[13px] font-semibold text-accent pt-0.5',
+    time: 'text-[13px] font-semibold text-accent',
     label: 'text-[11px] font-light caps text-accent'
   };
 </script>
 
 <div class="flex gap-4">
-  <div class="{widths[leadWidth]} shrink-0 {leadStyle[leadWidth]}">{lead}</div>
+  <div
+    class="{widths[leadWidth]} flex shrink-0 items-center justify-center pb-4 text-center {leadStyle[
+      leadWidth
+    ]}"
+  >
+    {lead}
+  </div>
   <div class="flex-1 border-b border-line-soft pb-4">
     {#if title}
       <p class="text-[15px] font-normal text-ink">{title}</p>

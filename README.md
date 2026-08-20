@@ -76,7 +76,12 @@ venue address *is* public and lives in `wedding.js`.
 `src/lib/content/wedding.js`:
 
 - **street number** — the address has none
-- **`photoDropUrl`** — empty hides the photo link entirely
+
+Env-driven, set in the Infisical project (`wedding-2026-ih1x`):
+
+- **`PHOTO_DROP_URL`** — the shared album. Empty hides the link and the chatbot
+  won't mention one. In env rather than content because an album URL tends to be
+  decided late and changed after the day.
 - **`gardenPlanImage`** — drop a drawing at `static/plan.jpg` and point at it;
   the four pins are positioned in percentages and scale over any image
 

@@ -68,7 +68,7 @@ export async function answer(message, lang, prior) {
     max_tokens: 300,
     temperature: 0.3,
     messages: [
-      { role: 'system', content: systemPrompt(lang) },
+      { role: 'system', content: systemPrompt(lang, { photoDropUrl: env.PHOTO_DROP_URL }) },
       ...prior.map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: message }
     ]

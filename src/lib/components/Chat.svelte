@@ -50,6 +50,9 @@
   }
 </script>
 
+<!-- The transcript is the part that scrolls: once the section reaches its
+     max-h-dvh cap, min-h-0 lets this shrink inside the flex column instead of
+     pushing the composer off-screen. -->
 <div class="flex flex-wrap gap-1.5">
   {#each t.chips as chip (chip.q)}
     <Chip onclick={() => ask(chip.q)} disabled={pending}>{chip.q}</Chip>
@@ -59,7 +62,7 @@
 {#if messages.length || pending || error}
   <div
     bind:this={log}
-    class="flex flex-col gap-2.5"
+    class="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto"
     role="log"
     aria-live="polite"
     aria-busy={pending}

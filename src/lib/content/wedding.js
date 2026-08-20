@@ -35,13 +35,16 @@ export const SHARED = {
   // this repo. Guests who need a person are pointed at the couple directly; the
   // chatbot's handoff says the same and is told never to produce a number.
   // The `contact`/`contactValue` locale keys were removed with them.
-  // PLACEHOLDER: the shared album guests drop photos into. Empty hides the link.
-  photoDropUrl: '',
   // Drop a hand-drawn plan at static/plan.jpg and set this to '/plan.jpg'.
   // The four pins are positioned in percentages, so they scale over any image.
   gardenPlanImage: '',
   isoDate: '2026-09-05',
-  names: { latin: ['Leïla', 'Mohammad-Amine'], arabic: 'ليلى و محمد أمين', persian: 'لیلا و محمدامین' },
+  names: { latin: ['Leïla', 'Mohammad-Amine'], arabic: 'ليلى و محمد أمين' },
+
+  // The couple's phrase — "Iman o Sabr", faith and patience. Arabic script in
+  // every locale, like the names: it is a name for the thing, not a sentence to
+  // translate.
+  motto: 'إيمان و صبر',
   monogram: 'L & M'
 };
 
