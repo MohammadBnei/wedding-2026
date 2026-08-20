@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { sql } from '$lib/server/db.js';
+import { sql, dbOr } from '$lib/server/db.js';
 import { match } from '$lib/match.js';
 
 const MIN_CHARS = 2;
@@ -11,7 +11,11 @@ let fetchedAt = 0;
 
 async function guests() {
   if (Date.now() - fetchedAt < TTL) return cache;
-  const rows = await sql`SELECT name, companion FROM guest`;
+  // With the database down this returns null rather than an empty roster, so
+  // the last good cache is kept instead of being blanked — and no empty result
+  // is written back, so the next request retries.
+  const rows = await dbOr(null, () => sql`SELECT name, companion FROM guest`);
+  if (!rows) return cache;
   // companion is the EXTRA heads, so the party size is one more than that.
   cache = rows.map((r) => ({ value: r.name, count: r.companion + 1 }));
   fetchedAt = Date.now();

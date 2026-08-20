@@ -267,3 +267,53 @@ test('the banding drifts, alternates direction, and stops for reduced motion', a
   expect(await at()).toBe(r1);
   await ctx.close();
 });
+
+test('the link preview points at a card that actually exists', async ({ page, baseURL }) => {
+  // Crawlers never run JS and never resolve relative URLs, so this failure mode
+  // is invisible in a browser: a relative or missing og:image renders a perfect
+  // page and a blank card in WhatsApp. Assert the tag is in the SERVER html, is
+  // absolute, and that the file behind it is really there.
+  // The navigation response, NOT page.content(): what a crawler sees is the
+  // server html, before Svelte has touched it.
+  const html = await (await page.goto('/'))?.text();
+  expect(html).toContain('og:image');
+  expect(html).toContain('twitter:card');
+  // A preview is forwarded far beyond the guest list, so it says the event and
+  // the date and nothing that locates the venue. Scoped to <head>: the address
+  // is printed in the BODY on purpose, for the guests who open the page.
+  const head = html.slice(0, html.indexOf('</head>'));
+  for (const venue of ['Prairie de Rocourt', '95470', 'Fosses', 'PostalAddress']) {
+    expect(head).not.toContain(venue);
+  }
+
+  const og = await page.locator('meta[property="og:image"]').getAttribute('content');
+  expect(og).toBe(`${baseURL}/og.png`);
+  expect((await page.request.get(/** @type {string} */ (og))).status()).toBe(200);
+
+  const canonical = await page.locator('link[rel="canonical"]').getAttribute('href');
+  expect(canonical).toBe(`${baseURL}/`);
+});
+
+test('an unknown url gets the localized 404, not the bare SvelteKit one', async ({ page }) => {
+  const res = await page.goto('/no-such-page');
+  expect(res?.status()).toBe(404);
+  // French is the negotiated default for the fr-FR browser locale in use here.
+  await expect(page.getByRole('heading', { name: 'Page introuvable' })).toBeVisible();
+  await page.getByRole('link', { name: "retour à l'invitation" }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Leïla');
+});
+
+test('the calendar button downloads a calendar file', async ({ page }) => {
+  // The BODY is asserted in src/lib/ics.test.js, which needs no server. What
+  // only a browser can prove is that the route is wired up and that the headers
+  // make a phone hand the file to its calendar app instead of showing text.
+  await visit(page, '/');
+  const res = await page.request.get('/wedding.ics');
+  expect(res.status()).toBe(200);
+  expect(res.headers()['content-type']).toContain('text/calendar');
+  expect(res.headers()['content-disposition']).toContain('attachment');
+  await expect(page.getByRole('link', { name: 'ajouter au calendrier' })).toHaveAttribute(
+    'href',
+    '/wedding.ics'
+  );
+});

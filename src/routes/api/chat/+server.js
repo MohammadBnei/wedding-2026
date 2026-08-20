@@ -1,5 +1,5 @@
 import { json, error } from '@sveltejs/kit';
-import { sql } from '$lib/server/db.js';
+import { sql, dbOr } from '$lib/server/db.js';
 import { answer, checkRateLimit, history, MAX_MESSAGE } from '$lib/server/chat.js';
 import { pickLang, t } from '$lib/content/wedding.js';
 
@@ -28,10 +28,12 @@ export async function POST({ request, locals }) {
   }
 
   // Persist both halves together so the transcript can't end up lopsided.
-  await sql`
+  // Best-effort: with the database down the guest still gets their answer, it
+  // just will not be there after a refresh.
+  await dbOr(null, () => sql`
     INSERT INTO chat_message (visitor_id, role, content, lang) VALUES
       (${locals.visitorId}, 'user',      ${message}, ${lang}),
-      (${locals.visitorId}, 'assistant', ${reply},   ${lang})`;
+      (${locals.visitorId}, 'assistant', ${reply},   ${lang})`);
 
   return json({ reply });
 }

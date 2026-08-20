@@ -149,6 +149,10 @@
           <Row lead={item.time} leadWidth="time" title={item.title}>{item.note}</Row>
         {/each}
       </div>
+      <!-- The .ics covers the garden lunch onwards only — see wedding.ics/+server.js. -->
+      <div class="mt-2">
+        <Button href="/wedding.ics" download>{t.calendarCta}</Button>
+      </div>
     </Section>
 
     <Zigzag reverse={true} />
@@ -181,7 +185,7 @@
 
     <Section title={t.rsvpTitle} id="rsvp">
       <p class="text-[13px] leading-relaxed font-light text-ink-muted">{t.rsvpSub}</p>
-      <RsvpForm {t} existing={data.rsvp} {form} />
+      <RsvpForm {t} existing={data.rsvp} {form} canRsvp={data.canRsvp} />
     </Section>
 
     <!-- Mobile footer. On desktop this content lives in the rail instead. -->
