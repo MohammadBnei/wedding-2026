@@ -91,7 +91,11 @@
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     *, *::before, *::after {
+      /* Duration alone does NOT stop an infinite animation — it just runs the
+         cycle 0.01ms at a time, forever, which is worse than leaving it be.
+         Capping the iteration count is what actually holds it still. */
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
   }
@@ -123,6 +127,22 @@
 @utility caps-wide {
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps-wide);
+}
+
+/*
+ * The banding drifts sideways. The stripes run at 135deg with a 20px period
+ * along that axis, so a purely horizontal shift only repeats seamlessly at
+ * 20 / sin(135deg) = 28.284px — any other distance visibly jumps on loop.
+ * Animating transform rather than background-position keeps it on the
+ * compositor instead of repainting the strip every frame.
+ */
+@keyframes zigzag-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-28.284px);
+  }
 }
 
 /* The zellij-ish banding used as a section divider. */

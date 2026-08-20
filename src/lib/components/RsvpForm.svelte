@@ -13,6 +13,12 @@
 
   let { t, existing = null, form = null } = $props();
 
+  // The largest invites on the guest list bring six and five, which the original
+  // 1-4 picker silently under-counted. `+page.server.js` clamps to the same
+  // ceiling — widening only the chips would save a 6 as a 1.
+  const COUNTS = [1, 2, 3, 4, 5, 6];
+  const MAX_COUNT = COUNTS[COUNTS.length - 1];
+
   let going = $state(existing?.going ?? null);
   let count = $state(existing?.headcount ?? 1);
   let saved = $state(false);
@@ -71,19 +77,37 @@
       {/if}
     </div>
 
-    <Field label={t.fName} name="name" required maxlength={120} error={errors.name ?? ''} />
+    <Field
+      label={t.fName}
+      name="name"
+      required
+      maxlength={120}
+      error={errors.name ?? ''}
+      suggest="/api/guests"
+      onpick={(/** @type {{ count?: number }} */ g) => {
+        // The guest list knows how many heads each invite covers, so picking a
+        // name saves the guest counting their own family.
+        if (g.count) count = Math.min(g.count, MAX_COUNT);
+      }}
+    />
 
     {#if going !== false}
       <div class="flex flex-col gap-1.5">
         <span class="caps text-[11px] font-light text-ink-muted">{t.fCount}</span>
         <div class="flex gap-1.5">
-          {#each [1, 2, 3, 4] as n (n)}
+          {#each COUNTS as n (n)}
             <Chip selected={count === n} onclick={() => (count = n)}>{n}</Chip>
           {/each}
         </div>
       </div>
 
-      <Field label={t.fSong} name="song" placeholder={t.fSongPh} maxlength={200} />
+      <Field
+        label={t.fSong}
+        name="song"
+        placeholder={t.fSongPh}
+        maxlength={200}
+        suggest="/api/songs"
+      />
     {/if}
 
     <Field label={t.fWord} name="message" rows={3} maxlength={2000} />

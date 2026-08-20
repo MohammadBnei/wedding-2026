@@ -5,6 +5,9 @@
   import Section from '$lib/components/Section.svelte';
   import Zigzag from '$lib/components/Zigzag.svelte';
   import Ornament from '$lib/components/Ornament.svelte';
+  import Arch from '$lib/components/Arch.svelte';
+  import Sprig from '$lib/components/Sprig.svelte';
+  import Flourish from '$lib/components/Flourish.svelte';
   import Button from '$lib/components/Button.svelte';
   import Row from '$lib/components/Row.svelte';
   import GardenPlan from '$lib/components/GardenPlan.svelte';
@@ -34,22 +37,42 @@
     <div class="flex flex-1 flex-col lg:h-full lg:justify-between lg:px-9 lg:py-10">
       <!-- The mihrab arch. On desktop it drops its rounding and becomes a panel. -->
       <div class="flex flex-1 flex-col justify-center px-5 pt-6 lg:block lg:flex-none lg:pt-0 lg:px-0">
-        <!--
-          A pointed arch, not a dome. The card's top edge is an ellipse whose
-          apex sits at dead centre, so a square rotated 45deg and centred on
-          that apex puts its own corner above it — two cream shapes reading as
-          one silhouette that rises to a point. Same trick as the ornaments: no
-          image, no SVG, and it scales with the card because the peak is pinned
-          to the centre rather than a fixed offset.
-        -->
-        <div class="relative lg:contents">
+        <!-- The arch head is decorative and mobile-only; on desktop the rail
+             is a flat panel, so it is dropped rather than squared off. -->
+        <div class="relative lg:hidden">
+          <!-- Sprays either side of the crown, echoing the botanical borders on
+               the henna card. Low opacity and behind the arch: they should read
+               as texture in the green, not as illustration competing with it. -->
+          <Sprig class="pointer-events-none absolute -top-10 left-1 h-16 w-16 text-primary-faint opacity-30" />
+          <Sprig
+            flip
+            leaves={6}
+            class="pointer-events-none absolute -top-8 right-1 h-14 w-14 text-primary-faint opacity-25"
+          />
+          <Arch />
+        </div>
+        <div
+          class="relative -mt-px flex flex-col items-center gap-4 bg-surface px-7 pb-8 lg:mt-0 lg:items-start lg:bg-transparent lg:px-0 lg:text-start"
+        >
+          <!--
+            The dotted tracery continues down the sides and across the foot, so it
+            frames the whole card rather than stopping at the arch. The arch's
+            dotted path meets the springing line at 5% and 95% of the width (it is
+            the outline scaled 0.9 about centre), which is why this inset is 5%.
+            Pitch is 1.4px every 7px to match the SVG's non-scaling stroke.
+
+            The foot inset has to equal the side inset. A percentage `bottom`
+            resolves against HEIGHT, not width, so it cannot just be 5% — the card
+            is (100vw - 40px) wide, making 5% of it 5vw - 2px.
+          -->
           <div
-            class="absolute left-1/2 top-0 h-[clamp(12px,4.4vw,24px)] w-[clamp(12px,4.4vw,24px)] -translate-x-1/2 -translate-y-1/2 rotate-45 bg-surface lg:hidden"
+            class="pointer-events-none absolute inset-x-[5%] top-0 bottom-[calc(5vw-2px)] opacity-55 lg:hidden"
+            style="background:
+              repeating-linear-gradient(to bottom, var(--color-accent) 0 1.4px, transparent 1.4px 7px) left top / 1.4px 100% no-repeat,
+              repeating-linear-gradient(to bottom, var(--color-accent) 0 1.4px, transparent 1.4px 7px) right top / 1.4px 100% no-repeat,
+              repeating-linear-gradient(to right, var(--color-accent) 0 1.4px, transparent 1.4px 7px) left bottom / 100% 1.4px no-repeat"
             aria-hidden="true"
           ></div>
-          <div
-            class="flex flex-col items-center gap-4 bg-surface px-7 pt-[clamp(48px,15.5vw,84px)] pb-8 [border-radius:50%_50%_0_0/clamp(40px,13.5vw,78px)_clamp(40px,13.5vw,78px)_0_0] lg:items-start lg:rounded-none lg:bg-transparent lg:px-0 lg:pt-0 lg:text-start"
-          >
             <Ornament kind="star" size={44} tone="accent" punch="surface" />
 
             <h1
@@ -67,7 +90,7 @@
               {SHARED.motto}
             </p>
 
-            <div class="h-px w-8 bg-line lg:bg-primary-soft"></div>
+            <Flourish width="w-28" />
 
             <p
               class="caps-wide text-center text-xs leading-loose font-light text-ink-muted lg:text-start lg:text-primary-faint"
@@ -76,7 +99,6 @@
             </p>
 
             <Button href="#rsvp">{t.rsvpCta}</Button>
-          </div>
         </div>
       </div>
 
@@ -95,7 +117,7 @@
            block instead of being the first thing the content column does. On
            desktop it stays in the scrolling column, where it spans the width. -->
       <div class="lg:hidden">
-        <Zigzag />
+        <Zigzag reverse={false} />
       </div>
 
       <!-- The address sits in the rail on desktop and in the footer on mobile.
@@ -113,7 +135,7 @@
   <!-- ── scrolling content ─────────────────────────────────────────── -->
   <main class="flex flex-col bg-surface">
     <div class="hidden lg:block">
-      <Zigzag />
+      <Zigzag reverse={false} />
     </div>
 
     <Section kicker={t.welcomeKicker}>
@@ -129,7 +151,7 @@
       </div>
     </Section>
 
-    <Zigzag />
+    <Zigzag reverse={true} />
 
     <Section title={t.essTitle}>
       <GardenPlan pins={t.pins} placeholder={t.planPlaceholder} {rtl} />
@@ -147,13 +169,15 @@
       {/if}
     </Section>
 
+    <Zigzag reverse={false} />
+
     <Section title={t.chatTitle} tone="alt" fill>
       <p class="text-[13px] leading-relaxed font-light text-ink-muted">{t.chatSub}</p>
       <Chat {t} messages={data.messages} lang={data.lang} />
       <p class="text-[11px] font-light text-ink-muted">{t.botNote}</p>
     </Section>
 
-    <Zigzag />
+    <Zigzag reverse={true} />
 
     <Section title={t.rsvpTitle} id="rsvp">
       <p class="text-[13px] leading-relaxed font-light text-ink-muted">{t.rsvpSub}</p>

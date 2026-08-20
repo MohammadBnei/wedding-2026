@@ -21,7 +21,7 @@ let ready;
 
 /**
  * ponytail: idempotent DDL at boot rather than a PreSync migration hook and a
- * second image. One replica, no race, two tables. Move to a hook (agent-fleet's
+ * second image. One replica, no race, three tables. Move to a hook (agent-fleet's
  * `migrate` shape) the day this needs a second replica or a destructive change.
  */
 export function migrate() {
@@ -50,6 +50,14 @@ export function migrate() {
     await sql`
       CREATE INDEX IF NOT EXISTS chat_message_visitor_idx
         ON chat_message (visitor_id, created_at)`;
+    // The real guest list. It lives here rather than in the repo because the CSV
+    // export is gitignored on purpose — real names, and this repo is public.
+    // Populated out-of-band by `scripts/seed-guests.js`, never by the app.
+    await sql`
+      CREATE TABLE IF NOT EXISTS guest (
+        name        text PRIMARY KEY,
+        companion   int  NOT NULL DEFAULT 0
+      )`;
   })();
   return ready;
 }

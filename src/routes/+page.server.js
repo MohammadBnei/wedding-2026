@@ -37,8 +37,10 @@ export const actions = {
     else if (name.length > LIMITS.name) errors.name = 'Trop long. / Too long.';
 
     const headcount = Number(str('headcount') || '1');
-    // Not user-facing: the picker only offers 1-4, so anything else is a forged post.
-    const count = Number.isInteger(headcount) && headcount >= 1 && headcount <= 4 ? headcount : 1;
+    // Not user-facing: the picker only offers 1-6, so anything else is a forged
+    // post. Keep this bound in step with COUNTS in RsvpForm.svelte — if the chips
+    // offer more than this allows, the extra heads are silently saved as 1.
+    const count = Number.isInteger(headcount) && headcount >= 1 && headcount <= 6 ? headcount : 1;
 
     const song = str('song').slice(0, LIMITS.song) || null;
     const message = str('message').slice(0, LIMITS.message) || null;

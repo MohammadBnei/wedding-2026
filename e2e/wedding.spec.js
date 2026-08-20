@@ -233,3 +233,37 @@ test('a language choice survives a full reload', async ({ page }) => {
   expect(await res.text()).toContain('dir="rtl"');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
 });
+
+test('the banding drifts, alternates direction, and stops for reduced motion', async ({ page, browser }) => {
+  await visit(page);
+  const positions = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('.zigzag-band')]
+        .filter((el) => el.getClientRects().length)
+        .map((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41));
+
+  const a = await positions();
+  await page.waitForTimeout(300);
+  const b = await positions();
+  expect(a.length).toBeGreaterThan(1);
+  expect(a.some((v, i) => v !== b[i])).toBe(true);
+
+  // Consecutive bands must travel opposite ways, or the page reads as everything
+  // sliding one direction rather than as woven banding.
+  const signs = new Set(a.map((v, i) => Math.sign(b[i] - v)).filter(Boolean));
+  expect(signs.size).toBeGreaterThan(1);
+
+  // Duration alone does NOT stop an infinite animation — it runs the cycle
+  // 0.01ms at a time, forever. The reset also caps iteration-count; this fails
+  // if that is ever dropped.
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const p2 = await ctx.newPage();
+  await visit(p2);
+  const at = () =>
+    p2.evaluate(() =>
+      new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.zigzag-band')).transform).m41);
+  const r1 = await at();
+  await p2.waitForTimeout(400);
+  expect(await at()).toBe(r1);
+  await ctx.close();
+});

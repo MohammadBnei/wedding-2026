@@ -58,8 +58,32 @@ bun install && bun run dev
 
 Tables are created on boot (`src/lib/server/db.js`). There is no migration step.
 
+### The guest list
+
+The RSVP name field autocompletes against the real guest list, and picking a name
+prefills the headcount. Those names live in Postgres and nowhere else: the CSV
+export is gitignored and dockerignored (real names, and this repo is public), so
+it never reaches the image. Load it by hand, once per DB, whenever the list
+changes:
+
 ```sh
-bun test src        # prompt construction, guardrails, limits
+# local dev DB
+WEDDING_DB_HOST=localhost WEDDING_DB_PORT=55432 WEDDING_DB_NAME=weddingdb \
+WEDDING_DB_USER=postgres WEDDING_DB_PASSWORD=postgres \
+  bun scripts/seed-guests.js "Wedding Guest List - 5 September 202 - Guest List.csv"
+
+# production
+infisical run --projectId=798540d3-0c3e-47ee-b447-468d65088377 --env=dev --silent -- \
+  bun scripts/seed-guests.js "Wedding Guest List - 5 September 202 - Guest List.csv"
+```
+
+Without it the field simply suggests nothing — the form still works. Suggestions
+need two characters, so no single request returns the roster. The song field
+autocompletes too, proxied through `/api/songs` from the iTunes Search API (no
+key, no account); if that call fails the field is plain free text again.
+
+```sh
+bun test src        # prompt construction, guardrails, limits, name matching
 bun run test:e2e    # 26 browser tests, needs the dev server on :5188
 ```
 
