@@ -7,7 +7,7 @@
   import Chip from './Chip.svelte';
   import { LANGS } from '$lib/content/wedding.js';
 
-  let { current, tone = 'on-primary' } = $props();
+  let { current, tone = 'on-primary', label } = $props();
 
   async function pick(lang) {
     if (lang === current) return;
@@ -29,7 +29,7 @@
   }
 </script>
 
-<div class="flex gap-1.5" role="group" aria-label="Language">
+<div class="flex gap-1.5" role="group" aria-label={label}>
   {#each LANGS as lang (lang)}
     <Chip
       {tone}

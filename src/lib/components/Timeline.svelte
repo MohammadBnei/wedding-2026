@@ -8,6 +8,10 @@
 
   The rail is a sibling of the <ol> rather than a child, because an <ol> may only
   contain <li>.
+
+  An entry carries either a `note` sentence or an `items` list — the programme
+  for one hour is a list of things, and running them into a sentence loses the
+  scannability that made it a list in the first place.
 -->
 <script>
   let { items } = $props();
@@ -21,7 +25,7 @@
   ></div>
 
   <ol class="flex flex-col">
-    {#each items as item (item.time)}
+    {#each items as item, i (i)}
       <li class="relative pb-5">
         <!-- 11px wide, pulled back 26px, so its centre sits on the rail at 5px. -->
         <span
@@ -32,9 +36,23 @@
           <span class="w-13 shrink-0 text-[13px] font-semibold text-accent">{item.time}</span>
           <div class="flex-1">
             <p class="text-[15px] text-ink">{item.title}</p>
-            <p class="text-[13px] leading-relaxed font-light text-ink-muted text-pretty">
-              {item.note}
-            </p>
+            {#if item.items}
+              <ul class="mt-1.5 flex flex-col gap-1">
+                {#each item.items as entry (entry)}
+                  <li
+                    class="relative ps-4 text-[13px] leading-relaxed font-light text-ink-muted text-pretty
+                           before:absolute before:start-0 before:top-[0.55em] before:h-1 before:w-1
+                           before:rotate-45 before:bg-gold before:content-['']"
+                  >
+                    {entry}
+                  </li>
+                {/each}
+              </ul>
+            {:else}
+              <p class="text-[13px] leading-relaxed font-light text-ink-muted text-pretty">
+                {item.note}
+              </p>
+            {/if}
           </div>
         </div>
       </li>

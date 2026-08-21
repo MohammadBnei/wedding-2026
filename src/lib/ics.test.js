@@ -13,15 +13,16 @@ test('the calendar file is a well-formed VCALENDAR in every language', () => {
   }
 });
 
-test('the times are the garden lunch in UTC, not the mairie and not floating', () => {
+test('the times are the garden gathering in UTC, not floating', () => {
   const ics = icsBody('fr');
   // 15h Paris on 5 September is CEST, so 13:00Z. Getting this wrong puts the
   // wedding two hours out in every guest's calendar and nobody notices until
   // they arrive at the wrong time.
   expect(ics).toContain('DTSTART:20260905T130000Z');
   expect(ics).toContain('DTEND:20260905T210000Z');
-  // The mairie is 13h30 local = 11:30Z, restricted attendance. It must not be
-  // in the file a general guest downloads.
+  // Nothing before 15h belongs in a guest's calendar. Kept as a guard: the
+  // programme has carried an earlier, restricted-attendance entry before and
+  // may again.
   expect(ics).not.toContain('113000');
   // The date comes from wedding.js, so changing it there changes the file.
   expect(ics).toContain(SHARED.isoDate.replace(/-/g, ''));

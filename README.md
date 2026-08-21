@@ -171,17 +171,26 @@ bun run test:e2e    # 38 browser tests, needs `bun run dev` (pinned to :5188)
 
 ## Deliberately absent
 
-There are **no phone numbers** on this site and none in this repo. Guests who
-need a person are pointed at Leïla or Amine directly, and the chatbot's system
-prompt bans producing a contact detail outright — without an explicit ban a
-model asked "how do I reach you?" will format a plausible-looking number. The
-venue address *is* public and lives in `wedding.js`.
+There are **no phone numbers** on this site and none in this repo. The one
+contact detail is an email, and it appears in exactly one place: the chat's
+give-up line, assembled by `fallbackText()` in `wedding.js`. It is deliberately
+**not** in the chatbot's system prompt, which still bans the model producing a
+contact detail outright — without that ban, a model asked "how do I reach you?"
+will format a plausible-looking address, and an invented one is worse than "I
+don't know". The hand-off happens on the way out, in copy nobody generated.
+
+While `SHARED.email` is empty the sentence is dropped entirely rather than
+rendered as a dangling "write to us at ." — so the site is safe to ship before
+the mailbox exists.
+
+The venue address *is* public and lives in `wedding.js`.
 
 ## Still to fill in
 
 `src/lib/content/wedding.js`:
 
 - **street number** — the address has none
+- **`email`** — the chat's hand-off address; the fallback omits the sentence until it is set
 
 Env-driven, set in the Infisical project (`wedding-2026-ih1x`):
 

@@ -3,7 +3,7 @@
  * SvelteKit import ($env, $lib) so it is plain, testable JavaScript — the parts
  * worth asserting on don't need a server, a database or a provider key.
  */
-import { t, SHARED } from './content/wedding.js';
+import { t, SHARED, fallbackText } from './content/wedding.js';
 
 /** Longest message a guest may send. Trust boundary — do not relax. */
 export const MAX_MESSAGE = 500;
@@ -34,10 +34,10 @@ export function systemPrompt(lang, runtime = {}) {
     `Couple: ${SHARED.names.latin.join(' and ')}.`,
     `Date: ${s.date}. Town: ${s.town}.`,
     `Address: ${SHARED.addressLine1}, ${SHARED.addressLine2}.`,
-    `Venue: the garden of Amine's parents' house.`,
+    `Venue: the garden of Mohammad-Amine's parents' house.`,
     '',
     'SCHEDULE:',
-    ...s.schedule.map((x) => `- ${x.time} — ${x.title}: ${x.note}`),
+    ...s.schedule.map((x) => `- ${x.time} — ${x.title}: ${x.items?.join('; ') ?? x.note}`),
     '',
     'GETTING THERE AND PRACTICALITIES:',
     ...s.facts.map((f) => `- ${f.label}: ${f.value}`),
@@ -81,5 +81,5 @@ export function cannedAnswer(message, lang) {
   const s = t(lang);
   const norm = (x) => x.trim().toLowerCase().replace(/\s+/g, ' ');
   const hit = s.chips.find((c) => norm(c.q) === norm(message));
-  return hit ? hit.a : s.fallback;
+  return hit ? hit.a : fallbackText(lang);
 }

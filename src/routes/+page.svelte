@@ -142,8 +142,8 @@
       >
         <span class="caps text-xs font-light text-primary-faint lg:hidden">{SHARED.monogram}</span>
         <div class="flex items-center gap-1.5">
-          <LangSwitcher current={data.lang} />
-          <ThemeToggle current={data.theme} />
+          <LangSwitcher current={data.lang} label={t.langLabel} />
+          <ThemeToggle current={data.theme} toLight={t.themeToLight} toDark={t.themeToDark} />
         </div>
       </div>
 
@@ -192,6 +192,26 @@
         <p class="text-[15px] leading-loose font-light text-ink-body text-pretty">{t.welcome1}</p>
         <p class="text-[15px] leading-loose font-light text-ink-body text-pretty">{t.welcome2}</p>
         <Origins title={t.originsTitle} items={t.origins} />
+
+        <!--
+          Qur'an 78:8, per issue #11. Same shape as the motto in the identity
+          rail (Arabic line, small gloss beneath, gold): the two are the same
+          kind of object, so they should read as siblings rather than as two
+          unrelated inventions. The gloss line is dropped in Arabic, where the
+          verse needs none — see EXTRA.ar.verseGloss.
+        -->
+        <figure class="flex flex-col items-center gap-2 py-2 text-center">
+          <blockquote dir="rtl" lang="ar" class="font-arabic text-lg leading-loose text-gold">
+            {SHARED.verse}
+          </blockquote>
+          {#if t.verseGloss}
+            <p class="text-[13px] leading-relaxed font-light text-ink-muted text-pretty">
+              {t.verseGloss}
+            </p>
+          {/if}
+          <figcaption class="caps-wide text-[9px] font-light text-gold">{t.verseRef}</figcaption>
+        </figure>
+
         <Countdown {t} lang={data.lang} />
       </Section>
 
@@ -200,7 +220,7 @@
           class="pointer-events-none absolute end-4 top-6 -z-10 h-20 w-20 text-gold opacity-45"
         />
         <Timeline items={t.schedule} />
-        <!-- The .ics covers the garden lunch onwards only — see wedding.ics/+server.js.
+        <!-- The .ics covers the garden gathering, 15h-23h — see wedding.ics/+server.js.
              No `download` attribute: the point is to hand the file to the phone's
              calendar app, and `download` forces a save instead. The endpoint
              serves it `inline` to match. `data-sveltekit-reload` stops the client

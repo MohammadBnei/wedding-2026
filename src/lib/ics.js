@@ -14,7 +14,12 @@ import { t, SHARED } from './content/wedding.js';
 const esc = (s) =>
   s.replace(/\\/g, '\\\\').replace(/([;,])/g, '\\$1').replace(/\r?\n/g, '\\n');
 
-/** Local wall-clock hours in Fosses. Matches the 15h / 19h+ rows in wedding.js. */
+/**
+ * Local wall-clock hours in Fosses. These are a SECOND copy of the programme's
+ * 15h start — wedding.js's schedule, +layout.svelte's JSON-LD and
+ * Countdown.svelte each hold their own. Only this one is covered by a test, so
+ * if the hour moves, move all four by hand.
+ */
 const GARDEN_FROM = 15;
 const GARDEN_UNTIL = 23;
 
@@ -89,8 +94,7 @@ export function icsBody(lang) {
       // own day so the response is byte-identical on every request — cacheable,
       // and it does not re-download as "changed" every time a guest taps it.
       `DTSTAMP:${day}T000000Z`,
-      // Only the garden lunch onwards. The 13h30 mairie is restricted
-      // attendance and must never land in a general guest's calendar.
+      // The garden gathering, which is the whole of what a guest is invited to.
       `DTSTART:${utcStamp(SHARED.isoDate, GARDEN_FROM)}`,
       `DTEND:${utcStamp(SHARED.isoDate, GARDEN_UNTIL)}`,
       `SUMMARY:${esc(t(lang).icsSummary)}`,
