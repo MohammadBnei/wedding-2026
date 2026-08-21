@@ -39,6 +39,12 @@ Note that `--color-primary-surface` (the large green field: rail, footer) and
 mode lifts the second for contrast and leaves the first dark — collapsing them
 turns the rail mint.
 
+`--color-gold` / `--color-gold-soft` are the same split for the second accent:
+gold as ink on paper (4.61:1 on `surface-alt`, the worst light ground it lands
+on) and gold on the night field (8.01:1). Only the ink lifts in dark; the field
+gold needs no dark variant, because the field is dark in both themes. Every
+ratio in `app.css`'s comments is measured — recompute before changing one.
+
 ### The chatbot degrades instead of breaking
 
 With no `OPENAI_API_KEY`, `/api/chat` answers from the canned FAQ in
