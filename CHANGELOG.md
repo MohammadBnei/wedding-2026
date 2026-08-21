@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.5.0](https://github.com/MohammadBnei/wedding-2026/compare/0.4.0...0.5.0) (2026-08-21)
+
+
+### Features
+
+* **hero:** open the site behind an oriental door ([85b281d](https://github.com/MohammadBnei/wedding-2026/commit/85b281d75008737411f39a95debf39744470a982)), closes [#11](https://github.com/MohammadBnei/wedding-2026/issues/11)
+
 # [0.4.0](https://github.com/MohammadBnei/wedding-2026/compare/0.3.0...0.4.0) (2026-08-21)
 
 
