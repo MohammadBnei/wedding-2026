@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.4.0](https://github.com/MohammadBnei/wedding-2026/compare/0.3.0...0.4.0) (2026-08-21)
+
+
+### Features
+
+* **og:** repaint the social card in the night identity ([7d6cdab](https://github.com/MohammadBnei/wedding-2026/commit/7d6cdaba560a95500c69484fbbd3376ea6abc643))
+
 # [0.3.0](https://github.com/MohammadBnei/wedding-2026/compare/0.2.1...0.3.0) (2026-08-21)
 
 
