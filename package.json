@@ -37,6 +37,10 @@
     "git": {
       "commitMessage": "chore: release v${version}",
       "tagName": "${version}",
+      "pushArgs": [
+        "--follow-tags",
+        "--atomic"
+      ],
       "requireCommits": true,
       "requireCommitsFail": false
     },
