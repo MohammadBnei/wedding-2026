@@ -1,5 +1,13 @@
 # Changelog
 
+# [0.6.0](https://github.com/MohammadBnei/wedding-2026/compare/0.5.0...0.6.0) (2026-08-21)
+
+
+### Features
+
+* **content:** rewrite the invitation in a formal register, in four languages ([e1d69c7](https://github.com/MohammadBnei/wedding-2026/commit/e1d69c7494967be1ece59a44eec06225d49d4132)), closes [#9](https://github.com/MohammadBnei/wedding-2026/issues/9) [#10](https://github.com/MohammadBnei/wedding-2026/issues/10) [#9](https://github.com/MohammadBnei/wedding-2026/issues/9)
+* **design:** rebuild the ornament on three marks, and open the door ([cee457a](https://github.com/MohammadBnei/wedding-2026/commit/cee457a5bead97cbb7edaf80eaacf63736edba56))
+
 # [0.5.0](https://github.com/MohammadBnei/wedding-2026/compare/0.4.0...0.5.0) (2026-08-21)
 
 
