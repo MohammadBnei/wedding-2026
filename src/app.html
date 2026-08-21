@@ -8,6 +8,14 @@
 		     see the list in app.css. -->
 		<meta name="theme-color" content="#1e2159" />
 		%sveltekit.head%
+		<!-- The entrance door (Door.svelte) is server-rendered SHUT, because an
+		     overlay mounted client-side lets the page paint for a frame first. Only
+		     script can open it again, so with scripting off it must never be there.
+		     It has to sit BELOW the head placeholder above, not over it: app.css
+		     arrives in there and sets .door-scrim to display:flex at the same
+		     specificity, both unlayered — so source order is the whole of what
+		     decides this, and higher up it silently loses. -->
+		<noscript><style>.door-scrim{display:none}</style></noscript>
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>

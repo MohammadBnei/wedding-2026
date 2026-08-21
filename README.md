@@ -98,7 +98,7 @@ WEDDING_DB_HOST=127.0.0.1 WEDDING_DB_PORT=1 bun run dev
 
 `og:*`, the `<meta name="description">` snippet and the JSON-LD say the event
 type and the date, and nothing else — `"Un mariage — samedi 5 septembre 2026."`
-The card in `static/og.png` is the names, the motto and the date. No town, no
+The card in `static/og.png` is the names, the greeting and the date. No town, no
 street, and deliberately no schema.org `location`, which is what a Google rich
 result would need.
 

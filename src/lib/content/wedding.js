@@ -41,10 +41,15 @@ export const SHARED = {
   isoDate: '2026-09-05',
   names: { latin: ['Leïla', 'Mohammad-Amine'], arabic: 'ليلى و محمد أمين' },
 
-  // The couple's phrase — "Iman o Sabr", faith and patience. Arabic script in
-  // every locale, like the names: it is a name for the thing, not a sentence to
-  // translate.
-  motto: 'إيمان و صبر',
+  // What is said at the door, in Arabic script in every locale — the same rule the
+  // names follow: this is the greeting itself, not a sentence to be translated.
+  // fr/en get a gloss under it (see `salamGloss`); ar/fa need none.
+  salam: 'السلام عليكم',
+
+  // Two words, carved one per leaf and read across the shut pair. The array is
+  // the split, so the component never has to cut a string it does not own: the
+  // line is right-to-left, so [0] is the RIGHT leaf.
+  basmala: ['بسم', 'الله'],
   monogram: 'L & M'
 };
 
@@ -289,10 +294,14 @@ const EXTRA = {
     lostTitle: 'Page introuvable',
     lostBody: "Ce lien ne mène nulle part. Tout se trouve sur la page d'accueil.",
     lostCta: "retour à l'invitation",
-    // `motto` glosses SHARED.motto so it does not read as two more names.
-    // fr/en get the meaning; ar/fa already have it, so they get the framing.
     closing: "Nous serons heureux de célébrer cette journée avec vous.",
-    motto: 'foi & patience',
+    // The door. `salamGloss`/`basmalaGloss` translate what is written on it, so
+    // they are EMPTY in ar/fa rather than restated — there is nothing to gloss for
+    // someone already reading the script. `doorHint` doubles as the button's
+    // aria-label, which is why it is an instruction and not a greeting.
+    salamGloss: 'que la paix soit sur vous',
+    basmalaGloss: 'au nom de Dieu',
+    doorHint: 'touchez pour entrer',
     cdDays: 'jours',
     cdHours: 'heures',
     cdMins: 'minutes',
@@ -318,7 +327,9 @@ const EXTRA = {
     lostBody: 'That link goes nowhere. Everything is on the front page.',
     lostCta: 'back to the invitation',
     closing: 'We would be happy to celebrate this day with you.',
-    motto: 'faith & patience',
+    salamGloss: 'peace be upon you',
+    basmalaGloss: 'in the name of God',
+    doorHint: 'tap to enter',
     cdDays: 'days',
     cdHours: 'hours',
     cdMins: 'minutes',
@@ -344,7 +355,9 @@ const EXTRA = {
     lostBody: 'هذا الرابط لا يؤدي إلى شيء. كل شيء في الصفحة الرئيسية.',
     lostCta: 'العودة إلى الدعوة',
     closing: 'يسعدنا أن نحتفل بهذا اليوم معكم.',
-    motto: 'شعارنا',
+    salamGloss: '',
+    basmalaGloss: '',
+    doorHint: 'انقروا للدخول',
     cdDays: 'أيام',
     cdHours: 'ساعات',
     cdMins: 'دقائق',
@@ -370,7 +383,9 @@ const EXTRA = {
     lostBody: 'این پیوند به جایی نمی‌رسد. همه‌چیز در صفحهٔ اصلی است.',
     lostCta: 'بازگشت به دعوت‌نامه',
     closing: 'خوشحال می‌شویم این روز را با شما جشن بگیریم.',
-    motto: 'شعار ما',
+    salamGloss: '',
+    basmalaGloss: '',
+    doorHint: 'برای ورود لمس کنید',
     cdDays: 'روز',
     cdHours: 'ساعت',
     cdMins: 'دقیقه',

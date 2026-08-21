@@ -11,8 +11,16 @@
   height gives an SVG its intrinsic ratio — so nothing is distorted at any width
   and the shape holds its proportions on every phone. Fill is currentColor so it
   inherits the surface token rather than naming a colour.
+
+  Two shapes, one outline. `inverse` gives the SPANDRELS — the bounding box minus
+  the arch head — which is what lets Door.svelte cut an arched opening into a
+  rectangle of door leaves without a clip-path. A clip-path would need this same
+  curve renormalised to 0..1 for objectBoundingBox units, i.e. a second,
+  hand-divided copy of the geometry; an even-odd fill needs none.
 -->
 <script>
+  let { inverse = false, class: klass = 'text-surface' } = $props();
+
   // The outline, springing line to springing line.
   const OUTLINE =
     'M 0 34 A 10.60 10.60 0 0 0 3.64 21.26 A 12.04 12.04 0 0 0 14.03 10.38 ' +
@@ -21,17 +29,17 @@
 
   // Filled shape closes across the bottom; the dotted tracery must NOT, or it
   // draws a stray line straight across the base of the arch.
-  const D = `${OUTLINE} L 100 34 Z`;
+  const D = inverse ? `M 0 0 H 100 V 34 H 0 Z ${OUTLINE} Z` : `${OUTLINE} L 100 34 Z`;
 </script>
 
 <svg
-  class="block w-full text-surface"
+  class="block w-full {klass}"
   viewBox="0 0 100 34"
   preserveAspectRatio="none"
   fill="currentColor"
   aria-hidden="true"
 >
-  <path d={D} />
+  <path d={D} fill-rule="evenodd" />
   <!-- The dotted line tracing the arch, straight off the henna invitation. Same
        path scaled about the springing line so it sits parallel inside the edge.
        non-scaling-stroke keeps the dots a fixed 1.4px every 7px no matter the
@@ -40,7 +48,7 @@
   <path
     d={OUTLINE}
     fill="none"
-    stroke="var(--color-accent)"
+    stroke="var(--color-arch-line)"
     stroke-width="1.4"
     stroke-dasharray="0.1 7"
     stroke-linecap="round"

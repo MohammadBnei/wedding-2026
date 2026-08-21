@@ -3,8 +3,8 @@
 
   import Section from '$lib/components/Section.svelte';
   import Zigzag from '$lib/components/Zigzag.svelte';
-  import Ornament from '$lib/components/Ornament.svelte';
   import Arch from '$lib/components/Arch.svelte';
+  import Door from '$lib/components/Door.svelte';
   import Sprig from '$lib/components/Sprig.svelte';
   import Flourish from '$lib/components/Flourish.svelte';
   import Tracery from '$lib/components/Tracery.svelte';
@@ -33,6 +33,10 @@
   `lang-fade` dims the whole page while a language switch is in flight — see
   LangSwitcher and app.css.
 -->
+<!-- The door is mounted here rather than in +layout.svelte, so /no-such-page
+     still answers with the bare localized 404 and nothing to open first. -->
+<Door {t} />
+
 <div
   class="night lang-fade mx-auto grid min-h-screen max-w-[1400px] lg:grid-cols-[minmax(300px,380px)_1fr]"
 >
@@ -72,7 +76,7 @@
           hole in the sequence.
         -->
         <div
-          class="hero-stagger relative -mt-px flex flex-col items-center gap-4 bg-surface px-7 pb-8 lg:mt-0 lg:items-start lg:bg-transparent lg:px-0 lg:text-start"
+          class="hero-card hero-stagger relative -mt-px flex flex-col items-center gap-4 bg-surface px-7 pb-8 lg:mt-0 lg:items-start lg:bg-transparent lg:px-0 lg:text-start"
         >
           <!--
             The dotted tracery continues down the sides and across the foot, so it
@@ -88,17 +92,23 @@
           <div
             class="pointer-events-none absolute inset-x-[5%] top-0 bottom-[calc(5vw-2px)] opacity-55 lg:hidden"
             style="background:
-              repeating-linear-gradient(to bottom, var(--color-accent) 0 1.4px, transparent 1.4px 7px) left top / 1.4px 100% no-repeat,
-              repeating-linear-gradient(to bottom, var(--color-accent) 0 1.4px, transparent 1.4px 7px) right top / 1.4px 100% no-repeat,
-              repeating-linear-gradient(to right, var(--color-accent) 0 1.4px, transparent 1.4px 7px) left bottom / 100% 1.4px no-repeat"
+              repeating-linear-gradient(to bottom, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) left top / 1.4px 100% no-repeat,
+              repeating-linear-gradient(to bottom, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) right top / 1.4px 100% no-repeat,
+              repeating-linear-gradient(to right, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) left bottom / 100% 1.4px no-repeat"
             aria-hidden="true"
           ></div>
 
-          <!-- The wrapper is what `hero-stagger` counts and what carries the one
-               child that spins in rather than rising. -->
-          <div class="hero-star">
-            <Ornament kind="star" size={44} tone="accent" punch="surface" />
-          </div>
+          <!-- The greeting the door just gave, said once more inside. It stands
+               where the eight-point star used to: the star was a second Maghrebi
+               mark directly above the zellij in the rail's corner, and a phrase
+               opens the page in a way an ornament cannot. -->
+          <p
+            dir="rtl"
+            lang="ar"
+            class="font-arabic text-xl text-gold lg:text-gold-soft"
+          >
+            {SHARED.salam}
+          </p>
 
           <h1
             dir="ltr"
@@ -119,21 +129,6 @@
           >
             {t.date}<br />{t.town}
           </p>
-
-          <!--
-            Iman and Sabr are ordinary given names. Set at name size directly
-            under `ليلى و محمد أمين` this read as two more guests, so it sits
-            below the Flourish instead of in the name stack, a size down, and
-            carries a gloss — `t.motto` — that frames it as a phrase. The gold is
-            the one piece of running text in it: 5.05:1 on the paper card,
-            8.01:1 on the night rail.
-          -->
-          <div class="flex flex-col items-center gap-0.5 lg:items-start">
-            <p dir="rtl" lang="ar" class="font-arabic text-sm text-gold lg:text-gold-soft">
-              {SHARED.motto}
-            </p>
-            <p class="caps-wide text-[9px] font-light text-gold lg:text-gold-soft">{t.motto}</p>
-          </div>
 
           <div class="mb-4 lg:mb-6">
             <Button href="#rsvp">{t.rsvpCta}</Button>
