@@ -2,25 +2,130 @@
   A content section. The artifact repeated `padding:30px 26px` and the 24px Bodoni
   title inline in five places.
 
+  It also owns its own decoration now. Every section used to hand-place its
+  ornaments — a lattice in one corner here, a sprig in another there, each with
+  its own offsets — which meant five sections carrying eight elements between
+  them and no two arranged alike. The rule is the same everywhere now, so it
+  lives here once:
+
+    a sprig at the top-start corner and another at the bottom-end corner,
+    and a scatter of eight-point stars over the rest of the box.
+
   tone  'paper' (default surface) or 'alt' (the sand panel behind the chat)
+  seed  what the scatter is drawn from. Deliberately NOT the title: seeding on
+        copy would reshuffle every ornament on the page when a language is
+        switched, and would move them again whenever a heading is reworded.
 -->
 <script>
   import { reveal } from '$lib/actions/reveal.js';
+  import Sprig from './Sprig.svelte';
+  import Tracery from './Tracery.svelte';
 
   // `fill`: cap the section at the viewport rather than force it there. It sizes
   // to its content and stops growing at 100dvh, at which point whatever is inside
   // marked to scroll takes over — no dead space when the content is short.
-  let { title = '', kicker = '', tone = 'paper', id = undefined, fill = false, children } = $props();
+  let {
+    title = '',
+    kicker = '',
+    tone = 'paper',
+    id = undefined,
+    seed = '',
+    fill = false,
+    children
+  } = $props();
+
+  /*
+   * The golden ratio, which the page's own ornament is already built out of: the
+   * girih behind every night field reduces to it exactly, down to the tile's own
+   * height being phi + 2 sides (see scripts/make-girih.js). So the marks
+   * scattered on the paper are proportioned by it too.
+   */
+  const PHI = (1 + Math.sqrt(5)) / 2;
+
+  /*
+   * One star per rung of a phi ladder, and there are exactly as many stars as
+   * rungs — three sizes, each used once, rather than three rolls that might come
+   * up the same. Starting at 13px the ladder lands on 13, 21 and 34: Fibonacci,
+   * which is the same fact said another way.
+   *
+   * 13 is also the floor. These are drawn as outlines, and an outline needs room
+   * a solid does not: much under that the eight points close up and it smudges.
+   *
+   * Weight falls as size rises, by the square root of the rung, so the big star
+   * carries about as much ink as the small one and the three read as one texture
+   * rather than as a blob and two specks.
+   */
+  const RUNGS = [1, PHI, PHI ** 2];
+  const BASE = 13;
+  const COUNT = RUNGS.length;
+
+  /*
+   * The corners the two sprigs stand in, as a share of the box — the stars keep
+   * out of them, which is the whole reason they are named rather than inlined.
+   * The bottom-end sprig is a phi step larger than the top-start one, so its
+   * corner is a phi step deeper.
+   *
+   * Percent against a px-sized sprig is a deliberate approximation: a section
+   * here runs anywhere from about 300px to 900px tall, so this is just right at
+   * the short end and generous at the tall end. Generous is the safe direction —
+   * it costs an empty corner, where mean would cost a star sitting on a leaf.
+   */
+  const KEEP = { x: 20, y: 15 };
+
+  /*
+   * Deterministic on purpose, and that is not a detail: Math.random() would draw
+   * one scatter on the server and a different one in the browser, and a DOM that
+   * does not match the markup it hydrates from is a hydration error, not a
+   * cosmetic difference.
+   *
+   * So: a string hash into a small LCG. Same seed, same sky, every render.
+   *
+   * Positions are `inset-inline-start`, not `left`, so the whole scatter mirrors
+   * with the sprigs under RTL rather than sliding out from under them — which is
+   * also why KEEP can be tested against x directly and still hold in Arabic.
+   *
+   * The opacities are LOW, and low for a reason that is not taste: these sit
+   * behind running body text on paper, which the corner ornaments they replaced
+   * never did — a corner mark can be as strong as it likes because nothing is
+   * read on top of it. If they are hard to see at a glance, they are doing their
+   * job.
+   *
+   * The sizes are not small for the same reason. These are drawn as outlines,
+   * and an outline needs room the way a solid does not: under about 14px the
+   * eight points close up and it turns to a smudge. So the star gets its size
+   * and gives back the weight — faint and legible beats sharp and muddy.
+   */
+  const STARS = $derived.by(() => {
+    let s = 7;
+    for (const ch of seed || id || 'section') s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+    const next = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+
+    /** @type {{ x: number, y: number, size: number, rot: number, o: number }[]} */
+    const out = [];
+    // Rejection sampling: rejected for landing on a sprig, or for crowding a
+    // star already placed. Without the second test the few points clump into a
+    // cluster and read as a mistake rather than as a scatter.
+    for (let guard = 0; out.length < COUNT && guard < 400; guard++) {
+      const x = 4 + next() * 82;
+      const y = 5 + next() * 83;
+      if (x < KEEP.x && y < KEEP.y) continue;
+      if (x > 100 - KEEP.x * PHI && y > 100 - KEEP.y * PHI) continue;
+      if (out.some((o) => Math.abs(o.x - x) < 15 && Math.abs(o.y - y) < 11)) continue;
+      const rung = RUNGS[out.length];
+      out.push({ x, y, size: BASE * rung, rot: next() * 45, o: 0.2 / Math.sqrt(rung) });
+    }
+    return out;
+  });
 </script>
 
-<!-- `relative` so a section can anchor its own corner tracery. Deliberately
-     NOT `overflow-hidden`: that would clip the focus ring in the chat panel.
+<!-- `relative` so a section can anchor its own ornaments. Deliberately NOT
+     `overflow-hidden`: that would clip the focus ring in the chat panel.
      Ornaments are inset instead.
 
-     `isolate` gives the section its own stacking context so a tracery marked
-     -z-10 lands behind the TEXT but still in front of this section's own
-     background. Without it that -z-10 escapes past <main>'s bg-surface and
-     the ornament vanishes. -->
+     `isolate` gives the section its own stacking context so the ornament layer
+     marked -z-10 lands behind the TEXT but still in front of this section's own
+     background. Without it that -z-10 escapes past <main>'s bg-surface and the
+     ornaments vanish. -->
 <section
   {id}
   use:reveal
@@ -28,6 +133,31 @@
     ? 'max-h-dvh lg:max-h-none'
     : ''}"
 >
+  <!-- The ornament layer. `overflow-hidden` is safe HERE, unlike on the section
+       itself: nothing in it can take focus, so there is no ring to clip — and it
+       is what keeps a star near an edge from bleeding into the next section.
+
+       A star is turned by up to 45deg and no further. Eight points every 45deg
+       means the shape repeats at that angle: past it the scatter stops looking
+       varied and starts looking like the same tilt twice. -->
+  <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+    <!-- The pair is a phi step apart: 64 and 104, or 80 and 128 at lg. The
+         larger anchors the bottom-end corner, where a section's content has
+         usually run out. -->
+    <Sprig class="absolute start-1 top-1 h-16 w-16 text-gold opacity-25 lg:h-20 lg:w-20" />
+    {#each STARS as star, i (i)}
+      <span
+        class="absolute block text-gold"
+        style="inset-inline-start:{star.x.toFixed(2)}%;top:{star.y.toFixed(2)}%;width:{star.size.toFixed(
+          1
+        )}px;rotate:{star.rot.toFixed(1)}deg;opacity:{star.o.toFixed(2)}"
+      >
+        <Tracery kind="star" class="w-full" />
+      </span>
+    {/each}
+    <Sprig flip class="absolute end-1 bottom-1 h-26 w-26 text-gold opacity-25 lg:h-32 lg:w-32" />
+  </div>
+
   {#if kicker}
     <p class="caps-wide text-[11px] leading-relaxed font-light text-accent">{kicker}</p>
   {/if}

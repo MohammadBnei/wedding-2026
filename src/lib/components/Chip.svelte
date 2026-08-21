@@ -9,6 +9,7 @@
   selectedAs 'primary' (normal) or 'muted' (the "I can't make it" toggle)
   size       'sm' (language, FAQ, headcount) or 'lg' (the yes/no toggle)
   block      stretch to fill a flex row
+  class      appended last, so a caller can pin a width (the control bar does)
 -->
 <script>
   let {
@@ -18,6 +19,7 @@
     size = 'sm',
     block = false,
     type = 'button',
+    class: klass = '',
     children,
     ...rest
   } = $props();
@@ -38,14 +40,17 @@
       muted: 'border-ink-muted bg-ink-muted text-surface'
     },
     'on-primary': {
-      off: 'border-primary-soft bg-transparent text-primary-faint hover:text-primary-ink hover:border-primary-ink',
-      primary: 'border-surface bg-surface text-primary',
-      muted: 'border-surface bg-surface text-primary'
+      /* selected is an indigo outline on the night field, not a white fill: the
+         off state is a hairline at 40% of the same indigo, so the selected one
+         reads as the same border turned up rather than as a different object. */
+      off: 'border-primary-soft/40 bg-transparent text-primary-faint hover:text-primary-ink hover:border-primary-ink',
+      primary: 'border-primary bg-primary/25 text-primary-ink',
+      muted: 'border-primary bg-primary/25 text-primary-ink'
     }
   };
 
   const cls = $derived(
-    [base, sizes[size], block && 'flex-1', tones[tone][selected ? selectedAs : 'off']]
+    [base, sizes[size], block && 'flex-1', tones[tone][selected ? selectedAs : 'off'], klass]
       .filter(Boolean)
       .join(' ')
   );

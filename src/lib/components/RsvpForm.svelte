@@ -9,7 +9,7 @@
   import Chip from './Chip.svelte';
   import Field from './Field.svelte';
   import Button from './Button.svelte';
-  import Ornament from './Ornament.svelte';
+  import Tracery from './Tracery.svelte';
   import { localeDigits } from '$lib/content/wedding.js';
 
   // `canRsvp` false means Postgres is unreachable (see server/db.js). The rest
@@ -55,7 +55,7 @@
         aria-hidden="true"
       ></span>
     {/each}
-    <Ornament kind="star" size={32} tone="blush" punch="primary-surface" />
+    <Tracery kind="star" class="w-8 text-blush" />
     <p class="font-display text-xl text-primary-ink">{t.thanksTitle}</p>
     <p class="text-[13px] leading-relaxed font-light text-primary-faint">{t.thanksBody}</p>
     <button

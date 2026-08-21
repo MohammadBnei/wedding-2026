@@ -30,8 +30,8 @@
   aria-label={theme === 'dark' ? toLight : toDark}
 >
   <svg
-    width="13"
-    height="13"
+    width="16"
+    height="16"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"

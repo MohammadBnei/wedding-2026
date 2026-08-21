@@ -13,9 +13,24 @@
   nothing here, because a returning visitor still gets the door, it just opens
   itself instead of waiting to be pushed.
 
-  The arch is not redrawn. Arch.svelte owns that curve and `inverse` gives its
-  negative — the box minus the head — laid over the leaves in the curtain's own
-  colour, so their square top corners disappear and the opening reads as arched.
+  The doorway is Arch.svelte — the SAME arch and the same component as the hero's
+  head, not a second curve that resembles it. `inverse` fills the spandrels and
+  that is what cuts the leaves to it; `foot` runs the jambs and threshold down
+  the rest of the box.
+
+  The sunk panel on each leaf is ARCH.head drawn again in its own box — literally
+  the same path, so it is that same arch in miniature: the door within the door
+  those doors actually have.
+
+  The leaves run the FULL height of the box and the spandrel fill is what cuts
+  them to the arch, so the doorway is filled leaf to leaf the way a riad door is,
+  rather than two rectangles parked under a decorated lintel. The meeting stile
+  therefore runs into the apex, which is where the two halves of the arch meet.
+
+  Studs and the knocker are placed by formula rather than drawn by hand, the way
+  Sprig.svelte places its leaves, so density is one number rather than fifty
+  coordinates. It all stays HERE rather than in $lib/tracery.js: that file exists
+  so scripts/make-og.js can draw the same marks, and the door is not on the card.
 
   Scripting off: app.html hides `.door-scrim` outright in a <noscript>. Nothing
   here can run to open it, so it must never be there in the first place — the
@@ -24,8 +39,8 @@
 <script>
   import { onMount } from 'svelte';
   import { SHARED } from '$lib/content/wedding.js';
+  import { ARCH, CX, ring } from '$lib/arch.js';
   import Arch from './Arch.svelte';
-  import Tracery from './Tracery.svelte';
 
   let { t } = $props();
 
@@ -59,7 +74,80 @@
     el.style.overflow = shown && !opening ? 'hidden' : '';
     return () => (el.style.overflow = '');
   });
+
+  /* The box the doorway is drawn in. Must match .door's aspect-ratio in app.css,
+     which cannot import this. The arch springs at 40.19, so the leaves get the
+     other ~95 as straight jamb. */
+  const BOX = 135;
+
+  /*
+   * The sunk panel is the SAME path, in its own box. Not a scaled copy and not a
+   * second call to a generator — ARCH.head, drawn again at the size the leaf
+   * gives it, so the panel cannot drift from the doorway around it.
+   *
+   * PAD is negative headroom in the viewBox: the crown sits on y = 0 and the
+   * stud ring stands outside the arch, so without it the topmost studs are cut
+   * off by the box they are drawn in.
+   */
+  const PAD = 9;
+  const FOOT = 128;
+  const PANEL_PATH = `${ARCH.head} V${FOOT} H${CX - ARCH.narrow} Z`;
+
+  /* The moulding: the same path again, scaled about the middle of the springing
+     line so it springs off the same height and insets on all four sides at once.
+     The foot is solved back through that scale rather than guessed. */
+  const MOULD = 0.87;
+  const INNER_FOOT = ARCH.spring + (FOOT - 6 - ARCH.spring) / MOULD;
+  const INNER_PATH = `${ARCH.head} V${INNER_FOOT.toFixed(2)} H${CX - ARCH.narrow} Z`;
+
+  /*
+   * The studs (clous). A ring outside the head, then rows down the jambs at the
+   * same PITCH, so the hardware reads as one continuous run rather than two
+   * features that happen to meet.
+   */
+  const PITCH = 14;
+  const GAP = 5;
+
+  const STUDS = (() => {
+    const head = ring(GAP, 15);
+    const jx = ARCH.narrow + GAP;
+    const y0 = ARCH.spring + PITCH * 0.8;
+    const y1 = FOOT - 6;
+    const rows = Math.round((y1 - y0) / PITCH);
+    const jambs = Array.from({ length: rows + 1 }, (_, i) => y0 + ((y1 - y0) * i) / rows).flatMap(
+      (y) => [
+        { x: CX - jx, y },
+        { x: CX + jx, y }
+      ]
+    );
+    return [...head, ...jambs];
+  })();
 </script>
+
+{#snippet panel()}
+  <svg
+    class="door-panel"
+    viewBox="0 {-PAD} 100 {FOOT + PAD + 4}"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d={PANEL_PATH} fill="none" stroke="currentColor" stroke-width="1.6" />
+    <g
+      transform="translate({CX} {ARCH.spring}) scale({MOULD}) translate({-CX} {-ARCH.spring})"
+    >
+      <path d={INNER_PATH} fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.5" />
+    </g>
+
+    {#each STUDS as s, i (i)}
+      <circle cx={s.x.toFixed(1)} cy={s.y.toFixed(1)} r="2.4" />
+    {/each}
+
+    <!-- The knocker: a ring hanging off its plate, sat in the head of the panel.
+         Low enough to look hung rather than centred. -->
+    <circle cx={CX} cy="12" r="3.6" />
+    <circle cx={CX} cy="25" r="9" fill="none" stroke="currentColor" stroke-width="2.2" />
+  </svg>
+{/snippet}
 
 {#if shown}
   <button
@@ -69,6 +157,9 @@
     aria-label={t.doorHint}
     onclick={open}
   >
+    <!-- Amiri, the same face the hero says these words in. A display hand was
+         tried here and dropped: the greeting outside and the greeting inside are
+         one voice, and two faces for one phrase read as two. -->
     <p dir="rtl" lang="ar" class="font-arabic text-[clamp(22px,6vw,30px)] text-gold-soft">
       {SHARED.salam}
     </p>
@@ -79,23 +170,28 @@
     <div class="door mt-7">
       <div class="door-glow" aria-hidden="true"></div>
 
-      <!-- The tympanum: the arch head is not part of the leaves, it is the fixed
-           panel above them, and it carries the zellij. That is also what keeps the
-           meeting stile from spiking out of the crown — the leaves start at the
-           springing line, where a door actually starts. -->
-      <Tracery kind="zellij" class="door-tympan text-gold-soft" />
-
       <!-- Physical left/right, deliberately NOT logical start/end: a door's left
            leaf is on the left in every language, and the basmala's two words are
-           placed to read right-to-left across the pair while it is shut. -->
+           placed to read right-to-left across the pair while it is shut. They sit
+           in the arch head, where an inscription goes on a door of this kind —
+           which is also what the zellij used to occupy. -->
       <div class="door-leaf door-leaf-l">
         <span dir="rtl" lang="ar" class="font-arabic">{SHARED.basmala[1]}</span>
+        {@render panel()}
       </div>
       <div class="door-leaf door-leaf-r">
         <span dir="rtl" lang="ar" class="font-arabic">{SHARED.basmala[0]}</span>
+        {@render panel()}
       </div>
 
-      <Arch inverse class="door-cap text-primary-surface" />
+      <!-- LAST in the DOM on purpose: .door is transform-style: flat, so paint
+           order is what keeps a swinging leaf behind the arch rather than in front
+           of it, and the spandrel fill is what cuts the leaves to the curve. -->
+      <Arch
+        inverse
+        foot={BOX - ARCH.spring}
+        class="door-frame text-primary-surface"
+      />
     </div>
 
     {#if t.basmalaGloss}

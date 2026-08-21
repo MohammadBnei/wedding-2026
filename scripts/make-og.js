@@ -29,9 +29,11 @@ import { chromium } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { SHARED, STR } from '../src/lib/content/wedding.js';
-import { CELLS, SIDE, ZELLIJ_RULES, SUN_RAYS, GRASS_BLADES } from '../src/lib/tracery.js';
+import { star, SUN_RAYS } from '../src/lib/tracery.js';
 
 const asset = (p) => fileURLToPath(new URL(`../static/${p}`, import.meta.url));
+const girihURI =
+  'data:image/svg+xml;base64,' + readFileSync(asset('girih.svg')).toString('base64');
 const font = (f) =>
   `url(data:font/woff2;base64,${readFileSync(asset(`fonts/${f}`)).toString('base64')}) format('woff2')`;
 
@@ -44,29 +46,21 @@ const font = (f) =>
 // thing a guest sees when they open the link, so the preview should look like
 // it. The geometry comes from $lib/tracery.js, the same module the page draws
 // from, so the two cannot drift.
-const star = (fill, punch) =>
-  `<span class="star" style="--fill:${fill};--punch:${punch}"></span>`;
+/* The eight-point star, from the same star() the page uses, and drawn the same
+   way: outline only. It used to be three stacked boxes with the middle one
+   painted in whatever it sat on, which read as a cog rather than a star. */
+const mark = (stroke) =>
+  `<svg class="mark" viewBox="0 0 80 80" fill="none"><path d="${star(40, 40, 37)}"` +
+  ` stroke="${stroke}" stroke-width="2.6"/></svg>`;
 
 const svg = (viewBox, body, cls, style = '') =>
   `<svg viewBox="${viewBox}" class="${cls}" style="${style}"><g fill="none" stroke="currentColor" stroke-linecap="round">${body}</g></svg>`;
-
-const zellij = svg(
-  '0 0 120 120',
-  CELLS.map(
-    (c) =>
-      `<rect x="${c.x}" y="${c.y}" width="${SIDE}" height="${SIDE}"/>` +
-      `<rect x="${c.x}" y="${c.y}" width="${SIDE}" height="${SIDE}" transform="rotate(45 ${c.x + SIDE / 2} ${c.y + SIDE / 2})"/>`
-  ).join('') + `<path d="${ZELLIJ_RULES}"/>`,
-  'zellij'
-);
 
 const sun = svg(
   '0 0 100 100',
   `<circle cx="50" cy="50" r="15"/><circle cx="50" cy="50" r="21"/><path d="${SUN_RAYS}"/>`,
   'sun'
 );
-
-const grass = (cls) => svg('0 0 100 24', `<path d="${GRASS_BLADES}"/>`, cls);
 
 const card = `<!doctype html><meta charset="utf-8"><style>
   @font-face { font-family: Bodoni; src: ${font('bodoni-moda-400-normal-latin.woff2')} }
@@ -80,34 +74,20 @@ const card = `<!doctype html><meta charset="utf-8"><style>
          /* The block centres in the space ABOVE the sunrise, not in the whole
             card: without the reserve the date landed on top of the sun. */
          justify-content: center; gap: 16px; padding-bottom: 150px }
-  /* The star field, transcribed from .night in app.css — coprime tile sizes so
-     the layers only realign far beyond any card. */
-  body { background-image:
-      radial-gradient(1.5px 1.5px at 23px 31px, rgba(252,254,255,.85) 50%, transparent 50%),
-      radial-gradient(1px 1px at 96px 17px, rgba(235,169,255,.7) 50%, transparent 50%),
-      radial-gradient(1px 1px at 41px 74px, rgba(252,254,255,.55) 50%, transparent 50%),
-      radial-gradient(2px 2px at 150px 118px, rgba(252,254,255,.4) 50%, transparent 50%),
-      radial-gradient(1px 1px at 12px 57px, rgba(201,203,238,.55) 50%, transparent 50%),
-      radial-gradient(1px 1px at 63px 9px, rgba(235,169,255,.45) 50%, transparent 50%);
-    background-size: 137px 89px, 89px 211px, 211px 163px, 163px 71px, 71px 179px, 53px 127px }
+  /* The girih field, the same asset and the same size .night tiles it at. The
+     two numbers are the tile's own period and must stay in ratio or the
+     strapwork shears. Inlined rather than linked because this page renders from
+     a string with no server behind it, so a /girih.svg would not resolve. */
+  body { background-image: url('${girihURI}'); background-size: 239.03px 173.67px }
   /* the hero card's dotted frame, in gold */
   .frame { position: absolute; inset: 26px; border: 1.5px dotted #d9bc6a; opacity: .5 }
   svg { position: absolute; color: #d9bc6a; stroke-width: 1.1 }
-  .zellij { top: 34px; right: 34px; width: 150px; opacity: .3 }
   /* Sunrise along the foot: the same ramp the page runs, night into gold. */
   .dawn { position: absolute; inset: auto 0 0; height: 158px;
           background: linear-gradient(to top, #d9bc6a, #8a6914 38%, rgba(30,33,89,0)) }
   .sun { bottom: 62px; left: 50%; margin-left: -39px; width: 78px;
          color: #1e2159; stroke-width: 1.6 }
-  .blades { bottom: 0; width: 330px; color: #1e2159; opacity: .8 }
-  .blades.l { left: 30px } .blades.r { right: 30px; transform: scaleX(-1) }
-  .star { position: relative; flex: none; width: 54px; height: 54px }
-  .star::before, .star::after { content: ''; position: absolute; inset: 0; background: var(--fill) }
-  .star::after { transform: rotate(45deg) }
-  /* z-index because ::after paints AFTER the element's own children, so without
-     it the rotated square covers the punch and the star comes out solid. */
-  .star i { position: absolute; z-index: 1; inset: 17px; background: var(--punch);
-            transform: rotate(45deg) }
+  .mark { position: static; flex: none; width: 54px; height: 54px }
   h1 { font: 400 66px/1.14 Bodoni, serif; text-align: center }
   h1 em { color: #eba9ff }
   /* Amiri's default line-height is generous enough to push the block past the
@@ -118,12 +98,9 @@ const card = `<!doctype html><meta charset="utf-8"><style>
           letter-spacing: .24em; color: #c9cbee; margin-top: 4px }
 </style>
 <div class="frame"></div>
-${zellij}
 <div class="dawn"></div>
-${grass('blades l')}
-${grass('blades r')}
 ${sun}
-<div class="star" style="--fill:#a94bc9;--punch:#1e2159"><i></i></div>
+${mark('#a94bc9')}
 <h1>${SHARED.names.latin[0]} <em>&amp;</em><br>${SHARED.names.latin[1]}</h1>
 <div class="arabic">${SHARED.names.arabic}</div>
 <div class="salam">${SHARED.salam}</div>

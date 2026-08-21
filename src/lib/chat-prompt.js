@@ -34,7 +34,7 @@ export function systemPrompt(lang, runtime = {}) {
     `Couple: ${SHARED.names.latin.join(' and ')}.`,
     `Date: ${s.date}. Town: ${s.town}.`,
     `Address: ${SHARED.addressLine1}, ${SHARED.addressLine2}.`,
-    `Venue: the garden of Mohammad-Amine's parents' house.`,
+    `Venue: the garden of the Banaei family home.`,
     '',
     'SCHEDULE:',
     ...s.schedule.map((x) => `- ${x.time} — ${x.title}: ${x.items?.join('; ') ?? x.note}`),

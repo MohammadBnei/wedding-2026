@@ -40,7 +40,7 @@ test('the RSVP call to action jumps to the form', async ({ page }) => {
 
 test('switching language re-renders and flips direction to RTL', async ({ page }) => {
   await visit(page, '/');
-  await page.getByRole('button', { name: 'AR', exact: true }).click();
+  await page.getByRole('button', { name: 'العربية', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
   await expect(page.getByRole('heading', { name: 'برنامج اليوم' })).toBeVisible();
@@ -48,7 +48,7 @@ test('switching language re-renders and flips direction to RTL', async ({ page }
 
 test('the accent rule mirrors to the right edge in Arabic', async ({ page }) => {
   await visit(page, '/');
-  await page.getByRole('button', { name: 'AR', exact: true }).click();
+  await page.getByRole('button', { name: 'العربية', exact: true }).click();
   // Measure only once the switch has actually landed, or we read the LTR layout.
   await page.locator('html[dir="rtl"]').waitFor();
 
@@ -117,7 +117,7 @@ test('switching language keeps the transcript (the artifact wiped it)', async ({
   await page.getByRole('button', { name: 'Comment venir jusqu\'à Fosses ?' }).click();
   await expect(page.getByRole('log')).toContainText('Survilliers-Fosses');
 
-  await page.getByRole('button', { name: 'EN', exact: true }).click();
+  await page.getByRole('button', { name: 'English', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.getByRole('log')).toContainText('Survilliers-Fosses');
 });
@@ -201,7 +201,7 @@ test('an explicit choice outranks the browser preference on the next visit', asy
   const ctx = await browser.newContext({ locale: 'en-GB' });
   const page = await ctx.newPage();
   await visit(page, '/');
-  await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await page.getByRole('button', { name: 'Français', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
 
   await page.reload();
@@ -216,7 +216,7 @@ test('cookies are not marked Secure over plain HTTP', async ({ page, context }) 
   // language switch, the theme and the visitor id all silently stopped
   // persisting — while working perfectly on localhost.
   await visit(page);
-  await page.getByRole('button', { name: 'AR', exact: true }).click();
+  await page.getByRole('button', { name: 'العربية', exact: true }).click();
   await page.locator('html[dir="rtl"]').waitFor();
 
   const cookies = await context.cookies();
@@ -231,7 +231,7 @@ test('a language choice survives a full reload', async ({ page }) => {
   // The end-to-end shape of the same bug: if the cookie is rejected, the switch
   // appears to work (the client re-renders) and then reverts on reload.
   await visit(page);
-  await page.getByRole('button', { name: 'AR', exact: true }).click();
+  await page.getByRole('button', { name: 'العربية', exact: true }).click();
   await page.locator('html[dir="rtl"]').waitFor();
 
   const res = await page.reload();

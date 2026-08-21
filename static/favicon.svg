@@ -1,9 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <title>Leïla &amp; Mohammad-Amine</title>
+  <!--
+    The eight point star, from the same star() the page draws every other one
+    with. It used to be two rects and a rotated punch: a fourth hand rolled copy
+    of one shape, which is what this pass exists to stop.
+
+    SOLID here, where the page draws the same star as an outline. This is a 16px
+    glyph in a browser tab before it is anything else, and a hairline outline at
+    that size is a smudge. What made the filled version read as a cog was the
+    hole punched through it, and that is gone.
+
+    Opaque background on purpose: iOS composites a transparent home screen icon
+    onto white, and scripts/make-og.js rasterises this file for the touch icons.
+  -->
   <rect width="64" height="64" fill="#1e2159"/>
-  <g transform="translate(32 32)">
-    <rect x="-16" y="-16" width="32" height="32" fill="#eba9ff"/>
-    <rect x="-16" y="-16" width="32" height="32" fill="#eba9ff" transform="rotate(45)"/>
-    <rect x="-6" y="-6" width="12" height="12" fill="#1e2159" transform="rotate(45)"/>
-  </g>
+  <path d="M54.60 32.00 L47.98 38.62 L47.98 47.98 L38.62 47.98 L32.00 54.60 L25.38 47.98 L16.02 47.98 L16.02 38.62 L9.40 32.00 L16.02 25.38 L16.02 16.02 L25.38 16.02 L32.00 9.40 L38.62 16.02 L47.98 16.02 L47.98 25.38 Z" fill="#eba9ff"/>
 </svg>

@@ -81,13 +81,15 @@
   --color-gold: #8a6914; /* gold as ink on paper — 4.61:1 */
   --color-gold-soft: #d9bc6a; /* on the night field — 8.01:1 */
 
-  /* The dotted line tracing the arch. Its own token because it is the ONE colour
-   * that has to be set from two places at once: Arch.svelte strokes it and the
-   * hero card continues it down its own sides in CSS gradients, and the two meet
-   * at the springing line — so a literal in either place drifts from the other.
-   * Door.svelte overrides it locally to the field gold, since the entrance arch
-   * sits on the night in both themes. */
-  --color-arch-line: var(--color-accent);
+  /* The line framing the arch. Its own token because it is the ONE colour that
+   * has to be set from two places at once: Arch.svelte strokes it and the hero
+   * card continues it down its own sides as a border, and the two meet at the
+   * springing line — so a literal in either place drifts from the other.
+   * The FIELD gold rather than the ink gold, in both themes and on both arches:
+   * this line always has the night on one side of it — the rail outside the hero
+   * card, the scrim outside the door — and the ink gold disappears against that.
+   * It has no dark variant for the same reason. */
+  --color-arch-line: var(--color-gold-soft);
 
   /* type */
   --font-display: 'Bodoni Moda', serif;
@@ -123,8 +125,8 @@
      a shade so it doesn't glow beside a near-black page, but still the same
      indigo, and still light-text-on-dark — so nothing layered on it has to change. */
   /* The sky deepens by a shade so it does not glow beside a near-black page.
-     It stays the same sky: light-text-on-dark in both themes, so nothing
-     layered on it — stars included — has to change. */
+     It stays the same field: light-text-on-dark in both themes, so nothing
+     layered on it — the girih included — has to change. */
   --color-primary-surface: #191c4a;
   --color-primary: #9ba0ee;
   --color-primary-ink: #ecedf5;
@@ -135,114 +137,132 @@
   --color-blush: #eba9ff;
   /* 8.15:1 on the dark surface-raise, the worst ground it lands on. */
   --color-gold: #d9bc6a;
-
-  /* Dark turns the hero arch into an outline — see .hero-card below. Once the
-     interior and the exterior are one field there is no card edge left for the
-     accent to sit on, and the border becomes the only thing drawing the door, so
-     it takes the gold the rest of the night field already uses. */
-  --color-arch-line: var(--color-gold-soft);
 }
 
 /*
- * The hero, in dark, is not a card on a field. It is the field.
+ * Dark keeps the hero a card rather than letting the night run through it: the
+ * arch and the card below it take the night's own colour, so the girih stops at
+ * the gold frame instead of running under the invitation. The card's text tokens
+ * are left alone — on --color-primary-surface (#191c4a) they measure 13:1 (ink),
+ * 5.9:1 (primary), 5.6:1 (ink-muted) and 6.4:1 (accent), every one over AA.
  *
- * In light the arch is a paper doorway cut into the night rail: white interior,
- * indigo exterior, dotted accent edge. Deepening both sides of that in dark left
- * a near-black panel sitting on an indigo one for no reason — two darks, one
- * seam, and the shape stopped reading as a door at all.
- *
- * So the interior goes away. The night runs unbroken from the rail through the
- * card, and the gold border is the whole drawing. The card's own text tokens are
- * all left alone: on --color-primary-surface (#191c4a) they measure 13:1 (ink),
- * 5.9:1 (primary), 5.6:1 (ink-muted) and 6.4:1 (accent) — every one over AA,
- * which is why this is a two-line change and not a repaint.
+ * Mobile only, and the media query is not decoration: above lg the hero has no
+ * arch at all and the card is transparent on the rail, and a plain
+ * [data-theme='dark'] .hero-card would outrank that lg:bg-transparent and punch
+ * a blank rectangle in the rail's strapwork.
  *
  * `color`, not `fill`: Arch.svelte fills with currentColor.
  */
-[data-theme='dark'] .hero-card {
-  background: transparent;
-}
+@media (width < 64rem) {
+  [data-theme='dark'] .hero-card {
+    background-color: var(--color-primary-surface);
+  }
 
-[data-theme='dark'] .hero-arch svg {
-  color: transparent;
+  [data-theme='dark'] .hero-arch svg {
+    color: var(--color-primary-surface);
+  }
 }
 
 /*
- * The night sky. Replaces a flat `bg-primary-surface` on the large fields —
- * the identity rail, the mobile footer, the thank-you panel.
+ * The night field. Replaces a flat `bg-primary-surface` on the large areas —
+ * the identity rail, the mobile footer, the thank-you panel, the door's scrim.
  *
- * Drawn, not photographed: four tiled radial-gradient layers, in the same spirit
- * as Ornament.svelte's CSS-only star. No image request, nothing to art-direct at
- * a second resolution, and it costs one class.
+ * It used to be a star field: six tiled radial-gradients on coprime tile sizes,
+ * so the layers only realigned far beyond any screen. It is girih strapwork now
+ * — the Persian mark, and the third of the three the page runs on. That is a
+ * pattern with a tradition behind it rather than scattered dots, and it is the
+ * one place a field can carry an identity without competing with the text on it.
  *
- * Every tile is a prime by a DIFFERENT prime (137x89, 89x211, …), never square.
- * Two things are going on. Coprime tile sizes mean the layers only realign after
- * their product, which is far larger than any screen. And making width != height
- * decouples the horizontal rhythm from the vertical one — with square tiles the
- * eye picks out rows and columns at once, which is what the first attempt looked
- * like: a lattice, not a sky.
+ * Deliberately static, for the same reason the stars were: a drift or a shimmer
+ * would be an infinite animation, and the reduced-motion block above caps
+ * iteration-count at 1 — so it would freeze part-way for the people who need it
+ * off, which looks broken rather than calm.
  *
- * Deliberately static. A twinkle would be an infinite animation, and the
- * reduced-motion block above caps iteration-count at 1 — so it would freeze
- * mid-fade for the people who need it off, which looks broken rather than calm.
+ * The strapwork sits at low alpha on purpose, and the number was measured, not
+ * chosen. Straps cross, and alpha compounds where they do, so what matters is
+ * the brightest pixel of a crossing rather than the flat field. Against that
+ * pixel, at the shipped 0.09:
  *
- * The stars sit at low alpha on purpose: --color-primary-ink measures 14.65:1
- * on this field and must keep doing so, so the sky may not lighten under text.
+ *     primary-ink   12.4:1 light / 13.5:1 dark   (14.65 / 15.89 on the flat)
+ *     primary-faint  7.9:1 /  8.6:1
+ *     gold-soft      6.8:1 /  7.4:1
+ *
+ * All past AAA but gold-soft in light, which has the least headroom to start
+ * with. Raise the alpha and re-measure the crossing before believing it is still
+ * fine. The alpha lives in the asset; see below.
  */
 .night {
   background-color: var(--color-primary-surface);
 }
 
 /*
- * The stars themselves, split out from the field they usually sit on. In dark
- * mode the whole page IS the night sky, so the body wears them too and the sky
+ * The strapwork itself, split out from the field it usually sits on. In dark
+ * mode the whole page IS the night, so the body wears it too and the pattern
  * runs from the hero to the footer unbroken instead of stopping at the seams.
- * One declaration list, three selectors — the six layers are not written twice.
+ * One declaration list, three selectors.
  *
- * <main> is in that list because it paints an opaque bg-surface of its own,
- * which sits over the body and would hide every star below the hero.
+ * <main> is deliberately NOT in that list: the content column reads better as a
+ * flat surface, and the pattern stays on the night fields and the body around it.
+ * .dawn-band IS, because the two seams are the night ENDING — a field that stops
+ * its pattern dead and then fades its colour reads as two edges, one of them
+ * hard. The band's tiling does not line up with the field it continues (they are
+ * separate elements, and the phase depends on a height nothing knows at author
+ * time), but at 0.09 alpha a shift in the strapwork is invisible where a stop is
+ * not.
+ *
+ * The tile is generated, not drawn — see scripts/make-girih.js. Its gold and its
+ * opacity are baked INTO the file rather than set here, because an SVG loaded as
+ * a background-image is an isolated document: it cannot read these tokens and
+ * `currentColor` means nothing to it. That is the one colour in the project
+ * outside this file, and it is safe because --color-gold-soft has no dark
+ * override for it to fall out of step with. If that ever changes, the fix is
+ * `mask-image` over a `background-color` token rather than a second asset.
+ *
+ * The size is the tile's own geometry at 1:1, and the two numbers must stay in
+ * that ratio or the strapwork shears. It is not a round number because the tile
+ * is not: it is a rectangle cut from a rhombic lattice of decagons, and 239.03
+ * by 173.67 is what that lattice's period actually measures. Change it in
+ * scripts/make-girih.js (the SIDE knob), not here.
  */
 .night,
-[data-theme='dark'] body,
-[data-theme='dark'] main {
-  background-image:
-    radial-gradient(1.5px 1.5px at 23px 31px, color-mix(in srgb, var(--color-primary-ink) 85%, transparent) 50%, transparent 50%),
-    radial-gradient(1px 1px at 96px 17px, color-mix(in srgb, var(--color-blush) 70%, transparent) 50%, transparent 50%),
-    radial-gradient(1px 1px at 41px 74px, color-mix(in srgb, var(--color-primary-ink) 55%, transparent) 50%, transparent 50%),
-    radial-gradient(2px 2px at 150px 118px, color-mix(in srgb, var(--color-primary-ink) 40%, transparent) 50%, transparent 50%),
-    radial-gradient(1px 1px at 12px 57px, color-mix(in srgb, var(--color-primary-faint) 55%, transparent) 50%, transparent 50%),
-    radial-gradient(1px 1px at 63px 9px, color-mix(in srgb, var(--color-blush) 45%, transparent) 50%, transparent 50%);
-  background-size:
-    137px 89px,
-    89px 211px,
-    211px 163px,
-    163px 71px,
-    71px 179px,
-    53px 127px;
+.dawn-band,
+[data-theme='dark'] body {
+  background-image: url('/girih.svg');
+  background-size: 239.03px 173.67px;
   background-repeat: repeat;
 }
 
 /*
- * The two ends of the day. The page is a walk through it: a starry hero, the sun
- * coming up over the grass, the garden hours in between, then the moon and the
- * stars again in the footer.
+ * The two ends of the day. The page is a walk through it: the hero on its night
+ * field, the sun coming up over the paper column, the garden hours in between,
+ * then the moon setting into the night again at the footer.
  *
  * Both bands run the same ramp, only mirrored, which is what --dawn-to picks:
- * the night the adjoining field is already painted in, warming through the deep
- * gold, into the light gold at the horizon, then out to nothing.
+ * the night the adjoining field is already painted in, going out to nothing —
+ * to the page, whichever page the theme is painting. One ramp for both themes.
  *
- * There is no violet stop. The first version went night -> accent -> gold and the
- * accent read as a purple STRIPE laid across the page rather than as light —
- * dawn does not have a magenta band in it. Deep gold is the warm dark that gets
- * from a night sky to a lit horizon without passing through another hue, so the
- * whole ramp is one continuous irradiation.
+ * There is no gold in it, and no violet either. Both have been tried: the gold
+ * one (night -> gold -> gold-soft) read as a bright stripe laid ACROSS the page
+ * rather than as light, which is the same thing that killed the accent stop
+ * before it. What the seam has to do is get the night field to the paper, and a
+ * hue that is in neither end cannot help with that.
  *
- * The night holds the first 42% flat before any warmth starts. Sky is most of
- * what you see at dawn; the gold is the horizon, not the subject.
+ * A MASK rather than a gradient in the background, which is what lets the girih
+ * fade out with the colour instead of stopping at the band's top edge. It also
+ * means the ramp is over ALPHA, so the same one stop-for-stop serves both
+ * themes.
+ *
+ * The stops are a smoothstep, not a straight line. A linear alpha ramp shows
+ * both of its ends: the eye finds the two corners where the rate of change
+ * starts and stops, and reads them as edges — which is exactly the "stiff" look
+ * a plain two-stop fade has. Easing in and out kills both corners.
+ *
+ * NOTE: the mask applies to the element's CHILDREN too. The sun and the moon are
+ * therefore siblings of the band, not inside it — see +page.svelte.
  *
  * Each band is its own element sized to --dawn-h, rather than one element
- * carrying two background layers, so the sun, the moon and the grass can be
- * positioned against the seam they belong to.
+ * carrying two background layers, so each can be anchored to the seam it
+ * belongs to.
  *
  * The bands sit ON TOP of the content, so --dawn-h must stay inside the
  * clearance the content area has: its own py-28 (lg:py-32) plus the first
@@ -253,45 +273,25 @@
  * if you grow --dawn-h, grow the padding first.
  */
 .dawn-band {
-  --dawn-h: 104px;
+  --dawn-h: 128px;
   height: var(--dawn-h);
-  background-image: linear-gradient(
+  background-color: var(--color-primary-surface);
+  mask-image: linear-gradient(
     var(--dawn-to, to bottom),
-    var(--color-primary-surface),
-    var(--color-primary-surface) 42%,
-    var(--color-gold) 66%,
-    var(--color-gold-soft) 84%,
-    transparent
+    rgb(0 0 0 / 1) 0%,
+    rgb(0 0 0 / 0.96) 12%,
+    rgb(0 0 0 / 0.81) 28%,
+    rgb(0 0 0 / 0.58) 46%,
+    rgb(0 0 0 / 0.29) 64%,
+    rgb(0 0 0 / 0.1) 80%,
+    rgb(0 0 0 / 0) 100%
   );
 }
 
 @media (min-width: 64rem) {
   .dawn-band {
-    --dawn-h: 120px;
+    --dawn-h: 152px;
   }
-}
-
-/*
- * Dark mode has no dawn in it. The page is already night, so a gold horizon is
- * not a sunrise there — it is a bright stripe laid across a dark page, which is
- * exactly how it read. The bands become what they should be at night: the sky
- * blue settling into the deeper shade the page is painted in.
- *
- * Opaque at both ends rather than fading to transparent, and that is safe
- * precisely because the far end IS --color-surface: the band ends in the colour
- * it is sitting on, so the seam is invisible. The clearance rule still holds —
- * these never reach text.
- */
-[data-theme='dark'] .dawn-band {
-  /* Fading to transparent rather than to --color-surface, even though the two
-     look identical against the page: transparent lets <main>'s starfield show
-     through the band, so the sky carries on across the seam instead of the band
-     punching a starless hole in it. */
-  background-image: linear-gradient(
-    var(--dawn-to, to bottom),
-    var(--color-primary-surface),
-    transparent
-  );
 }
 
 @layer base {
@@ -481,11 +481,14 @@
  * outright in a <noscript>. Under reduced motion the global reset collapses each
  * of these to one 0.01ms pass with no delay, so the door is simply open.
  *
- * The proportions: the doorway is 100x134, of which the arch head is the top 34 —
- * Arch.svelte's own viewBox, so the head is 25.37% and the jambs are the 74.63%
- * below it. The dotted jambs are inset 5% for the same reason the hero card's
- * are: the arch's tracery is the outline scaled 0.9 about centre, so it meets the
- * springing line at 5% and 95% of the width.
+ * The proportions live in Door.svelte, not here: the box is 100x135 and the arch
+ * springs at x = 10 and 90, and every number below that looks arbitrary is one of
+ * those two — and it IS Arch.svelte, the same cusped ogee the hero wears.
+ *
+ * Nothing here draws the frame any more. The arch, both jambs and the threshold
+ * are one dotted path inside .door-frame, on the outline rather than inset from
+ * it, because four CSS gradients pretending to be a doorway is what made this
+ * read as a box with a lid.
  */
 .door-scrim {
   position: fixed;
@@ -498,9 +501,6 @@
   padding: 24px;
   text-align: center;
   cursor: pointer;
-  /* Gold in BOTH themes, unlike the hero's arch: this doorway stands on the night
-     field either way, exactly like the traceries in the rail beside it. */
-  --color-arch-line: var(--color-gold-soft);
 }
 
 /* pointer-events goes the instant the door starts opening, and that is not a
@@ -514,24 +514,23 @@
 
 .door {
   position: relative;
-  width: min(62vw, 268px);
-  aspect-ratio: 100 / 134;
+  /* Narrower and taller than it was. A pointed horseshoe needs the height to be
+     a horseshoe at all, and the box has to give it that or the arch flattens
+     straight back into the shoulder it was. */
+  /* Height is the binding constraint, not width: the box is 1.7x as tall as it is
+     wide and it has to sit between the salam and the hint on a phone. 36vh is
+     that, expressed as a width. On a phone 54vw wins; on a desktop the 290px cap
+     does, and the door is no longer a stamp in the middle of the screen. */
+  width: min(58vw, 46vh, 320px);
+  aspect-ratio: 100 / 135;
   perspective: 1400px;
-}
-
-/* The dotted jambs and floor, continuing the arch's own tracery down the sides —
-   the same pitch (1.4px every 7px) and the same 0.55 the SVG stroke carries. */
-.door::after {
-  content: '';
-  position: absolute;
-  inset: 0 5%;
-  opacity: 0.55;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(to bottom, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) left bottom / 1.4px 74.63% no-repeat,
-    repeating-linear-gradient(to bottom, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) right bottom / 1.4px 74.63% no-repeat,
-    repeating-linear-gradient(to right, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) left bottom / 100% 1.4px no-repeat,
-    repeating-linear-gradient(to right, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) left 25.37% / 100% 1.4px no-repeat;
+  /* A leaf swinging towards the viewer projects its far top corner UP, past the
+     apex, where the spandrel fill has nothing left to hide it behind — two
+     triangles appear over the arch mid-swing. Clipping the box is what costs
+     least: the frame's apex dot and threshold lose the outer half of a 1.4px
+     stroke to it, which is nothing, and the leaves are edge-on by the time they
+     reach the sides. */
+  overflow: hidden;
 }
 
 /* What the opening gives onto. Not a white flash — the warm gold the rest of the
@@ -547,24 +546,16 @@
   );
 }
 
-/* The tympanum — the fixed panel filling the arch head, above the leaves. Its
-   own element rather than an ornament on the doors, because that is what a door
-   of this shape actually is: two rectangular leaves under a decorated head. */
-/* Sized to CLEAR the springing line: the head is 34 of the box's 134, and this
-   mark is square, so anything wider than about a quarter of the box hangs below
-   the lintel and gets cut in half by the doors. */
-.door-tympan {
-  position: absolute;
-  top: 4%;
-  left: 38%;
-  width: 24%;
-  opacity: 0.5;
-}
-
 /*
- * The leaves hang from the springing line — 25.37%, where Arch.svelte's head
- * ends — and not from the top of the box. Running them to the crown put the
- * meeting stile through the dome and out the other side.
+ * The leaves run the FULL height of the box, top: 0, and .door-cap cuts them to
+ * the arch. They used to hang from the springing line with the head left to a
+ * fixed tympanum above them; that is a lintel, not a riad door, and it is what
+ * made the doorway read as two rectangles under a decoration.
+ *
+ * The meeting stile therefore runs into the apex, and that is correct here where
+ * it was not before: Arch.svelte's outline comes to a POINT at (50, 0), so the
+ * seam ends exactly where the two halves of the arch meet, rather than spiking
+ * through a dome.
  *
  * They are the night, lifted just enough to be a surface rather than a hole:
  * the mix is off --color-primary-soft, the indigo already used for hairlines on
@@ -574,35 +565,47 @@
  */
 .door-leaf {
   position: absolute;
-  top: 25.37%;
+  top: 0;
   bottom: 0;
-  /* Inset 5% like the jambs, and for the same reason: the arch's tracery is the
-     outline scaled 0.9 about centre, so the opening it draws meets the springing
-     line at 5% and 95%. Leaves at a flat 50% each hang outside their own frame. */
-  width: 45%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* 10%..50% and 50%..90% — exactly the jambs the arch springs from, so a leaf
+     never hangs outside its own frame. Both numbers come from DOOR.narrow. */
+  width: 40%;
   backface-visibility: hidden;
 }
 
-/* The sunk panel every door of this kind has. */
-.door-leaf::before {
-  content: '';
+/*
+ * The carved panel — the horseshoe, its studs and its knocker, all in Door.svelte.
+ *
+ * left/right/bottom and height:auto, never an inset with a top: the svg carries
+ * its own 100x190 ratio and must keep it, or the studs turn to ellipses. Sitting
+ * on the bottom is what keeps it clear of the arch, so nothing of it is ever cut.
+ */
+.door-panel {
   position: absolute;
-  inset: 7% 14%;
-  border: 1px solid color-mix(in srgb, var(--color-gold-soft) 26%, transparent);
+  left: 7%;
+  right: 7%;
+  bottom: 3%;
+  height: auto;
+  color: var(--color-gold-soft);
+  opacity: 0.58;
 }
 
+/* The word sits in the arch head, where a door of this kind carries its
+   inscription — and where the zellij used to be. Absolute rather than centred by
+   flex: the leaf is now the whole box tall, so its middle is not the door's. */
 .door-leaf span {
-  position: relative;
-  font-size: clamp(17px, 5vw, 24px);
+  position: absolute;
+  top: 26%;
+  left: 0;
+  right: 0;
+  font-size: clamp(15px, 4.4vw, 21px);
+  /* stays clear of the panel below it — the two together fill the leaf */
   color: var(--color-gold-soft);
 }
 
 /* The meeting stile: one hairline where the two leaves shut against each other. */
 .door-leaf-l {
-  left: 5%;
+  left: 10%;
   transform-origin: left center;
   border-right: 1px solid color-mix(in srgb, var(--color-gold-soft) 40%, transparent);
   background: linear-gradient(
@@ -613,7 +616,7 @@
 }
 
 .door-leaf-r {
-  right: 5%;
+  right: 10%;
   transform-origin: right center;
   background: linear-gradient(
     260deg,
@@ -622,14 +625,11 @@
   );
 }
 
-/* The negative of the arch head, painted in the curtain's own colour, covering
-   the leaves' square top corners so the opening reads as arched. It is LAST in
-   the DOM on purpose: .door is transform-style: flat, so paint order is what
-   keeps a swinging leaf behind the frame rather than in front of it. */
-.door-cap {
+/* The frame: the spandrel fill that cuts the leaves to the arch, plus the dotted
+   outline, in one svg over the whole box. */
+.door-frame {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
 }
 
 .is-open .door-glow {
@@ -680,15 +680,15 @@ html[data-lang-switching] .lang-fade {
 /*
  * The day, moving.
  *
- * Four additions, each tied to the walk the page describes rather than added for
- * its own sake: the sun and the moon rise, the sun turns, the grass takes the
- * wind, and the countdown breathes when a figure changes.
+ * Three additions, each tied to the walk the page describes rather than added
+ * for its own sake: the sun and the moon rise, the sun turns, and the countdown
+ * breathes when a figure changes.
  *
  * Every one is transform and opacity only, so they stay on the compositor, and
  * every one lands somewhere true under the reduced-motion block above — which
  * collapses them to a single 0.01ms pass with no delay. Where that lands is
- * stated per keyframe. The stars are still deliberately NOT animated: a twinkle
- * would freeze mid-fade, which is the reason .night is static.
+ * stated per keyframe. The girih field is deliberately NOT animated: a drift
+ * would freeze part-way, which is the reason .night is static.
  */
 
 /* Rising is not the generic 18px section rise: it comes further, and from
@@ -721,29 +721,6 @@ html[data-lang-switching] .lang-fade {
 
 .turns {
   animation: sun-turn 120s linear infinite;
-}
-
-/* Wind. Anchored at the base, because grass bends from the ground rather than
-   sliding. 0% and 100% are both upright, so one pass ends upright. */
-@keyframes sway {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  50% {
-    transform: rotate(-2.4deg);
-  }
-}
-
-.sways {
-  transform-origin: bottom center;
-  /* Longhands, and no animation-delay. The shorthand would reset delay to 0, and
-     this class is unlayered — so it would outrank the [animation-delay:*]
-     utility each plant carries and the whole row would breathe in lockstep. */
-  animation-name: sway;
-  animation-duration: 7s;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
 }
 
 /* A figure that has just changed drops into place. Re-keyed in Countdown.svelte,

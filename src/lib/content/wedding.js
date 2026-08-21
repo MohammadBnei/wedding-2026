@@ -82,7 +82,12 @@ export const SHARED = {
   // `verseGloss`, which is deliberately empty in Arabic — see EXTRA.ar.
   verse: 'وَخَلَقْنَاكُمْ أَزْوَاجًا',
 
-  monogram: 'L & M'
+  // The invocation that opens the invitation text, above `welcome1`. Set alone
+  // and untranslated in every locale: this is the opening of a document, not a
+  // sentence being made. `basmalaGloss` is NOT reused here — it glosses the
+  // door's two-word `بسم الله`, and using it under the full formula would
+  // translate half of what is written.
+  bismillah: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ'
 };
 
 /** Pin positions over the garden plan, as percentages so they scale with it. */
@@ -98,17 +103,16 @@ export const STR = {
   fr: {
     date: "Samedi 5 septembre 2026", town: "Fosses", rsvpCta: "Je réponds",
     welcomeKicker: "Bienvenue",
-    welcome1: "Nous avons le plaisir de vous convier à célébrer notre mariage chez les parents de Mohammad-Amine, dans une ambiance intimiste. Ce sera pour nous une grande joie de partager ce moment, ainsi qu'un repas, en votre compagnie, dans une atmosphère que nous espérons chaleureuse et conviviale.",
-    welcome2: "Que vous veniez d'Azrou, de Téhéran, d'Alger, de Chelghoum Laïd ou du bout de la rue, vous trouverez sur cette page toutes les informations utiles pour préparer votre venue dans les meilleures conditions :",
+    welcome1: "Nous avons la joie de vous convier à célébrer notre mariage chez la famille Banaei, dans une ambiance intimiste. Nous serions heureux de vous compter parmi nous.",
     dayTitle: "Le déroulé",
     essTitle: "Informations pratiques", planPlaceholder: "plan annoté du jardin — à venir",
-    chatTitle: "Vos questions", chatSub: "Posez votre question : cette page y répond pour nous, à partir de tout ce qui y est écrit.",
+    chatTitle: "Vos questions", chatSub: "Posez votre question : cette page y répond pour nous.",
     chatPlaceholder: "Posez votre question…", send: "Envoyer",
-    rsvpTitle: "Votre réponse", rsvpSub: "Nous vous remercions de nous répondre avant le 15 juillet 2026.",
+    rsvpTitle: "Votre réponse", rsvpSub: "Merci de nous répondre avant le 15 juillet 2026.",
     yes: "Je serai des vôtres", no: "Je ne pourrai pas venir",
     fName: "Votre nom", fCount: "Combien serez-vous", fSong: "Un morceau à faire jouer", fSongPh: "titre, artiste…",
     fWord: "Un mot pour nous", sendRsvp: "Envoyer ma réponse",
-    thanksTitle: "Votre réponse nous est parvenue", thanksBody: "Merci du fond du cœur. Nous vous attendons le 5 septembre, sous les arbres.",
+    thanksTitle: "Votre réponse nous est parvenue", thanksBody: "Merci du fond du cœur. Rendez-vous le 5 septembre, au jardin.",
     address: "L'adresse",
     /** @type {ScheduleEntry[]} */
     schedule: [
@@ -124,26 +128,26 @@ export const STR = {
       }
     ],
     pins: [
-      { label: "1 · le portail", text: "L'entrée se fait par le portail vert, qui reste ouvert toute la journée." },
+      { label: "1 · le portail", text: "L'entrée se fait par le portail vert, ouvert toute la journée." },
       { label: "2 · les tables", text: "Les tables sont dressées côté jardin, sans plan de table." },
-      { label: "3 · le grand arbre", text: "C'est là que nous nous retrouvons à l'arrivée." },
+      { label: "3 · l'accueil", text: "C'est là que nous nous retrouvons à l'arrivée." },
       { label: "4 · le stationnement", text: "Le long de la rue, devant la maison et aux alentours." }
     ],
     facts: [
       { label: "en train", value: "RER D jusqu'à Survilliers-Fosses, puis le bus 4 — une vingtaine de minutes depuis la gare." },
-      { label: "en voiture", value: "Une heure depuis Paris par l'A1. Le stationnement est libre dans la rue ; n'hésitez pas à venir à plusieurs." },
-      { label: "la tenue", value: "Élégante et confortable. La journée se passe entièrement au jardin, sur l'herbe." },
-      { label: "la météo", value: "Début septembre : doux dans l'après-midi, plus frais à la tombée du soir. Prévoyez une veste." }
+      { label: "en voiture", value: "Une heure depuis Paris par l'A1. Stationnement libre dans la rue ; venez à plusieurs si vous pouvez." },
+      { label: "la tenue", value: "Élégante et confortable. La journée se passe au jardin, sur l'herbe." },
+      { label: "la météo", value: "Début septembre : doux l'après-midi, plus frais le soir. Prévoyez une veste." }
     ],
     // The chips deliberately do NOT restate the `facts` rows. Their job is the
     // questions the page does not already answer in print — and where they do
     // overlap (getting here), the answer is the door-to-door version while the
     // `facts` row stays the compressed reference.
     chips: [
-      { q: "À quelle heure faut-il arriver ?", a: "Nous vous accueillons à partir de 15h. Le buffet se déroule en plusieurs étapes tout au long de l'après-midi : venez à l'heure qui vous convient, vous ne manquerez rien." },
+      { q: "À quelle heure faut-il arriver ?", a: "Nous vous accueillons à partir de 15h. Le buffet se déroule tout l'après-midi : venez à l'heure qui vous convient, vous ne manquerez rien." },
       { q: "Comment venir jusqu'à Fosses ?", a: "En RER D jusqu'à Survilliers-Fosses, puis le bus 4 : comptez une vingtaine de minutes depuis la gare. En voiture, une heure depuis Paris par l'A1, et le stationnement est libre dans la rue." },
-      { q: "Les enfants sont-ils les bienvenus ?", a: "Bien sûr. Le jardin est clos, ils y auront toute la place pour courir, et des jeux sont prévus dans l'après-midi." },
-      { q: "Pourquoi nous demandez-vous un morceau ?", a: "La musique de la journée se construit à partir de vos réponses. Le morceau que vous indiquez dans le formulaire a toutes les chances d'être joué." }
+      { q: "Les enfants sont-ils les bienvenus ?", a: "Bien sûr. Le jardin est clos, il y a la place pour courir, et des jeux sont prévus." },
+      { q: "Pourquoi nous demandez-vous un morceau ?", a: "La musique de la journée se construit à partir de vos réponses. Le morceau que vous indiquez a toutes les chances d'être joué." }
     ],
     fallback: "Voilà une question à laquelle cette page ne répond pas encore.",
     fallbackContact: "Écrivez-nous à {email} et nous vous répondrons dans la journée."
@@ -151,17 +155,16 @@ export const STR = {
   en: {
     date: "Saturday 5 September 2026", town: "Fosses", rsvpCta: "Reply",
     welcomeKicker: "Welcome",
-    welcome1: "It is our pleasure to invite you to celebrate our marriage at the home of Mohammad-Amine's parents, among those closest to us. It would be a great joy to share this moment, and a meal, in your company — in what we hope will be a warm and easy afternoon.",
-    welcome2: "Whether you are coming from Azrou, Tehran, Algiers, Chelghoum Laïd or from just down the road, this page holds everything you need to prepare your visit:",
+    welcome1: "It is our joy to invite you to celebrate our marriage at the home of the Banaei family, among those closest to us. We would love to have you with us.",
     dayTitle: "The day",
     essTitle: "Practical information", planPlaceholder: "annotated garden plan — to come",
-    chatTitle: "Your questions", chatSub: "Ask your question: this page answers on our behalf, drawing on everything written here.",
+    chatTitle: "Your questions", chatSub: "Ask your question: this page answers on our behalf.",
     chatPlaceholder: "Ask your question…", send: "Send",
-    rsvpTitle: "Your reply", rsvpSub: "We would be grateful for your reply before 15 July 2026.",
+    rsvpTitle: "Your reply", rsvpSub: "Please reply before 15 July 2026.",
     yes: "I will be there", no: "I am unable to come",
     fName: "Your name", fCount: "How many of you", fSong: "A song to play", fSongPh: "title, artist…",
     fWord: "A word for us", sendRsvp: "Send my reply",
-    thanksTitle: "Your reply has reached us", thanksBody: "Thank you, warmly. We will see you on 5 September, under the trees.",
+    thanksTitle: "Your reply has reached us", thanksBody: "Thank you, warmly. See you on 5 September, in the garden.",
     address: "The address",
     /** @type {ScheduleEntry[]} */
     schedule: [
@@ -177,22 +180,22 @@ export const STR = {
       }
     ],
     pins: [
-      { label: "1 · the gate", text: "Come in through the green gate, which stays open all day." },
+      { label: "1 · the gate", text: "Come in through the green gate, open all day." },
       { label: "2 · the tables", text: "The tables are set on the garden side, with no seating plan." },
-      { label: "3 · the big tree", text: "This is where we gather as everyone arrives." },
+      { label: "3 · the welcome", text: "This is where we gather as everyone arrives." },
       { label: "4 · parking", text: "Along the street, in front of the house and nearby." }
     ],
     facts: [
       { label: "by train", value: "RER D to Survilliers-Fosses, then bus 4 — about twenty minutes from the station." },
-      { label: "by car", value: "An hour from Paris on the A1. Street parking is free; do share a car if you can." },
-      { label: "dress", value: "Elegant and comfortable. The whole day is spent in the garden, on grass." },
-      { label: "weather", value: "Early September: mild through the afternoon, cooler as evening falls. Bring a jacket." }
+      { label: "by car", value: "An hour from Paris on the A1. Street parking is free; share a car if you can." },
+      { label: "dress", value: "Elegant and comfortable. The day is spent in the garden, on grass." },
+      { label: "weather", value: "Early September: mild in the afternoon, cooler by evening. Bring a jacket." }
     ],
     chips: [
-      { q: "What time should we arrive?", a: "You are welcome from 3pm. The buffet is served in several courses through the afternoon, so come at whatever hour suits you — you will miss nothing." },
+      { q: "What time should we arrive?", a: "You are welcome from 3pm. The buffet runs all afternoon, so come at whatever hour suits you — you will miss nothing." },
       { q: "How do we get to Fosses?", a: "RER D to Survilliers-Fosses, then bus 4: about twenty minutes from the station. By car, an hour from Paris on the A1, with free street parking." },
-      { q: "Are children welcome?", a: "Of course. The garden is enclosed, there is room to run, and games are planned for the afternoon." },
-      { q: "Why are you asking for a song?", a: "The day's music is built from your replies. Whatever you name in the form stands every chance of being played." }
+      { q: "Are children welcome?", a: "Of course. The garden is enclosed, there is room to run, and games are planned." },
+      { q: "Why are you asking for a song?", a: "The day's music is built from your replies. Whatever you name stands every chance of being played." }
     ],
     fallback: "That is a question this page does not answer yet.",
     fallbackContact: "Write to us at {email} and we will reply the same day."
@@ -200,17 +203,16 @@ export const STR = {
   ar: {
     date: "السبت ٥ سبتمبر ٢٠٢٦", town: "فوس", rsvpCta: "أُلبّي الدعوة",
     welcomeKicker: "أهلاً وسهلاً",
-    welcome1: "يسرّنا أن ندعوكم لمشاركتنا فرحة زفافنا في بيت والدَي محمد أمين، في جوٍّ حميم بين الأقربين. وسيكون لنا عظيم السرور أن نتقاسم معكم هذه اللحظة ومائدةً نرجو أن تجمعنا في دفءٍ وأُنس.",
-    welcome2: "سواء أتيتم من أزرو أو من طهران أو من الجزائر أو من شلغوم العيد أو من آخر الشارع، تجدون في هذه الصفحة كل ما يلزمكم للاستعداد لزيارتكم:",
+    welcome1: "يسرّنا أن ندعوكم لمشاركتنا فرحة زفافنا في بيت عائلة بنائي، في جوٍّ حميم بين الأقربين. يسعدنا أن تكونوا معنا.",
     dayTitle: "برنامج اليوم",
     essTitle: "معلومات عملية", planPlaceholder: "مخطط الحديقة — سيُضاف قريباً",
-    chatTitle: "أسئلتكم", chatSub: "اسألوا ما شئتم: تجيبكم هذه الصفحة عنّا، اعتماداً على كل ما ورد فيها.",
+    chatTitle: "أسئلتكم", chatSub: "اسألوا ما شئتم: تجيبكم هذه الصفحة عنّا.",
     chatPlaceholder: "اكتبوا سؤالكم…", send: "إرسال",
-    rsvpTitle: "ردّكم", rsvpSub: "نرجو تكرّمكم بالردّ قبل ١٥ يوليو ٢٠٢٦.",
+    rsvpTitle: "ردّكم", rsvpSub: "نرجو ردّكم قبل ١٥ يوليو ٢٠٢٦.",
     yes: "سأكون معكم بإذن الله", no: "يعزّ عليّ أنّني لن أتمكّن",
     fName: "اسمكم", fCount: "عدد الحاضرين", fSong: "أغنية تودّون سماعها", fSongPh: "العنوان، الفنان…",
     fWord: "كلمة لنا", sendRsvp: "إرسال ردّي",
-    thanksTitle: "وصلنا ردّكم", thanksBody: "شكراً لكم من القلب. ننتظركم في الخامس من سبتمبر، تحت الأشجار.",
+    thanksTitle: "وصلنا ردّكم", thanksBody: "شكراً لكم من القلب. ننتظركم في الخامس من سبتمبر، في الحديقة.",
     address: "العنوان",
     /** @type {ScheduleEntry[]} */
     schedule: [
@@ -228,20 +230,20 @@ export const STR = {
     pins: [
       { label: "١ · البوابة", text: "الدخول من البوابة الخضراء، وتبقى مفتوحة طوال اليوم." },
       { label: "٢ · الطاولات", text: "الطاولات مُعدّة في جهة الحديقة، من غير ترتيب مسبق للجلوس." },
-      { label: "٣ · الشجرة الكبيرة", text: "هناك نلتقي بكم عند وصولكم." },
+      { label: "٣ · الاستقبال", text: "هناك نلتقي بكم عند وصولكم." },
       { label: "٤ · مواقف السيارات", text: "على طول الشارع، أمام البيت وما حوله." }
     ],
     facts: [
       { label: "بالقطار", value: "خط RER D حتى محطة Survilliers-Fosses، ثم الحافلة رقم ٤ — نحو عشرين دقيقة من المحطة." },
-      { label: "بالسيارة", value: "ساعة من باريس عبر الطريق A1. الوقوف حرّ في الشارع، ونرحّب بمن يأتي بسيارة واحدة مع غيره." },
-      { label: "اللباس", value: "أنيق ومريح. يمضي اليوم كلّه في الحديقة، على العشب." },
-      { label: "الطقس", value: "مطلع سبتمبر: معتدل بعد الظهر، وأبرد مع حلول المساء. خذوا معكم سترة." }
+      { label: "بالسيارة", value: "ساعة من باريس عبر A1. الوقوف حرّ في الشارع؛ تعالوا معاً في سيارة واحدة إن أمكن." },
+      { label: "اللباس", value: "أنيق ومريح. اليوم كلّه في الحديقة، على العشب." },
+      { label: "الطقس", value: "مطلع سبتمبر: معتدل بعد الظهر، أبرد مساءً. خذوا سترة." }
     ],
     chips: [
-      { q: "متى نصل؟", a: "نستقبلكم ابتداءً من الثالثة بعد الظهر. تُقدَّم المائدة على مراحل طوال العصر، فتعالوا في الوقت الذي يناسبكم، ولن يفوتكم شيء." },
+      { q: "متى نصل؟", a: "نستقبلكم من الثالثة بعد الظهر. تُقدَّم المائدة طوال العصر: تعالوا في الوقت الذي يناسبكم، ولن يفوتكم شيء." },
       { q: "كيف نصل إلى فوس؟", a: "خط RER D حتى محطة Survilliers-Fosses ثم الحافلة رقم ٤: نحو عشرين دقيقة من المحطة. وبالسيارة ساعة من باريس عبر A1، والوقوف حرّ في الشارع." },
-      { q: "هل الأطفال مدعوّون؟", a: "بكل تأكيد. الحديقة مسوّرة وفيها متّسع للّعب، وقد أعددنا ألعاباً في فترة العصر." },
-      { q: "لماذا تسألوننا عن أغنية؟", a: "موسيقى اليوم تُبنى من ردودكم. والأغنية التي تذكرونها في الاستمارة لها كل الحظّ في أن تُعزف." }
+      { q: "هل الأطفال مدعوّون؟", a: "بكل تأكيد. الحديقة مسوّرة وفيها متّسع للّعب، وقد أعددنا ألعاباً." },
+      { q: "لماذا تسألوننا عن أغنية؟", a: "موسيقى اليوم تُبنى من ردودكم. والأغنية التي تذكرونها لها كل الحظّ في أن تُعزف." }
     ],
     fallback: "سؤال لم تُجب عنه هذه الصفحة بعد.",
     fallbackContact: "اكتبوا لنا على {email} ونردّ عليكم في اليوم نفسه."
@@ -249,53 +251,52 @@ export const STR = {
   fa: {
     // Jalali, with the Gregorian alongside it because the guests are in France.
     // Everywhere ELSE in this locale the date is Jalali only — see thanksBody.
-    date: "شنبه ۱۴ شهریور ۱۴۰۵ · ۵ سپتامبر ۲۰۲۶", town: "فوس", rsvpCta: "پاسخ می‌دهم",
-    welcomeKicker: "خوش آمدید",
-    welcome1: "با کمال مسرّت شما را به جشن ازدواج خود در خانهٔ پدر و مادر محمدامین دعوت می‌کنیم؛ در جمعی خودمانی و صمیمی. مایهٔ خوشحالی بسیار ماست که این لحظه و سفره‌ای را در کنار شما قسمت کنیم، در فضایی که امیدواریم گرم و دلنشین باشد.",
-    welcome2: "چه از ازرو بیایید، چه از تهران، الجزیره، شلغوم‌العید یا از همین نزدیکی، هر آنچه برای آماده شدن سفرتان لازم است در این صفحه آمده است:",
-    dayTitle: "برنامهٔ روز",
-    essTitle: "اطلاعات کاربردی", planPlaceholder: "نقشهٔ باغ — به‌زودی افزوده می‌شود",
-    chatTitle: "پرسش‌های شما", chatSub: "هر چه می‌خواهید بپرسید: این صفحه از جانب ما پاسخ می‌دهد، بر پایهٔ هر آنچه در آن نوشته شده است.",
-    chatPlaceholder: "پرسشتان را بنویسید…", send: "ارسال",
-    rsvpTitle: "پاسخ شما", rsvpSub: "سپاسگزار می‌شویم اگر تا ۲۴ تیر ۱۴۰۵ پاسخ خود را برای ما بفرستید.",
-    yes: "حتماً خواهم آمد", no: "متأسفانه نمی‌توانم بیایم",
-    fName: "نام شما", fCount: "چند نفر تشریف می‌آورید", fSong: "آهنگی که دوست دارید پخش شود", fSongPh: "نام آهنگ، خواننده…",
-    fWord: "یک کلام برای ما", sendRsvp: "ارسال پاسخ من",
-    thanksTitle: "پاسخ شما به دست ما رسید", thanksBody: "از صمیم قلب سپاسگزاریم. چهاردهم شهریور، زیر درخت‌ها منتظرتان هستیم.",
+    date: "شنبه ۱۴ شهریور ۱۴۰۵ · ۵ سپتامبر ۲۰۲۶", town: "فوس", rsvpCta: "پاسخ می‌فرستم",
+    welcomeKicker: "مقدمتان گلباران",
+    welcome1: "شما را به جشن پیوند خود در خانهٔ خانوادهٔ بنایی دعوت می‌کنیم؛ جمعی کوچک و خودمانی، در باغ خانه. خوشحال می‌شویم کنارمان باشید.",
+    dayTitle: "آنچه در آن روز می‌گذرد",
+    essTitle: "دانستنی‌های سفر", planPlaceholder: "نقشهٔ باغ — به‌زودی",
+    chatTitle: "پرسش‌های شما", chatSub: "بپرسید؛ این صفحه از جانب ما پاسخ می‌گوید.",
+    chatPlaceholder: "پرسش خود را بنویسید…", send: "ارسال",
+    rsvpTitle: "پاسخ شما", rsvpSub: "تا ۲۴ تیر ۱۴۰۵ ما را بی‌خبر نگذارید.",
+    yes: "به دیدارتان می‌آیم", no: "افسوس که این‌بار در کنارتان نیستم",
+    fName: "نام شما", fCount: "چند نفر تشریف می‌آورید", fSong: "آهنگی که دوست دارید بشنوید", fSongPh: "نام آهنگ، خواننده…",
+    fWord: "سخنی برای ما", sendRsvp: "پاسخم را می‌فرستم",
+    thanksTitle: "پاسخ شما به دستمان رسید", thanksBody: "از صمیم دل سپاسگزاریم. چهاردهم شهریور، در باغ چشم‌به‌راهتان هستیم.",
     address: "نشانی",
     /** @type {ScheduleEntry[]} */
     schedule: [
       {
         time: "۱۵:۰۰", title: "دیدار در باغ",
         items: [
-          "سفره‌ای که در چند مرحله چیده می‌شود",
-          "عکس دسته‌جمعی",
-          "بازی",
-          "کیک",
-          "موسیقی و رقص"
+          "سفره‌ای که کم‌کم چیده می‌شود",
+          "عکس یادگاری، همه در یک قاب",
+          "بازی و سرگرمی",
+          "بریدن کیک",
+          "ساز و آواز و رقص"
         ]
       }
     ],
     pins: [
-      { label: "۱ · دروازه", text: "ورود از دروازهٔ سبز است که تمام روز باز می‌ماند." },
-      { label: "۲ · میزها", text: "میزها سمت باغ چیده شده و جای نشستن از پیش تعیین نشده است." },
-      { label: "۳ · درخت بزرگ", text: "هنگام رسیدنتان همان‌جا به استقبالتان می‌آییم." },
-      { label: "۴ · پارکینگ", text: "در طول خیابان، مقابل خانه و اطراف آن." }
+      { label: "۱ · دروازه", text: "از دروازهٔ سبز؛ تمام روز باز است." },
+      { label: "۲ · میزها", text: "سمت باغ چیده شده؛ هرجا دلتان خواست بنشینید." },
+      { label: "۳ · پذیرایی", text: "همان‌جا به پیشوازتان می‌آییم." },
+      { label: "۴ · پارکینگ", text: "در طول خیابان، روبه‌روی خانه و گرداگرد آن." }
     ],
     facts: [
-      { label: "با قطار", value: "خط RER D تا ایستگاه Survilliers-Fosses، سپس اتوبوس ۴ — حدود بیست دقیقه از ایستگاه." },
-      { label: "با ماشین", value: "یک ساعت از پاریس با اتوبان A1. پارک در خیابان آزاد است؛ اگر می‌توانید چند نفری با یک ماشین بیایید." },
-      { label: "پوشش", value: "شیک و راحت. تمام روز در باغ و روی چمن می‌گذرد." },
-      { label: "هوا", value: "اوایل سپتامبر: بعدازظهر ملایم و نزدیک غروب خنک‌تر. یک کت همراه داشته باشید." }
+      { label: "با قطار", value: "RER D تا ایستگاه Survilliers-Fosses، سپس اتوبوس ۴ — بیست دقیقه." },
+      { label: "با ماشین", value: "یک ساعت از پاریس با اتوبان A1. پارک در خیابان آزاد است؛ اگر می‌شود چند نفری بیایید." },
+      { label: "پوشش", value: "شیک و راحت؛ تمام روز در باغ و روی چمن." },
+      { label: "هوا", value: "نیمهٔ شهریور: بعدازظهر ملایم، غروب خنک. کتی همراه داشته باشید." }
     ],
     chips: [
-      { q: "چه ساعتی برسیم؟", a: "از ساعت سه بعدازظهر در خدمتتان هستیم. سفره در چند مرحله و در طول بعدازظهر چیده می‌شود؛ هر ساعتی که برایتان مناسب است بیایید، چیزی را از دست نمی‌دهید." },
-      { q: "چطور به فوس برسیم؟", a: "خط RER D تا ایستگاه Survilliers-Fosses و سپس اتوبوس ۴: حدود بیست دقیقه از ایستگاه. با ماشین یک ساعت از پاریس با اتوبان A1، و پارک در خیابان آزاد است." },
-      { q: "بچه‌ها هم دعوت‌اند؟", a: "البته. باغ محصور است و جا برای دویدن دارد، و برای بعدازظهر بازی هم در نظر گرفته‌ایم." },
-      { q: "چرا از ما آهنگ می‌پرسید؟", a: "موسیقی آن روز از پاسخ‌های شما ساخته می‌شود. آهنگی که در فرم می‌نویسید به احتمال زیاد پخش خواهد شد." }
+      { q: "چه ساعتی برسیم؟", a: "ما از ساعت ۱۵ آمادهٔ پذیرایی از شما عزیزان هستیم. سفره کم‌کم چیده می‌شود؛ هر وقت برسید، چیزی از دست نمی‌رود." },
+      { q: "چطور به فوس برسیم؟", a: "با RER D تا Survilliers-Fosses و اتوبوس ۴: بیست دقیقه. با ماشین یک ساعت از پاریس با A1؛ پارک در خیابان آزاد است." },
+      { q: "بچه‌ها هم دعوت‌اند؟", a: "البته. باغ دیوار دارد و جا برای دویدن؛ برای بعدازظهر بازی هم در نظر گرفته‌ایم." },
+      { q: "چرا از ما آهنگ می‌پرسید؟", a: "موسیقی آن روز را پاسخ‌های شما می‌سازد. آهنگی که بنویسید، به احتمال زیاد نواخته می‌شود." }
     ],
-    fallback: "پرسشی است که این صفحه هنوز پاسخش را ندارد.",
-    fallbackContact: "به {email} برای ما بنویسید، همان روز پاسخ می‌دهیم."
+    fallback: "این پرسشی است که هنوز پاسخی در این صفحه ندارد.",
+    fallbackContact: "به {email} بنویسید؛ همان روز پاسخ می‌دهیم."
   }
 };
 
@@ -409,6 +410,10 @@ const EXTRA = {
     doorHint: 'touchez pour entrer',
     verseGloss: '« Et Nous vous avons créés par couples. »',
     verseRef: "Sourate An-Naba', 8",
+    // Reads straight off the two names above it in the hero — the one line that
+    // says what this page is. Everything else up there (names, date, town) is
+    // true of a dinner too.
+    heroInvite: 'ont la joie de vous convier à leur mariage',
     errGoing: 'Choisissez une réponse.',
     errName: "Merci d'indiquer votre nom.",
     errNameLong: 'Ce nom est trop long.',
@@ -445,6 +450,7 @@ const EXTRA = {
     doorHint: 'tap to enter',
     verseGloss: '“And We created you in pairs.”',
     verseRef: "Sūrat an-Naba', 8",
+    heroInvite: 'invite you, with joy, to their wedding',
     errGoing: 'Please choose an answer.',
     errName: 'Please tell us your name.',
     errNameLong: 'That name is too long.',
@@ -484,6 +490,7 @@ const EXTRA = {
     doorHint: 'انقروا للدخول',
     verseGloss: '',
     verseRef: 'سورة النبأ، ٨',
+    heroInvite: 'يتشرّفان بدعوتكم إلى حفل زفافهما',
     errGoing: 'اختاروا أحد الجوابين.',
     errName: 'نرجو كتابة اسمكم.',
     errNameLong: 'هذا الاسم طويل أكثر من اللازم.',
@@ -493,22 +500,22 @@ const EXTRA = {
   },
   fa: {
     editReply: 'ویرایش پاسخم',
-    photoCta: 'عکس‌هایتان را با ما بگذارید',
-    rateLimited: 'در زمان کوتاهی پرسش‌های زیادی مطرح شد. کمی بعد ادامه می‌دهیم.',
-    botNote: 'پاسخ‌ها خودکار و بر پایهٔ اطلاعات همین صفحه است.',
+    photoCta: 'عکس‌هایتان را به یادگار بگذارید',
+    rateLimited: 'پرسش‌ها پشت سر هم زیاد شد. کمی درنگ کنید.',
+    botNote: 'پاسخ‌ها خودکارند، بر پایهٔ همین صفحه.',
     calendarCta: 'افزودن به تقویم من',
-    eventKind: 'یک عروسی',
-    rsvpOffline: 'پاسخ شما در حال حاضر ثبت نمی‌شود. لطفاً کمی بعد دوباره تلاش کنید — بقیهٔ صفحه در دسترس است.',
-    icsSummary: 'عروسی لیلا و محمدامین',
-    lostTitle: 'صفحه پیدا نشد',
-    lostBody: 'این پیوند به جایی نمی‌رسد. همه‌چیز در صفحهٔ اصلی است.',
+    eventKind: 'جشن پیوند',
+    rsvpOffline: 'پاسخ شما الان ثبت نمی‌شود. کمی بعد دوباره بفرستید — بقیهٔ صفحه سر جایش است.',
+    icsSummary: 'جشن پیوند لیلا و محمدامین',
+    lostTitle: 'این صفحه یافت نشد',
+    lostBody: 'این نشانی به جایی نمی‌رسد. هرچه هست، در صفحهٔ نخست است.',
     lostCta: 'بازگشت به دعوت‌نامه',
-    closing: 'مایهٔ افتخار ماست که این روز را در کنار شما جشن بگیریم.',
-    motto: 'شعار ما',
+    closing: 'خوشحال می‌شویم که در روز عروسی‌مان کنارمان باشید.',
+    motto: 'رهتوشهٔ ما',
     cdDays: 'روز',
     cdHours: 'ساعت',
     cdMins: 'دقیقه',
-    originsTitle: 'چهار کشور. دو خانواده. یک قصه.',
+    originsTitle: 'چهار سرزمین. دو خانواده. یک قصه.',
     origins: [
       { country: 'مراکش', cities: 'ازرو' },
       { country: 'ایران', cities: 'تهران' },
@@ -517,12 +524,13 @@ const EXTRA = {
     ],
     salamGloss: '',
     basmalaGloss: '',
-    doorHint: 'برای ورود لمس کنید',
-    verseGloss: '«و شما را جفت‌ها آفریدیم.»',
+    doorHint: 'برای گشودن در، لمس کنید',
+    verseGloss: '«و شما را جفت آفریدیم.»',
     verseRef: 'سورهٔ نبأ، ۸',
+    heroInvite: 'شما را به جشن پیوند خود فرا می‌خوانند',
     errGoing: 'لطفاً یکی از دو گزینه را انتخاب کنید.',
     errName: 'لطفاً نامتان را بنویسید.',
-    errNameLong: 'این نام بیش از حد بلند است.',
+    errNameLong: 'این نام بیش از اندازه بلند است.',
     themeToLight: 'تغییر به پوستهٔ روشن',
     themeToDark: 'تغییر به پوستهٔ تیره',
     langLabel: 'زبان'

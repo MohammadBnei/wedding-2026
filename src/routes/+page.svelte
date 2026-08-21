@@ -5,7 +5,6 @@
   import Zigzag from '$lib/components/Zigzag.svelte';
   import Arch from '$lib/components/Arch.svelte';
   import Door from '$lib/components/Door.svelte';
-  import Sprig from '$lib/components/Sprig.svelte';
   import Flourish from '$lib/components/Flourish.svelte';
   import Tracery from '$lib/components/Tracery.svelte';
   import { reveal } from '$lib/actions/reveal.js';
@@ -23,6 +22,7 @@
   let { data, form } = $props();
 
   const t = $derived(data.t);
+
 </script>
 
 <!--
@@ -44,14 +44,10 @@
   <header
     class="night relative isolate flex min-h-dvh flex-col lg:sticky lg:top-0 lg:h-screen lg:min-h-0 lg:overflow-y-auto"
   >
-    <!-- The one tracery that rests fully drawn rather than drawing itself on:
-         it is above the fold, where a 2.6s draw would compete with the hero's
-         own entrance instead of accompanying it. -->
-    <Tracery
-      kind="zellij"
-      class="pointer-events-none absolute end-1.5 top-2 -z-10 w-33 text-gold-soft opacity-50"
-    />
-
+    <!-- Nothing is laid on this field on purpose. It carries the girih, and a
+         zellij corner and a pair of sprays on top of strapwork is two patterns
+         arguing. The ornaments live on the paper column, where there is no
+         pattern for them to fight. -->
     <div class="flex flex-1 flex-col lg:h-full lg:justify-between lg:px-9 lg:py-10">
       <!-- The mihrab arch. On desktop it drops its rounding and becomes a panel. -->
       <div class="flex flex-1 flex-col justify-center px-3 pt-6 lg:block lg:flex-none lg:px-0 lg:pt-0">
@@ -60,23 +56,10 @@
 
              It is the SAME arch and the same component as the door that opens
              the site — see Arch.svelte. That arch springs at 10% and 90% of its
-             width, so the card below is 80% and centred: the card's two edges
-             ARE the jambs, and the horseshoe overhangs them the way it should.
-
-             The card then rides UP into it. A pointed horseshoe is 0.9 as tall as
-             it is wide, and left standing on top of the card that is a third of a
-             phone screen of empty white — so the invitation goes inside the arch,
-             where an invitation goes. -->
+             width, so the card below is 80% and centred: the card's two edges ARE
+             the jambs, and the rules down its sides are those jambs carrying on
+             past the springing line. -->
         <div class="hero-arch relative lg:hidden">
-          <!-- Sprays either side of the crown, echoing the botanical borders on
-               the henna card. Low opacity and behind the arch: they should read
-               as texture in the green, not as illustration competing with it. -->
-          <Sprig class="pointer-events-none absolute -top-10 left-1 h-16 w-16 text-primary-faint opacity-30" />
-          <Sprig
-            flip
-            leaves={6}
-            class="pointer-events-none absolute -top-8 right-1 h-14 w-14 text-primary-faint opacity-25"
-          />
           <Arch />
         </div>
         <!--
@@ -86,39 +69,45 @@
           hole in the sequence.
         -->
         <div
-          class="hero-card hero-stagger relative -mt-[53.8%] flex w-4/5 flex-col items-center gap-4 self-center bg-surface px-4 pt-7 pb-8 lg:mt-0 lg:w-full lg:items-start lg:self-stretch lg:bg-transparent lg:px-0 lg:pt-0 lg:text-start"
+          class="hero-card hero-stagger relative -mt-px flex w-4/5 flex-col items-center gap-4 self-center bg-surface px-4 pt-6 pb-8 lg:mt-0 lg:w-full lg:items-start lg:self-stretch lg:bg-transparent lg:px-0 lg:pt-0 lg:text-start"
         >
           <!--
-            The dotted tracery continues down the sides and across the foot, so it
-            frames the whole card rather than stopping at the arch. Plain inset-0
-            now: the card is exactly the width the arch springs at, so its own
-            edges are the jambs and there is no percentage to keep in step with
-            the curve. Pitch is 1.4px every 7px, matching the svg's non-scaling
-            stroke in Arch.svelte.
-
-            The card's top is inside the arch, so these two verticals start where
-            the curve is still WIDER than they are. -53.8% puts that at y = 36 of
-            the arch's 89.79, and the curve does not narrow back to the card's own
-            width until y = 32 — cut it any finer and the dots step outside the
-            arch they are supposed to continue.
+            The frame continues down the sides and across the foot, so it runs
+            round the whole card rather than stopping at the arch. Plain inset-0:
+            the card is exactly the width the arch springs at, so its own edges
+            ARE the jambs and there is no percentage to keep in step with the
+            curve. 3px to match Arch.svelte's non-scaling stroke.
           -->
           <div
-            class="pointer-events-none absolute inset-0 opacity-55 lg:hidden"
-            style="background:
-              repeating-linear-gradient(to bottom, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) left top / 1.4px 100% no-repeat,
-              repeating-linear-gradient(to bottom, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) right top / 1.4px 100% no-repeat,
-              repeating-linear-gradient(to right, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) left bottom / 100% 1.4px no-repeat"
+            class="pointer-events-none absolute inset-0 border-x-[3px] border-b-[3px] lg:hidden"
+            style="border-color: var(--color-arch-line)"
             aria-hidden="true"
           ></div>
 
-          <!-- The greeting the door just gave, said once more inside. It stands
-               where the eight-point star used to: the star was a second Maghrebi
-               mark directly above the zellij in the rail's corner, and a phrase
-               opens the page in a way an ornament cannot. -->
+          <!--
+            The greeting the door just gave, said once more inside. It stands
+            where the eight-point star used to: the star was a second Maghrebi
+            mark directly above the zellij in the rail's corner, and a phrase
+            opens the page in a way an ornament cannot.
+
+            It also carries the whole stack UP into the arch, which is why the
+            margin is here and not on .hero-card. The card is 80% wide and the
+            arch is narrower than that everywhere above its springing line, so a
+            card raised into the head sticks its own white corners out past the
+            curve on both sides. Raising the CONTENT instead leaves the white box
+            standing on the springing where it belongs, and the text above it is
+            simply on the arch's own fill — the same white in light, the same
+            night in dark. A negative top margin on the first child shortens the
+            card by exactly as much, so nothing opens up underneath.
+
+            27% of the CARD's width is 22% of the arch's, which puts the salam at
+            y = 18 of the head's 40.19. Lower than it looks: the arch is down to a
+            third of its width by y = 10, and the crown wants to stay empty.
+          -->
           <p
             dir="rtl"
             lang="ar"
-            class="font-arabic text-xl text-gold lg:text-gold-soft"
+            class="-mt-[27%] font-arabic text-xl text-gold lg:mt-0 lg:text-gold-soft"
           >
             {SHARED.salam}
           </p>
@@ -133,6 +122,19 @@
 
           <p dir="rtl" lang="ar" class="font-arabic text-lg font-bold text-primary lg:text-primary-faint">
             {SHARED.names.arabic}
+          </p>
+
+          <!--
+            The point of the page. Everything else in this card — the names, the
+            date, the town — is equally true of a dinner invitation; this is the
+            only line that says what is being celebrated. It sits directly under
+            the names because it reads off them: "Leïla & Mohammad-Amine / ont la
+            joie de vous convier à leur mariage".
+          -->
+          <p
+            class="font-display text-center text-[14px] leading-relaxed italic text-ink-body text-pretty lg:text-start lg:text-primary-ink"
+          >
+            {t.heroInvite}
           </p>
 
           <Flourish width="w-28" />
@@ -151,21 +153,18 @@
 
       <!-- Sticky control bar on mobile; just the footer of the rail on desktop. -->
       <div
-        class="night sticky top-0 z-20 flex items-center justify-between gap-2 px-5 py-3.5 lg:static lg:mt-8 lg:flex-col lg:items-start lg:gap-5 lg:px-0"
+        class="night sticky top-0 z-20 flex items-center gap-1.5 px-5 py-3.5 lg:static lg:mt-8 lg:px-0"
       >
-        <span class="caps text-xs font-light text-primary-faint lg:hidden">{SHARED.monogram}</span>
-        <div class="flex items-center gap-1.5">
-          <LangSwitcher current={data.lang} label={t.langLabel} />
-          <ThemeToggle current={data.theme} toLight={t.themeToLight} toDark={t.themeToDark} />
-        </div>
-      </div>
+        <!-- The four languages on one side, the theme toggle on the other, one
+             row across the bar's whole width. Logical order, not left/right: the
+             flex row reverses in Arabic and Persian, so the toggle stays on the
+             end you read towards.
 
-      <!-- The arch's pair of sprays is mobile-only, so the desktop rail gets its
-           own, low and behind the address block. -->
-      <Sprig
-        leaves={9}
-        class="pointer-events-none absolute bottom-6 -end-2 hidden h-28 w-28 -scale-x-100 text-primary-faint opacity-25 lg:block"
-      />
+             LangSwitcher brings its own grid and its own flex-1 — it is the part
+             that stretches; the toggle is one icon and stays one icon wide. -->
+        <LangSwitcher current={data.lang} label={t.langLabel} />
+        <ThemeToggle current={data.theme} toLight={t.themeToLight} toDark={t.themeToDark} />
+      </div>
 
       <!-- The address sits in the rail on desktop and in the footer on mobile.
            There are deliberately no phone numbers anywhere — see wedding.js. -->
@@ -174,12 +173,12 @@
         <p class="font-display mt-5 text-[15px] leading-relaxed italic text-primary-ink text-pretty">
           {t.closing}
         </p>
-        <span class="mt-5 block h-1.5 w-1.5 rotate-45 bg-gold-soft" aria-hidden="true"></span>
+        <Tracery kind="star" class="mt-5 w-2.5 text-gold-soft" />
         <p class="caps-wide mt-5 text-[11px] font-light text-primary-faint">{t.address}</p>
         <p dir="ltr" class="mt-1.5 text-sm leading-relaxed font-light text-primary-ink">
           {SHARED.addressLine1}<br />{SHARED.addressLine2}
         </p>
-        <span class="mt-5 block h-1.5 w-1.5 rotate-45 bg-gold-soft" aria-hidden="true"></span>
+        <Tracery kind="star" class="mt-5 w-2.5 text-gold-soft" />
         <!-- dir=ltr: the signature is a pair of Latin proper nouns and must not
              reorder in Arabic or Persian. -->
         <p dir="ltr" class="font-script mt-4 text-[26px] leading-tight text-gold-soft">
@@ -198,12 +197,22 @@
       would get no fade at all. Ending the wrapper here puts it exactly on that seam.
     -->
     <div class="relative isolate flex flex-col py-28 lg:py-32">
-      <Section kicker={t.welcomeKicker}>
-        <Tracery
-          class="pointer-events-none absolute end-3 bottom-2 -z-10 w-16 -scale-x-100 text-gold opacity-40"
-        />
+      <Section kicker={t.welcomeKicker} seed="welcome">
+        <!--
+          The Bismillah opens the invitation text, as it opens the document it
+          is standing in for. Set alone and untranslated in all four locales —
+          it is an invocation, not a sentence to be rendered into French, and
+          the fr/en gloss that exists (`basmalaGloss`) covers only the door's
+          two-word `بسم الله`, so it would translate half of this and stop.
+        -->
+        <p
+          dir="rtl"
+          lang="ar"
+          class="font-arabic text-center text-lg leading-loose text-gold"
+        >
+          {SHARED.bismillah}
+        </p>
         <p class="text-[15px] leading-loose font-light text-ink-body text-pretty">{t.welcome1}</p>
-        <p class="text-[15px] leading-loose font-light text-ink-body text-pretty">{t.welcome2}</p>
         <VerseCard
           title={t.originsTitle}
           verse={SHARED.verse}
@@ -214,10 +223,7 @@
         <Countdown {t} lang={data.lang} />
       </Section>
 
-      <Section title={t.dayTitle}>
-        <Sprig leaves={8}
-          class="pointer-events-none absolute end-4 top-6 -z-10 h-20 w-20 text-gold opacity-45"
-        />
+      <Section title={t.dayTitle} seed="day">
         <Timeline items={t.schedule} />
         <!-- The .ics covers the garden gathering, 15h-23h — see wedding.ics/+server.js.
              No `download` attribute: the point is to hand the file to the phone's
@@ -231,14 +237,7 @@
 
       <Zigzag reverse={true} />
 
-      <Section title={t.essTitle}>
-        <Tracery
-          kind="zellij"
-          class="pointer-events-none absolute end-0 top-3 -z-10 w-26 text-gold opacity-30"
-        />
-        <Sprig flip leaves={6}
-          class="pointer-events-none absolute start-1 bottom-4 -z-10 h-16 w-16 text-gold opacity-45"
-        />
+      <Section title={t.essTitle} seed="essentials">
         <GardenPlan pins={t.pins} placeholder={t.planPlaceholder} lang={data.lang} />
         <div class="mt-2 flex flex-col gap-3.5">
           {#each t.facts as fact (fact.label)}
@@ -256,13 +255,7 @@
 
       <Zigzag reverse={false} />
 
-      <Section title={t.chatTitle} tone="alt" fill>
-        <Tracery
-          class="pointer-events-none absolute end-2 top-2 -z-10 w-18 rotate-180 text-gold opacity-40"
-        />
-        <Sprig flip leaves={9}
-          class="pointer-events-none absolute start-2 bottom-6 -z-10 h-24 w-24 text-gold opacity-45"
-        />
+      <Section title={t.chatTitle} tone="alt" fill seed="chat">
         <p class="text-[13px] leading-relaxed font-light text-ink-muted">{t.chatSub}</p>
         <Chat {t} messages={data.messages} lang={data.lang} />
         <p class="text-[11px] font-light text-ink-muted">{t.botNote}</p>
@@ -270,11 +263,10 @@
 
       <Zigzag reverse={true} />
 
-      <Section title={t.rsvpTitle} id="rsvp">
-        <Tracery
-          class="pointer-events-none absolute start-0 bottom-3 -z-10 w-18 text-gold opacity-40"
-        />
-        <p class="text-[13px] leading-relaxed font-light text-ink-muted">{t.rsvpSub}</p>
+      <Section title={t.rsvpTitle} id="rsvp" seed="rsvp">
+        <!-- `rsvpSub` — the reply-by date — is deliberately NOT printed here any
+             more. It still reaches the bot through $lib/chat-prompt.js, so a
+             guest who asks when to reply by still gets the date. -->
         <RsvpForm {t} lang={data.lang} existing={data.rsvp} {form} canRsvp={data.canRsvp} />
       </Section>
 
@@ -286,31 +278,18 @@
         The wrapper is what moves, not the SVG: reveal-rise animates `transform`,
         which would fight a -translate-x-1/2 for centring. Centring with flex
         keeps the two off each other.
+
+        A SIBLING of the band, not a child: the band fades itself with a mask,
+        and a mask takes the children with it — the sun would set as fast as the
+        night it is rising out of.
       -->
-      <div class="dawn-band pointer-events-none absolute inset-x-0 top-0 z-10" aria-hidden="true">
-        <div use:reveal class="rises absolute inset-x-0 top-4 flex justify-center lg:top-5">
-          <Tracery kind="sun" class="turns w-14 text-gold-soft lg:w-16" />
-        </div>
-        <div use:reveal class="absolute inset-x-0 bottom-0 flex items-end justify-between px-6 lg:px-10">
-          <div class="flex items-end">
-            <!-- Sprig's stem foot sits at y=60 of a 64 viewBox, 6.25% above the
-                 bottom edge; the grass baseline is the edge itself. Nudging by
-                 that fraction is what puts them on one ground line. -->
-            <Sprig
-              leaves={6}
-              class="sways [animation-delay:800ms] -me-3 h-12 w-12 translate-y-[6.25%] text-gold opacity-70 lg:h-16 lg:w-16"
-            />
-            <Tracery kind="grass" class="sways w-24 text-gold lg:w-32" />
-          </div>
-          <div class="flex items-end">
-            <Tracery kind="grass" class="sways [animation-delay:1900ms] w-24 -scale-x-100 text-gold lg:w-32" />
-            <Sprig
-              flip
-              leaves={6}
-              class="sways [animation-delay:2900ms] -ms-3 h-12 w-12 translate-y-[6.25%] text-gold opacity-70 lg:h-16 lg:w-16"
-            />
-          </div>
-        </div>
+      <div class="dawn-band pointer-events-none absolute inset-x-0 top-0 z-10" aria-hidden="true"></div>
+      <div
+        use:reveal
+        class="rises pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center lg:top-5"
+        aria-hidden="true"
+      >
+        <Tracery kind="sun" class="turns w-14 text-gold-soft lg:w-16" />
       </div>
 
       <!-- Moonrise, and the stars again below it. -->
@@ -318,10 +297,13 @@
         class="dawn-band pointer-events-none absolute inset-x-0 bottom-0 z-10"
         style="--dawn-to: to top"
         aria-hidden="true"
+      ></div>
+      <div
+        use:reveal
+        class="rises pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center lg:bottom-5"
+        aria-hidden="true"
       >
-        <div use:reveal class="rises absolute inset-x-0 bottom-4 flex justify-center lg:bottom-5">
-          <Tracery kind="moon" class="w-16 text-primary-faint lg:w-20" />
-        </div>
+        <Tracery kind="moon" class="w-16 text-primary-faint lg:w-20" />
       </div>
     </div>
 
@@ -333,12 +315,12 @@
       >
         {t.closing}
       </p>
-      <span class="h-1.5 w-1.5 rotate-45 bg-gold-soft" aria-hidden="true"></span>
+      <Tracery kind="star" class="w-2.5 text-gold-soft" />
       <p class="caps-wide text-[11px] font-light text-primary-faint">{t.address}</p>
       <p dir="ltr" class="text-sm leading-relaxed font-light text-primary-ink">
         {SHARED.addressLine1}<br />{SHARED.addressLine2}
       </p>
-      <span class="h-1.5 w-1.5 rotate-45 bg-gold-soft" aria-hidden="true"></span>
+      <Tracery kind="star" class="w-2.5 text-gold-soft" />
       <p dir="ltr" class="font-script mt-2 text-[30px] leading-tight text-gold-soft">
         {SHARED.names.latin[0]}<span class="mx-1.5">&amp;</span>{SHARED.names.latin[1]}
       </p>
