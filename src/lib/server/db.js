@@ -133,10 +133,18 @@ export function migrate() {
         headcount   int     NOT NULL DEFAULT 1,
         song        text,
         message     text,
+        email       text,
         lang        text,
         created_at  timestamptz NOT NULL DEFAULT now(),
         updated_at  timestamptz NOT NULL DEFAULT now()
       )`;
+    // `CREATE TABLE IF NOT EXISTS` above is a no-op on a table that already
+    // exists, so the column in it reaches fresh databases only — local compose
+    // and CI. The deployed table needs this line, and will keep needing one per
+    // column added from here on. Additive and idempotent, which is the whole
+    // reason this is tolerable without a migration tool; a DESTRUCTIVE change
+    // is the point at which the ponytail note above comes due.
+    await sql`ALTER TABLE rsvp ADD COLUMN IF NOT EXISTS email text`;
     await sql`
       CREATE TABLE IF NOT EXISTS chat_message (
         id          bigserial PRIMARY KEY,

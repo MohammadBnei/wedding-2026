@@ -117,6 +117,13 @@
       }}
     />
 
+    <!--
+      Outside the going check on purpose: someone who cannot come is exactly the
+      person worth being able to send photographs to afterwards, and hiding the
+      box the moment they press "no" takes that away.
+    -->
+    <Field label={t.fEmail} name="email" type="email" maxlength={200} />
+
     {#if going !== false}
       <div class="flex flex-col gap-1.5">
         <span class="caps text-[11px] font-light text-ink-muted">{t.fCount}</span>

@@ -70,6 +70,7 @@ need it go quiet:
 | Chatbot | model answers, with history | canned FAQ, no memory |
 | Chat rate limits | enforced in SQL | not needed — no provider call is made |
 | RSVP name autocomplete | suggests | suggests nothing |
+| `/admin` | lists the replies | says so — an empty list would read as "nobody came" |
 | **RSVP** | saved | **refused, and the guest is told** |
 
 `dbUp()` and `dbOr()` in `src/lib/server/db.js` are the whole mechanism.
@@ -168,6 +169,40 @@ at the old URL reaches nobody who has already shared the link.
 bun test src        # prompt construction, guardrails, limits, name matching
 bun run test:e2e    # 38 browser tests, needs `bun run dev` (pinned to :5188)
 ```
+
+### `/admin` is gated at Traefik, not in the app
+
+`/admin` lists every reply — name, going, heads, email, song, message — with the
+three numbers above it. It is linked from nowhere and there is no login form,
+because the gate is not in this codebase at all: `helm/values.yaml` declares a
+second IngressRoute matching ``Host(...) && PathPrefix(`/admin`)`` and hangs
+authentik's shared `default/authentik-forwardauth` middleware on it. The chart's
+own route matches the host alone and carries no auth, which is what keeps the
+invitation public. This app is that middleware's first consumer cluster-wide.
+
+Two things in that manifest will serve the guest list to the internet if got
+wrong, and both are commented at length where they live:
+
+- **`priority: 100`.** Traefik's default priority is the *rule length*, so
+  ``Host(`wedding.bnei.dev`)`` scores around 26 on its own. A tidy small number
+  here puts the admin route *below* the chart's, and every `/admin` request gets
+  served by the unauthenticated one with a 200.
+- **The three baseline middlewares are repeated by hand.** The origin lock,
+  rate limit and security headers are prepended only to the IngressRoute the
+  chart renders; anything declared through `extraManifests` must wire the refs
+  itself or it sits outside the Cloudflare origin lock.
+
+`src/routes/admin/+page.server.js` also 404s unless the request carries
+`X-authentik-username`, bypassed under `dev`. That is **not** the security
+boundary — the header is set by the middleware and anything already on the pod
+network could forge it. It exists so that a routing mistake is a 404 instead of
+a leak. Nothing is authorised on the strength of it.
+
+The arithmetic lives in `src/lib/rsvp-summary.js`, apart from the route so it can
+be tested without a database. It deduplicates on the lowercased name because the
+`rsvp` primary key is `visitor_id` — a cookie, not a person — so a guest who
+replies on their phone and again on a laptop is two rows, and summing both books
+a table for people who do not exist. Newest wins.
 
 ## Deliberately absent
 

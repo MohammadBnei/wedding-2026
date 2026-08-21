@@ -140,6 +140,7 @@ test('RSVP refuses an empty form, then saves and can be edited', async ({ page }
 
   await form.getByRole('button', { name: 'Je serai des vôtres' }).click();
   await form.getByRole('button', { name: '3', exact: true }).click();
+  await form.getByLabel('Votre e-mail (facultatif)').fill('niloufar@example.test');
   await form.getByLabel('Un morceau à faire jouer').fill('Fairuz — Li Beirut');
   await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
 
@@ -148,6 +149,40 @@ test('RSVP refuses an empty form, then saves and can be edited', async ({ page }
   // The artifact had no way back from the thank-you screen.
   await form.getByRole('button', { name: 'Modifier ma réponse' }).click();
   await expect(form.getByLabel('Votre nom')).toBeVisible();
+});
+
+test('the email field is optional and does not block a reply', async ({ page }) => {
+  await visit(page, '/#rsvp');
+  const form = page.locator('#rsvp');
+
+  await form.getByLabel('Votre nom').fill('Sans Adresse');
+  await form.getByRole('button', { name: 'Je serai des vôtres' }).click();
+  // Left empty on purpose. `type="email"` only validates a NON-empty value, so
+  // an untouched box must not trip the native constraint the way `required`
+  // does on the name — that is the whole difference this test is protecting.
+  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
+  await expect(form).toContainText('Votre réponse nous est parvenue');
+});
+
+test('/admin lists the replies with their totals', async ({ page }) => {
+  // Unlinked and gated by authentik in the cluster; here there is no Traefik in
+  // front, so the route's dev bypass lets this through. What is being tested is
+  // the page, not the gate — the gate is a Traefik route and cannot be reached
+  // from a dev server at all.
+  await visit(page, '/#rsvp');
+  const form = page.locator('#rsvp');
+  await form.getByLabel('Votre nom').fill('Table Row');
+  await form.getByRole('button', { name: 'Je serai des vôtres' }).click();
+  await form.getByRole('button', { name: '2', exact: true }).click();
+  await form.getByLabel('Votre e-mail (facultatif)').fill('row@example.test');
+  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
+  await expect(form).toContainText('Votre réponse nous est parvenue');
+
+  await page.goto('/admin');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('replies');
+  const row = page.getByRole('row').filter({ hasText: 'Table Row' });
+  await expect(row).toContainText('row@example.test');
+  await expect(row).toContainText('2');
 });
 
 test('desktop shows a sticky rail beside a scrolling column', async ({ page }, testInfo) => {

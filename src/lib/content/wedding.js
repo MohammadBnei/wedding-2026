@@ -414,6 +414,11 @@ const EXTRA = {
     // says what this page is. Everything else up there (names, date, town) is
     // true of a dinner too.
     heroInvite: 'ont la joie de vous convier à leur mariage',
+    // Optional, and the label says so rather than a separate hint line: the
+    // form is short on purpose and an unexplained address box on a wedding
+    // invitation reads as a mailing list. Collected so the couple can send the
+    // photos afterwards without chasing numbers through four group chats.
+    fEmail: 'Votre e-mail (facultatif)',
     errGoing: 'Choisissez une réponse.',
     errName: "Merci d'indiquer votre nom.",
     errNameLong: 'Ce nom est trop long.',
@@ -451,6 +456,7 @@ const EXTRA = {
     verseGloss: '“And We created you in pairs.”',
     verseRef: "Sūrat an-Naba', 8",
     heroInvite: 'invite you, with joy, to their wedding',
+    fEmail: 'Your email (optional)',
     errGoing: 'Please choose an answer.',
     errName: 'Please tell us your name.',
     errNameLong: 'That name is too long.',
@@ -491,6 +497,7 @@ const EXTRA = {
     verseGloss: '',
     verseRef: 'سورة النبأ، ٨',
     heroInvite: 'يتشرّفان بدعوتكم إلى حفل زفافهما',
+    fEmail: 'بريدكم الإلكتروني (اختياري)',
     errGoing: 'اختاروا أحد الجوابين.',
     errName: 'نرجو كتابة اسمكم.',
     errNameLong: 'هذا الاسم طويل أكثر من اللازم.',
@@ -528,6 +535,7 @@ const EXTRA = {
     verseGloss: '«و شما را جفت آفریدیم.»',
     verseRef: 'سورهٔ نبأ، ۸',
     heroInvite: 'شما را به جشن پیوند خود فرا می‌خوانند',
+    fEmail: 'پست الکترونیکی شما (اختیاری)',
     errGoing: 'لطفاً یکی از دو گزینه را انتخاب کنید.',
     errName: 'لطفاً نامتان را بنویسید.',
     errNameLong: 'این نام بیش از اندازه بلند است.',
