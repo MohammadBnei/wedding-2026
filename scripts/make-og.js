@@ -113,10 +113,9 @@ const card = `<!doctype html><meta charset="utf-8"><style>
   /* Amiri's default line-height is generous enough to push the block past the
      top edge; both Arabic lines are single-line, so pin it. */
   .arabic { font: 28px/1.1 Amiri, serif; color: #c9cbee; direction: rtl }
-  .motto { font: 26px/1.1 Amiri, serif; color: #d9bc6a; direction: rtl }
-  .gloss, .meta { font-weight: 300; text-transform: uppercase; color: #d9bc6a }
-  .gloss { font-size: 15px; letter-spacing: .3em }
-  .meta { font-size: 21px; letter-spacing: .24em; color: #c9cbee; margin-top: 4px }
+  .salam { font: 26px/1.1 Amiri, serif; color: #d9bc6a; direction: rtl }
+  .meta { font-weight: 300; text-transform: uppercase; font-size: 21px;
+          letter-spacing: .24em; color: #c9cbee; margin-top: 4px }
 </style>
 <div class="frame"></div>
 ${zellij}
@@ -127,8 +126,7 @@ ${sun}
 <div class="star" style="--fill:#a94bc9;--punch:#1e2159"><i></i></div>
 <h1>${SHARED.names.latin[0]} <em>&amp;</em><br>${SHARED.names.latin[1]}</h1>
 <div class="arabic">${SHARED.names.arabic}</div>
-<div class="motto">${SHARED.motto}</div>
-<div class="gloss">${STR.fr.motto}</div>
+<div class="salam">${SHARED.salam}</div>
 <div class="meta">${STR.fr.date}</div>`;
 
 // The icons ARE the favicon, rasterised — one mark, so they cannot drift apart.

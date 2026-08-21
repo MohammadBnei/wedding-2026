@@ -19,7 +19,7 @@
   // against its URL, and WhatsApp — where most of this link will be pasted — has
   // no re-scrape tool at all, so without a new URL a redesigned card reaches
   // nobody who has already shared the link. The file ignores the query.
-  const OG_VERSION = 2;
+  const OG_VERSION = 3;
   const ogImage = $derived(`${origin}/og.png?v=${OG_VERSION}`);
 
   // What a preview and a search result are allowed to say: the kind of event and

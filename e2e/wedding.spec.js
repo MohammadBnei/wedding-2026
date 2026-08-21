@@ -6,8 +6,13 @@ import { test, expect } from '@playwright/test';
  * and the click goes nowhere — which looks exactly like a broken feature.
  */
 async function visit(page, path = '/') {
+  // Seed the returning-visitor flag so the entrance door opens itself instead of
+  // waiting to be pushed. Every test below is about the page BEHIND the door; the
+  // door's own behaviour, gate included, is the last test in this file.
+  await page.addInitScript(() => sessionStorage.setItem('door', '1'));
   await page.goto(path);
   await page.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
+  await page.locator('.door-scrim').waitFor({ state: 'detached' });
 }
 
 /**
@@ -321,4 +326,53 @@ test('the calendar button opens the calendar app rather than saving a file', asy
   await expect(link).toHaveAttribute('href', '/wedding.ics');
   // A `download` attribute would defeat the content-disposition above.
   await expect(link).not.toHaveAttribute('download', /.*/);
+});
+
+test('the door holds the page shut until it is pushed, then remembers', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
+
+  // First visit: shut, and staying shut.
+  const door = page.locator('.door-scrim');
+  await expect(door).toBeVisible();
+  await expect(page.getByText('السلام عليكم').first()).toBeVisible();
+  await page.waitForTimeout(1200);
+  await expect(door).toBeVisible();
+
+  // Nothing behind it moves while it is closed.
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow)).toBe(
+    'hidden'
+  );
+
+  await door.click();
+  await door.waitFor({ state: 'detached' });
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflow)).not.toBe(
+    'hidden'
+  );
+
+  // Second visit in the same session: it opens itself, with nobody touching it.
+  await page.reload();
+  await page.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
+  await door.waitFor({ state: 'detached' });
+});
+
+test('the door is not a trap for reduced motion or for scripting off', async ({ browser }) => {
+  // Reduced motion collapses the swing and the lift to 0.01ms, but the curtain
+  // still EXISTS for the 1.7s the component waits before dropping it. If it kept
+  // its pointer-events it would silently eat every click in that window.
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const p1 = await ctx.newPage();
+  await p1.goto('/');
+  await p1.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
+  await p1.locator('.door-scrim').click();
+  await p1.getByRole('link', { name: /je réponds|répond/i }).first().click({ timeout: 2000 });
+  await ctx.close();
+
+  // Scripting off: nothing can open the door, so it must never cover the page.
+  const noJs = await browser.newContext({ javaScriptEnabled: false });
+  const p2 = await noJs.newPage();
+  await p2.goto('/');
+  await expect(p2.locator('.door-scrim')).toBeHidden();
+  await expect(p2.getByRole('heading', { level: 1 })).toBeVisible();
+  await noJs.close();
 });
