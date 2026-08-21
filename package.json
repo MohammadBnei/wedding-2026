@@ -11,14 +11,17 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
     "test": "bun test src",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "release": "release-it"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "@release-it/conventional-changelog": "^10.0.4",
     "@sveltejs/adapter-node": "^5.5.4",
     "@sveltejs/kit": "^2.63.0",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@tailwindcss/vite": "^4.3.0",
+    "release-it": "^19.2.4",
     "svelte": "^5.56.1",
     "svelte-check": "^4.6.0",
     "tailwindcss": "^4.3.0",
@@ -28,5 +31,28 @@
   "dependencies": {
     "openai": "^7.5.0",
     "postgres": "^3.4.9"
+  },
+  "release-it": {
+    "$schema": "https://unpkg.com/release-it@19/schema/release-it.json",
+    "git": {
+      "commitMessage": "chore: release v${version}",
+      "tagName": "${version}",
+      "requireCommits": true,
+      "requireCommitsFail": false
+    },
+    "github": {
+      "release": false
+    },
+    "npm": {
+      "publish": false
+    },
+    "plugins": {
+      "@release-it/conventional-changelog": {
+        "preset": {
+          "name": "angular"
+        },
+        "infile": "CHANGELOG.md"
+      }
+    }
   }
 }

@@ -1,0 +1,101 @@
+# Cut a release with release-it + conventional-changelog: bump package.json,
+# regenerate CHANGELOG.md, tag, push to main. The tag push is what fires
+# docker.yml, which builds the image and bumps helm/values.yaml for ArgoCD.
+#
+# Shape copied from agent-fleet's release.yml, with one deliberate difference:
+# this one is gated on ci passing instead of firing straight off push-to-main.
+# workflow_run has no paths-ignore, so both the loop-breaker and the "did ci
+# actually validate *this* commit" check live in the gate step below, reading
+# real git state rather than webhook payload fields.
+name: release
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [ci] # must match ci.yml's `name:` exactly, lowercase
+    types: [completed]
+
+# Releases must not overlap. Two of them checking out main before either pushes
+# would compute the same version from the same latest tag; the loser's
+# `git push --follow-tags` is then rejected non-fast-forward, after it has
+# already bumped package.json and made a local tag. Serialised, the second run
+# sees the first one's tag — or skips, via the gate step.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # workflow_run fires for *every* ci run, including failed ones and the ones
+    # from pull_request. This only filters the obvious cases; the real decision
+    # is the gate step.
+    if: >-
+      github.event_name == 'workflow_dispatch' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # release-it needs a branch with an upstream to push to, so check out
+          # main rather than the validated sha; the gate step below is what makes
+          # that safe.
+          ref: main
+          # conventional-changelog needs the full history and the tags.
+          fetch-depth: 0
+          # Must be the PAT, not GITHUB_TOKEN: a tag pushed with GITHUB_TOKEN
+          # does not fire docker.yml, so the release would land and nothing
+          # would ever get built.
+          token: ${{ secrets.PAT }}
+
+      - name: Decide whether to release
+        id: gate
+        env:
+          VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          # Loop-breaker. release-it's own commit passes ci like any other, which
+          # fires this workflow again. Reading the actual commit beats matching on
+          # github.event.*.head_commit.message: this is the only thing between us
+          # and an infinite release loop, so it does not get to depend on a
+          # webhook field being populated.
+          case "$(git log -1 --format=%s)" in
+            'chore: release '*)
+              echo "::notice::HEAD is release-it's own commit — nothing to do"
+              exit 0 ;;
+          esac
+
+          # `ref: main` releases main's tip, which is not necessarily the commit
+          # ci validated. Merge two PRs a minute apart and the first ci run would
+          # otherwise tag, build and deploy the second one without it ever having
+          # passed. If main has moved on, skip: that newer commit fires its own ci
+          # run and releases itself, carrying this commit's changes with it.
+          if [ -n "${VALIDATED_SHA}" ] && [ "$(git rev-parse HEAD)" != "${VALIDATED_SHA}" ]; then
+            echo "::notice::main moved past the ci-validated commit ${VALIDATED_SHA} — its own run releases it"
+            exit 0
+          fi
+
+          echo "go=true" >> "$GITHUB_OUTPUT"
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.gate.outputs.go == 'true'
+
+      # --frozen-lockfile errors rather than rewriting bun.lock, and `prepare`
+      # only writes gitignored paths, so the tree stays clean for release-it.
+      - run: bun install --frozen-lockfile
+        if: steps.gate.outputs.go == 'true'
+
+      # No GITHUB_TOKEN in env: `github.release: false` disables release-it's
+      # GitHub plugin entirely. The token that matters is the checkout one above,
+      # persisted into .git/config, which is what pushes the tag.
+      - name: Run release-it
+        if: steps.gate.outputs.go == 'true'
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          bun run release
