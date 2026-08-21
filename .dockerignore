@@ -9,3 +9,4 @@ playwright-report
 *.md
 *.html
 *.csv
+compose.yaml
