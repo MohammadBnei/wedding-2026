@@ -15,6 +15,13 @@
   // cluster without a second place to configure the hostname.
   const origin = $derived(page.url.origin);
 
+  // Bump whenever static/og.png is re-rendered. Social platforms cache the card
+  // against its URL, and WhatsApp — where most of this link will be pasted — has
+  // no re-scrape tool at all, so without a new URL a redesigned card reaches
+  // nobody who has already shared the link. The file ignores the query.
+  const OG_VERSION = 2;
+  const ogImage = $derived(`${origin}/og.png?v=${OG_VERSION}`);
+
   // What a preview and a search result are allowed to say: the kind of event and
   // the day. Deliberately NOT the venue — this page is shared by link into group
   // chats and forwarded on, and a preview card is seen by far more people than
@@ -35,7 +42,7 @@
       endDate: venueInstant(SHARED.isoDate, 23).toISOString(),
       eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
       eventStatus: 'https://schema.org/EventScheduled',
-      image: `${origin}/og.png`,
+      image: ogImage,
       url: `${origin}/`
     })
   );
@@ -70,7 +77,7 @@
   <meta property="og:url" content="{origin}/" />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={preview} />
-  <meta property="og:image" content="{origin}/og.png" />
+  <meta property="og:image" content={ogImage} />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content={title} />

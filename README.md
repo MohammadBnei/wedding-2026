@@ -156,7 +156,13 @@ bun scripts/make-og.js             # rewrites the three PNGs, then look at them
 ```
 
 The card is French only — crawlers send no cookie, so they get the default
-language. Its facts come from `wedding.js`, so it cannot contradict the page.
+language. Its facts come from `wedding.js` and its ornaments from
+`$lib/tracery.js`, the same module `Tracery.svelte` draws from, so it can
+contradict neither the page's words nor its marks.
+
+**Bump `OG_VERSION` in `+layout.svelte` whenever you re-render it.** Platforms
+cache the card against its URL and WhatsApp has no re-scrape tool, so a new card
+at the old URL reaches nobody who has already shared the link.
 
 ```sh
 bun test src        # prompt construction, guardrails, limits, name matching

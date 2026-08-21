@@ -14,8 +14,10 @@
  *   src/app.html            <meta name="theme-color">  = primary-surface
  *   static/favicon.svg      the mark                   = primary-surface + blush
  *   static/manifest.webmanifest  theme/background      = primary-surface + surface
- *   scripts/make-og.js      the card, then `bun scripts/make-og.js` to re-render
- *                           og.png, apple-touch-icon.png and icon-512.png
+ *   scripts/make-og.js      the card — including the two gold values — then
+ *                           `bun scripts/make-og.js` to re-render og.png, and
+ *                           bump OG_VERSION in +layout.svelte so the new card
+ *                           actually reaches anyone who already shared the link
  *
  * The palette is anchored on three given colours. Which role each takes was not
  * a choice — the contrast maths only permits one arrangement:
