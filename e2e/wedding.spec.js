@@ -287,7 +287,10 @@ test('the link preview points at a card that actually exists', async ({ page, ba
   }
 
   const og = await page.locator('meta[property="og:image"]').getAttribute('content');
-  expect(og).toBe(`${baseURL}/og.png`);
+  // Versioned: platforms cache the card against its URL, and WhatsApp has no
+  // re-scrape tool, so a re-rendered card at the old URL would reach nobody who
+  // had already shared the link. The query is what makes a redesign propagate.
+  expect(og).toMatch(new RegExp(`^${baseURL}/og\\.png\\?v=\\d+$`));
   expect((await page.request.get(/** @type {string} */ (og))).status()).toBe(200);
 
   const canonical = await page.locator('link[rel="canonical"]').getAttribute('href');
