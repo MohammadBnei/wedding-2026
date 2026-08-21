@@ -5,13 +5,14 @@
   are positioned in percentages, so they scale over whatever goes underneath.
 -->
 <script>
-  import { PIN_POS, PIN_DIGITS, SHARED } from '$lib/content/wedding.js';
+  import { PIN_POS, SHARED, localeDigits } from '$lib/content/wedding.js';
 
-  let { pins, placeholder, rtl = false } = $props();
+  // `lang`, not `rtl`: the pin numerals differ between Arabic and Persian, so
+  // the direction alone was never enough to pick them.
+  let { pins, placeholder, lang } = $props();
 
   // The artifact defaulted to the third pin, "the big tree" — the gathering point.
   let active = $state(2);
-  const digits = $derived(rtl ? PIN_DIGITS.rtl : PIN_DIGITS.ltr);
 </script>
 
 <div class="flex flex-col gap-4">
@@ -39,12 +40,14 @@
         active
           ? 'bg-accent text-accent-ink'
           : 'bg-primary text-primary-ink opacity-55 hover:opacity-80'}"
-        style="left:{PIN_POS[i].left};top:{PIN_POS[i].top}"
+        style="left:{PIN_POS[i].left};top:{PIN_POS[i].top}{i === active
+          ? ''
+          : `;animation:pin-pulse 2.4s ${i * 0.4}s ease-out infinite`}"
         onclick={() => (active = i)}
         aria-pressed={i === active}
         aria-label={pin.label}
       >
-        {digits[i]}
+        {localeDigits(i + 1, lang)}
       </button>
     {/each}
   </div>

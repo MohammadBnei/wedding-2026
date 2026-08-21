@@ -29,13 +29,21 @@ Every colour lives in `@theme` in `src/app.css`. No component contains a raw hex
 or a stock Tailwind palette colour. The check:
 
 ```sh
-grep -rnE '#[0-9a-fA-F]{3,6}' src/lib src/routes   # must return nothing
+# The [^{] matters: `{#each` is four hex digits after a #, so the naive pattern
+# reports every block in every component and the check reads as permanently red.
+grep -rnE '[^{]#[0-9a-fA-F]{3,6}\b' src/lib src/routes   # must return nothing
 ```
 
 Note that `--color-primary-surface` (the large green field: rail, footer) and
 `--color-primary` (green as ink on paper) are deliberately separate tokens. Dark
 mode lifts the second for contrast and leaves the first dark — collapsing them
 turns the rail mint.
+
+`--color-gold` / `--color-gold-soft` are the same split for the second accent:
+gold as ink on paper (4.61:1 on `surface-alt`, the worst light ground it lands
+on) and gold on the night field (8.01:1). Only the ink lifts in dark; the field
+gold needs no dark variant, because the field is dark in both themes. Every
+ratio in `app.css`'s comments is measured — recompute before changing one.
 
 ### The chatbot degrades instead of breaking
 
@@ -83,7 +91,7 @@ Two rules worth keeping:
 Reproduce it locally by pointing the app at a port with nothing on it:
 
 ```sh
-WEDDING_DB_HOST=127.0.0.1 WEDDING_DB_PORT=1 bun run dev --port 5188
+WEDDING_DB_HOST=127.0.0.1 WEDDING_DB_PORT=1 bun run dev
 ```
 
 ### Link previews carry no address
@@ -152,7 +160,7 @@ language. Its facts come from `wedding.js`, so it cannot contradict the page.
 
 ```sh
 bun test src        # prompt construction, guardrails, limits, name matching
-bun run test:e2e    # 29 browser tests, needs the dev server on :5188
+bun run test:e2e    # 38 browser tests, needs `bun run dev` (pinned to :5188)
 ```
 
 ## Deliberately absent
@@ -177,6 +185,23 @@ Env-driven, set in the Infisical project (`wedding-2026-ih1x`):
 - **`gardenPlanImage`** — drop a drawing at `static/plan.jpg` and point at it;
   the four pins are positioned in percentages and scale over any image
 
+## Running it locally
+
+```sh
+cp .env.example .env            # gitignored; edit if you want the real chatbot
+docker compose up -d --wait     # Postgres on :55432, blocks until it accepts
+bun run dev                     # :5188, and reachable from a phone on the LAN
+```
+
+`compose.yaml` is the database and nothing else — the app runs on the host. It
+reads its port and credentials from the same `.env` the app does, so there is one
+definition rather than two that drift. `docker compose down` keeps the data;
+`down -v` wipes it. The schema builds itself on first request (`migrate()` in
+`server/db.js`), so there is nothing to seed.
+
+With `OPENAI_API_KEY` blank the chatbot answers from the canned FAQ, which is a
+supported state and not a broken one — see the degradation notes above.
+
 ## Deployment notes worth not relearning
 
 - **`ORIGIN` in `helm/values.yaml` is required.** Traefik terminates TLS and
@@ -188,7 +213,9 @@ Env-driven, set in the Infisical project (`wedding-2026-ih1x`):
   "localhost" marks cookies Secure on `http://192.168.x.x` too, and browsers drop
   those — language, theme and the visitor id stop persisting on a phone while
   everything looks fine on localhost.
-- `./dev-local.sh` runs against a throwaway Postgres with the real chatbot key.
-  Note the `env` **after** `--`: `infisical run` injects its own values over the
-  parent environment, so exporting `WEDDING_DB_HOST` beforehand is overridden by
-  `postgres.bnei.lan`, which does not resolve off-LAN.
+- **`infisical run` overrides the parent environment, not the other way round.**
+  If you start the dev server under it to get the real chatbot key, the local
+  database overrides have to come *after* the `--`, as `env KEY=VALUE …`.
+  Exporting `WEDDING_DB_HOST` beforehand is silently replaced by
+  `postgres.bnei.lan`, which does not resolve off-LAN. The invocation is written
+  out in `.env.example`.

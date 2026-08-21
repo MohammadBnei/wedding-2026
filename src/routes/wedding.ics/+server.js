@@ -12,7 +12,12 @@ export function GET({ locals }) {
   return new Response(icsBody(locals.lang), {
     headers: {
       'content-type': 'text/calendar; charset=utf-8',
-      'content-disposition': 'attachment; filename="leila-mohammad-amine.ics"',
+      // `inline`, not `attachment`. Both hand over a text/calendar body, but
+      // `attachment` tells the browser to SAVE it — which on a phone means a file
+      // sitting in Downloads that the guest then has to find and open. `inline`
+      // lets the platform pass it straight to the default calendar app, which is
+      // the whole point of the button.
+      'content-disposition': 'inline; filename="leila-mohammad-amine.ics"',
       // `private`, and Vary on the cookie: SUMMARY is localized from the `lang`
       // cookie, so a shared cache would pin one visitor's language for everyone,
       // and a plain `public, max-age` would hand a guest who switched language

@@ -11,12 +11,21 @@
 
   async function pick(lang) {
     if (lang === current) return;
-    await fetch('/api/prefs', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ lang })
-    });
-    await invalidateAll();
+    // Dim the page for however long the round trip actually takes, rather than
+    // for a fixed interval — see .lang-fade in app.css. The `finally` is the
+    // point: a failed fetch must not leave the site greyed out for good.
+    const root = document.documentElement;
+    root.dataset.langSwitching = '';
+    try {
+      await fetch('/api/prefs', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ lang })
+      });
+      await invalidateAll();
+    } finally {
+      delete root.dataset.langSwitching;
+    }
   }
 </script>
 

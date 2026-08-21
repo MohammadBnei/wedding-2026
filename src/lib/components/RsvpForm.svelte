@@ -10,11 +10,27 @@
   import Field from './Field.svelte';
   import Button from './Button.svelte';
   import Ornament from './Ornament.svelte';
+  import { localeDigits } from '$lib/content/wedding.js';
 
   // `canRsvp` false means Postgres is unreachable (see server/db.js). The rest
   // of the page is unaffected, so the form says so and stops rather than taking
   // an answer it cannot store.
-  let { t, existing = null, form = null, canRsvp = true } = $props();
+  let { t, lang, existing = null, form = null, canRsvp = true } = $props();
+
+  // Sixteen diamonds over the thank-you panel. Generated, not written out —
+  // and derived here rather than inline so the markup stays one <span>.
+  // The animation ENDS at opacity 0, so under reduced motion (where the global
+  // rule collapses it to a single 0.01ms pass) they simply never appear, which
+  // is the right degradation for confetti: absent, not frozen in mid-air.
+  const PETAL_TONES = ['bg-gold-soft', 'bg-blush', 'bg-primary-faint opacity-70'];
+  const PETALS = Array.from({ length: 16 }, (_, i) => ({
+    i,
+    start: 5 + i * 6,
+    size: 5 + (i % 3) * 3,
+    tone: PETAL_TONES[i % 3],
+    duration: 2.6 + (i % 5) * 0.5,
+    delay: i * 0.12
+  }));
 
   // The largest invites on the guest list bring six and five, which the original
   // 1-4 picker silently under-counted. `+page.server.js` clamps to the same
@@ -31,7 +47,14 @@
 </script>
 
 {#if saved}
-  <div class="night flex flex-col items-center gap-3 px-5 py-6 text-center">
+  <div class="night relative flex flex-col items-center gap-3 overflow-hidden px-5 py-6 text-center">
+    {#each PETALS as petal (petal.i)}
+      <span
+        class="absolute top-0 rotate-45 {petal.tone}"
+        style="inset-inline-start:{petal.start}%;width:{petal.size}px;height:{petal.size}px;animation:petal-fall {petal.duration}s {petal.delay}s ease-in both"
+        aria-hidden="true"
+      ></span>
+    {/each}
     <Ornament kind="star" size={32} tone="blush" punch="primary-surface" />
     <p class="font-display text-xl text-primary-ink">{t.thanksTitle}</p>
     <p class="text-[13px] leading-relaxed font-light text-primary-faint">{t.thanksBody}</p>
@@ -99,7 +122,9 @@
         <span class="caps text-[11px] font-light text-ink-muted">{t.fCount}</span>
         <div class="flex gap-1.5">
           {#each COUNTS as n (n)}
-            <Chip selected={count === n} onclick={() => (count = n)}>{n}</Chip>
+            <Chip selected={count === n} onclick={() => (count = n)}>
+              {localeDigits(n, lang)}
+            </Chip>
           {/each}
         </div>
       </div>

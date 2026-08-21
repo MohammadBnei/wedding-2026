@@ -1,0 +1,37 @@
+# The local Postgres, and nothing else. The app itself runs on the host under
+# `bun run dev` — this replaces the `docker run` plus `until pg_isready` loop
+# that dev-local.sh used to open with.
+#
+# Every value comes from .env, which the app reads too, so the port and the
+# credentials have ONE definition instead of one here and one there that quietly
+# drift apart.
+#
+#   docker compose up -d --wait     start it, block until it accepts connections
+#   bun run dev                     the site, on :5188
+#   docker compose down             stop it, keep the data
+#   docker compose down -v          stop it and wipe the data
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${WEDDING_DB_NAME}
+      POSTGRES_USER: ${WEDDING_DB_USER}
+      POSTGRES_PASSWORD: ${WEDDING_DB_PASSWORD}
+    # Published on WEDDING_DB_PORT, deliberately not 5432: it must not collide
+    # with a Postgres already installed on the machine, and that variable is what
+    # the app dials.
+    ports:
+      - '${WEDDING_DB_PORT}:5432'
+    volumes:
+      - wedding-pgdata:/var/lib/postgresql/data
+    # `up -d --wait` blocks on this, so the dev server can never start against a
+    # socket that is not accepting yet. Closing that race is the only thing the
+    # old until-loop did.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  wedding-pgdata:

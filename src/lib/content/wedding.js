@@ -56,8 +56,6 @@ export const PIN_POS = [
   { left: '64%', top: '78%' }
 ];
 
-/** Digits used for pin labels — Eastern Arabic in ar/fa, Latin elsewhere. */
-export const PIN_DIGITS = { ltr: ['1', '2', '3', '4'], rtl: ['١', '٢', '٣', '٤'] };
 
 export const STR = {
   fr: {
@@ -75,7 +73,6 @@ export const STR = {
     fWord: "un mot pour nous", sendRsvp: "envoyer",
     thanksTitle: "C'est noté", thanksBody: "Merci. On vous attend le 5 septembre, sous les arbres.",
     address: "l'adresse",
-    signoff: "À très vite",
     schedule: [
       { time: "13h30", title: "La mairie", note: "En cercle restreint — nous prévenons directement les personnes concernées." },
       { time: "15h", title: "Le repas au jardin", note: "On arrive quand on veut à partir de 15h. Ça dure tout l'après-midi." },
@@ -116,7 +113,6 @@ export const STR = {
     fWord: "a word for us", sendRsvp: "send",
     thanksTitle: "Noted", thanksBody: "Thank you. We'll see you on 5 September, under the trees.",
     address: "the address",
-    signoff: "See you very soon",
     schedule: [
       { time: "1.30pm", title: "The town hall", note: "A small circle only — we're telling those concerned directly." },
       { time: "3pm", title: "Lunch in the garden", note: "Come any time from 3pm. It runs all afternoon." },
@@ -157,7 +153,6 @@ export const STR = {
     fWord: "كلمة لنا", sendRsvp: "إرسال",
     thanksTitle: "وصلنا ردّكم", thanksBody: "شكراً لكم. نراكم في الخامس من سبتمبر، تحت الأشجار.",
     address: "العنوان",
-    signoff: "إلى اللقاء قريباً",
     schedule: [
       { time: "١٣:٣٠", title: "البلدية", note: "في نطاق ضيّق — سنبلغ المعنيين مباشرة." },
       { time: "١٥:٠٠", title: "الغداء في الحديقة", note: "تعالوا في أي وقت بعد الثالثة. يمتدّ طول العصر." },
@@ -198,7 +193,6 @@ export const STR = {
     fWord: "یک کلام برای ما", sendRsvp: "ارسال",
     thanksTitle: "ثبت شد", thanksBody: "سپاسگزاریم. پنجم سپتامبر، زیر درخت‌ها می‌بینیمتان.",
     address: "نشانی",
-    signoff: "به‌زودی می‌بینیمتان",
     schedule: [
       { time: "۱۳:۳۰", title: "شهرداری", note: "در جمعی کوچک — به افراد مربوط مستقیم خبر می‌دهیم." },
       { time: "۱۵:۰۰", title: "ناهار در باغ", note: "از ساعت سه هر وقت خواستید بیایید. تا عصر ادامه دارد." },
@@ -240,6 +234,27 @@ export function dirOf(lang) {
 }
 
 /**
+ * A number in the reader's own numerals — garden-plan pins, countdown figures.
+ *
+ * The numbering system is pinned explicitly rather than left to `ar-EG`/`fa-IR`,
+ * whose default varies between ICU versions. Persian is `arabext` (۱۲۳۴), NOT
+ * `arab` (١٢٣٤); the hand-written table this replaces gave both languages the
+ * Arabic digits, so Persian readers were seeing the wrong numerals.
+ *
+ * Grouping is off: these are digit substitutions, and a thousands separator in
+ * a day count is noise.
+ *
+ * @param {number} n
+ * @param {Lang} lang
+ */
+export function localeDigits(n, lang) {
+  return new Intl.NumberFormat(NUMERALS[lang] ?? 'en', { useGrouping: false }).format(n);
+}
+
+/** @type {Partial<Record<Lang, string>>} */
+const NUMERALS = { ar: 'en-u-nu-arab', fa: 'en-u-nu-arabext' };
+
+/**
  * The string table for a language, EXTRA included.
  *
  * The cast is doing real work: `Object.assign` at the foot of this file merges
@@ -273,7 +288,21 @@ const EXTRA = {
     icsSummary: 'Mariage de Leïla & Mohammad-Amine',
     lostTitle: 'Page introuvable',
     lostBody: "Ce lien ne mène nulle part. Tout se trouve sur la page d'accueil.",
-    lostCta: "retour à l'invitation"
+    lostCta: "retour à l'invitation",
+    // `motto` glosses SHARED.motto so it does not read as two more names.
+    // fr/en get the meaning; ar/fa already have it, so they get the framing.
+    closing: "Nous serons heureux de célébrer cette journée avec vous.",
+    motto: 'foi & patience',
+    cdDays: 'jours',
+    cdHours: 'heures',
+    cdMins: 'minutes',
+    originsTitle: 'Quatre pays. Deux familles. Une histoire.',
+    origins: [
+      { country: 'Maroc', cities: 'Azrou' },
+      { country: 'Iran', cities: 'Téhéran' },
+      { country: 'Algérie', cities: 'Alger · Chelghoum Laïd' },
+      { country: 'France', cities: 'Paris · Chauny' }
+    ]
   },
   en: {
     editReply: 'change my reply',
@@ -287,7 +316,19 @@ const EXTRA = {
     icsSummary: 'Wedding of Leïla & Mohammad-Amine',
     lostTitle: 'Page not found',
     lostBody: 'That link goes nowhere. Everything is on the front page.',
-    lostCta: 'back to the invitation'
+    lostCta: 'back to the invitation',
+    closing: 'We would be happy to celebrate this day with you.',
+    motto: 'faith & patience',
+    cdDays: 'days',
+    cdHours: 'hours',
+    cdMins: 'minutes',
+    originsTitle: 'Four countries. Two families. One story.',
+    origins: [
+      { country: 'Morocco', cities: 'Azrou' },
+      { country: 'Iran', cities: 'Tehran' },
+      { country: 'Algeria', cities: 'Algiers · Chelghoum Laïd' },
+      { country: 'France', cities: 'Paris · Chauny' }
+    ]
   },
   ar: {
     editReply: 'تعديل ردّي',
@@ -301,7 +342,19 @@ const EXTRA = {
     icsSummary: 'زفاف ليلى و محمد أمين',
     lostTitle: 'الصفحة غير موجودة',
     lostBody: 'هذا الرابط لا يؤدي إلى شيء. كل شيء في الصفحة الرئيسية.',
-    lostCta: 'العودة إلى الدعوة'
+    lostCta: 'العودة إلى الدعوة',
+    closing: 'يسعدنا أن نحتفل بهذا اليوم معكم.',
+    motto: 'شعارنا',
+    cdDays: 'أيام',
+    cdHours: 'ساعات',
+    cdMins: 'دقائق',
+    originsTitle: 'أربعة بلدان. عائلتان. حكاية واحدة.',
+    origins: [
+      { country: 'المغرب', cities: 'أزرو' },
+      { country: 'إيران', cities: 'طهران' },
+      { country: 'الجزائر', cities: 'الجزائر · شلغوم العيد' },
+      { country: 'فرنسا', cities: 'باريس · شوني' }
+    ]
   },
   fa: {
     editReply: 'ویرایش پاسخم',
@@ -315,7 +368,19 @@ const EXTRA = {
     icsSummary: 'عروسی لیلا و محمدامین',
     lostTitle: 'صفحه پیدا نشد',
     lostBody: 'این پیوند به جایی نمی‌رسد. همه‌چیز در صفحهٔ اصلی است.',
-    lostCta: 'بازگشت به دعوت‌نامه'
+    lostCta: 'بازگشت به دعوت‌نامه',
+    closing: 'خوشحال می‌شویم این روز را با شما جشن بگیریم.',
+    motto: 'شعار ما',
+    cdDays: 'روز',
+    cdHours: 'ساعت',
+    cdMins: 'دقیقه',
+    originsTitle: 'چهار کشور. دو خانواده. یک قصه.',
+    origins: [
+      { country: 'مراکش', cities: 'ازرو' },
+      { country: 'ایران', cities: 'تهران' },
+      { country: 'الجزایر', cities: 'الجزیره · شلغوم‌العید' },
+      { country: 'فرانسه', cities: 'پاریس · شونی' }
+    ]
   }
 };
 

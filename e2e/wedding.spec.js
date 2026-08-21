@@ -303,17 +303,19 @@ test('an unknown url gets the localized 404, not the bare SvelteKit one', async 
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Leïla');
 });
 
-test('the calendar button downloads a calendar file', async ({ page }) => {
+test('the calendar button opens the calendar app rather than saving a file', async ({ page }) => {
   // The BODY is asserted in src/lib/ics.test.js, which needs no server. What
   // only a browser can prove is that the route is wired up and that the headers
-  // make a phone hand the file to its calendar app instead of showing text.
+  // make a phone hand the file to its calendar app instead of parking it in
+  // Downloads.
   await visit(page, '/');
   const res = await page.request.get('/wedding.ics');
   expect(res.status()).toBe(200);
   expect(res.headers()['content-type']).toContain('text/calendar');
-  expect(res.headers()['content-disposition']).toContain('attachment');
-  await expect(page.getByRole('link', { name: 'ajouter au calendrier' })).toHaveAttribute(
-    'href',
-    '/wedding.ics'
-  );
+  // `attachment` would force a save; `inline` lets the platform hand it off.
+  expect(res.headers()['content-disposition']).toContain('inline');
+  const link = page.getByRole('link', { name: 'ajouter au calendrier' });
+  await expect(link).toHaveAttribute('href', '/wedding.ics');
+  // A `download` attribute would defeat the content-disposition above.
+  await expect(link).not.toHaveAttribute('download', /.*/);
 });
