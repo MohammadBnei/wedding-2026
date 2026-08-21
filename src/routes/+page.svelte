@@ -12,7 +12,7 @@
   import Button from '$lib/components/Button.svelte';
   import Row from '$lib/components/Row.svelte';
   import Timeline from '$lib/components/Timeline.svelte';
-  import Origins from '$lib/components/Origins.svelte';
+  import VerseCard from '$lib/components/VerseCard.svelte';
   import Countdown from '$lib/components/Countdown.svelte';
   import GardenPlan from '$lib/components/GardenPlan.svelte';
   import Chat from '$lib/components/Chat.svelte';
@@ -54,9 +54,19 @@
 
     <div class="flex flex-1 flex-col lg:h-full lg:justify-between lg:px-9 lg:py-10">
       <!-- The mihrab arch. On desktop it drops its rounding and becomes a panel. -->
-      <div class="flex flex-1 flex-col justify-center px-5 pt-6 lg:block lg:flex-none lg:px-0 lg:pt-0">
+      <div class="flex flex-1 flex-col justify-center px-3 pt-6 lg:block lg:flex-none lg:px-0 lg:pt-0">
         <!-- The arch head is decorative and mobile-only; on desktop the rail
-             is a flat panel, so it is dropped rather than squared off. -->
+             is a flat panel, so it is dropped rather than squared off.
+
+             It is the SAME arch and the same component as the door that opens
+             the site — see Arch.svelte. That arch springs at 10% and 90% of its
+             width, so the card below is 80% and centred: the card's two edges
+             ARE the jambs, and the horseshoe overhangs them the way it should.
+
+             The card then rides UP into it. A pointed horseshoe is 0.9 as tall as
+             it is wide, and left standing on top of the card that is a third of a
+             phone screen of empty white — so the invitation goes inside the arch,
+             where an invitation goes. -->
         <div class="hero-arch relative lg:hidden">
           <!-- Sprays either side of the crown, echoing the botanical borders on
                the henna card. Low opacity and behind the arch: they should read
@@ -76,21 +86,24 @@
           hole in the sequence.
         -->
         <div
-          class="hero-card hero-stagger relative -mt-px flex flex-col items-center gap-4 bg-surface px-7 pb-8 lg:mt-0 lg:items-start lg:bg-transparent lg:px-0 lg:text-start"
+          class="hero-card hero-stagger relative -mt-[53.8%] flex w-4/5 flex-col items-center gap-4 self-center bg-surface px-4 pt-7 pb-8 lg:mt-0 lg:w-full lg:items-start lg:self-stretch lg:bg-transparent lg:px-0 lg:pt-0 lg:text-start"
         >
           <!--
             The dotted tracery continues down the sides and across the foot, so it
-            frames the whole card rather than stopping at the arch. The arch's
-            dotted path meets the springing line at 5% and 95% of the width (it is
-            the outline scaled 0.9 about centre), which is why this inset is 5%.
-            Pitch is 1.4px every 7px to match the SVG's non-scaling stroke.
+            frames the whole card rather than stopping at the arch. Plain inset-0
+            now: the card is exactly the width the arch springs at, so its own
+            edges are the jambs and there is no percentage to keep in step with
+            the curve. Pitch is 1.4px every 7px, matching the svg's non-scaling
+            stroke in Arch.svelte.
 
-            The foot inset has to equal the side inset. A percentage `bottom`
-            resolves against HEIGHT, not width, so it cannot just be 5% — the card
-            is (100vw - 40px) wide, making 5% of it 5vw - 2px.
+            The card's top is inside the arch, so these two verticals start where
+            the curve is still WIDER than they are. -53.8% puts that at y = 36 of
+            the arch's 89.79, and the curve does not narrow back to the card's own
+            width until y = 32 — cut it any finer and the dots step outside the
+            arch they are supposed to continue.
           -->
           <div
-            class="pointer-events-none absolute inset-x-[5%] top-0 bottom-[calc(5vw-2px)] opacity-55 lg:hidden"
+            class="pointer-events-none absolute inset-0 opacity-55 lg:hidden"
             style="background:
               repeating-linear-gradient(to bottom, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) left top / 1.4px 100% no-repeat,
               repeating-linear-gradient(to bottom, var(--color-arch-line) 0 1.4px, transparent 1.4px 7px) right top / 1.4px 100% no-repeat,
@@ -191,26 +204,12 @@
         />
         <p class="text-[15px] leading-loose font-light text-ink-body text-pretty">{t.welcome1}</p>
         <p class="text-[15px] leading-loose font-light text-ink-body text-pretty">{t.welcome2}</p>
-        <Origins title={t.originsTitle} items={t.origins} />
-
-        <!--
-          Qur'an 78:8, per issue #11. Same shape as the motto in the identity
-          rail (Arabic line, small gloss beneath, gold): the two are the same
-          kind of object, so they should read as siblings rather than as two
-          unrelated inventions. The gloss line is dropped in Arabic, where the
-          verse needs none — see EXTRA.ar.verseGloss.
-        -->
-        <figure class="flex flex-col items-center gap-2 py-2 text-center">
-          <blockquote dir="rtl" lang="ar" class="font-arabic text-lg leading-loose text-gold">
-            {SHARED.verse}
-          </blockquote>
-          {#if t.verseGloss}
-            <p class="text-[13px] leading-relaxed font-light text-ink-muted text-pretty">
-              {t.verseGloss}
-            </p>
-          {/if}
-          <figcaption class="caps-wide text-[9px] font-light text-gold">{t.verseRef}</figcaption>
-        </figure>
+        <VerseCard
+          title={t.originsTitle}
+          verse={SHARED.verse}
+          gloss={t.verseGloss}
+          reference={t.verseRef}
+        />
 
         <Countdown {t} lang={data.lang} />
       </Section>

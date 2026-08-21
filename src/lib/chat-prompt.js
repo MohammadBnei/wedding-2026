@@ -42,6 +42,8 @@ export function systemPrompt(lang, runtime = {}) {
     'GETTING THERE AND PRACTICALITIES:',
     ...s.facts.map((f) => `- ${f.label}: ${f.value}`),
     '',
+    // No longer printed on the page (VerseCard replaced the grid), but still
+    // the answer to "where is the family from", so the bot keeps it.
     'WHERE THE TWO FAMILIES COME FROM:',
     ...s.origins.map((o) => `- ${o.country}: ${o.cities}`),
     '',
