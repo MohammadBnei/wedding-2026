@@ -34,16 +34,17 @@ export const actions = {
 
     /** @type {Record<string,string>} */
     const errors = {};
+    const msg = t(locals.lang);
 
     const goingRaw = str('going');
     if (goingRaw !== 'true' && goingRaw !== 'false') {
-      errors.going = 'Choisissez une réponse. / Please pick an answer.';
+      errors.going = msg.errGoing;
     }
     const going = goingRaw === 'true';
 
     const name = str('name');
-    if (!name) errors.name = 'Votre nom, s’il vous plaît. / Your name, please.';
-    else if (name.length > LIMITS.name) errors.name = 'Trop long. / Too long.';
+    if (!name) errors.name = msg.errName;
+    else if (name.length > LIMITS.name) errors.name = msg.errNameLong;
 
     const headcount = Number(str('headcount') || '1');
     // Not user-facing: the picker only offers 1-6, so anything else is a forged
@@ -72,7 +73,7 @@ export const actions = {
       console.error('[rsvp] write failed:', err instanceof Error ? err.message : err);
       // 503, not 500: this is temporary and the guest should come back. Their
       // answers stay in the form (enhance updates with reset: false).
-      return fail(503, { errors: { form: t(locals.lang).rsvpOffline } });
+      return fail(503, { errors: { form: msg.rsvpOffline } });
     }
 
     return { saved: true };

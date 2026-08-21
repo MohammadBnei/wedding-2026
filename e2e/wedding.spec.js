@@ -28,19 +28,19 @@ test('renders the invitation in French by default', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Leïla');
   await expect(page.getByRole('heading', { name: 'Le déroulé' })).toBeVisible();
-  await expect(page.getByText('13h30')).toBeVisible();
+  await expect(page.getByText('15h')).toBeVisible();
 });
 
 test('the RSVP call to action jumps to the form', async ({ page }) => {
   await visit(page, '/');
-  await page.getByRole('link', { name: 'je réponds' }).click();
+  await page.getByRole('link', { name: 'Je réponds' }).click();
   await expect(page).toHaveURL(/#rsvp/);
   await expect(page.locator('#rsvp')).toBeInViewport();
 });
 
 test('switching language re-renders and flips direction to RTL', async ({ page }) => {
   await visit(page, '/');
-  await page.getByRole('button', { name: 'AR', exact: true }).click();
+  await page.getByRole('button', { name: 'العربية', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
   await expect(page.getByRole('heading', { name: 'برنامج اليوم' })).toBeVisible();
@@ -48,7 +48,7 @@ test('switching language re-renders and flips direction to RTL', async ({ page }
 
 test('the accent rule mirrors to the right edge in Arabic', async ({ page }) => {
   await visit(page, '/');
-  await page.getByRole('button', { name: 'AR', exact: true }).click();
+  await page.getByRole('button', { name: 'العربية', exact: true }).click();
   // Measure only once the switch has actually landed, or we read the LTR layout.
   await page.locator('html[dir="rtl"]').waitFor();
 
@@ -101,23 +101,23 @@ test('dark theme actually repaints the surfaces and lifts the accent', async ({ 
 
 test('a chip question gets an answer and the transcript survives a reload', async ({ page }) => {
   await visit(page, '/');
-  await page.getByRole('button', { name: 'Il y a un parking ?' }).click();
+  await page.getByRole('button', { name: 'Les enfants sont-ils les bienvenus ?' }).click();
 
   const log = page.getByRole('log');
-  await expect(log).toContainText('Il y a un parking ?');
-  await expect(log).toContainText('stationnement est libre');
+  await expect(log).toContainText('Les enfants sont-ils les bienvenus ?');
+  await expect(log).toContainText('Le jardin est clos');
 
   // The artifact kept messages in component state; a refresh wiped them.
   await page.reload();
-  await expect(page.getByRole('log')).toContainText('stationnement est libre');
+  await expect(page.getByRole('log')).toContainText('Le jardin est clos');
 });
 
 test('switching language keeps the transcript (the artifact wiped it)', async ({ page }) => {
   await visit(page, '/');
-  await page.getByRole('button', { name: 'Comment venir ?' }).click();
+  await page.getByRole('button', { name: 'Comment venir jusqu\'à Fosses ?' }).click();
   await expect(page.getByRole('log')).toContainText('Survilliers-Fosses');
 
-  await page.getByRole('button', { name: 'EN', exact: true }).click();
+  await page.getByRole('button', { name: 'English', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.getByRole('log')).toContainText('Survilliers-Fosses');
 });
@@ -128,26 +128,26 @@ test('RSVP refuses an empty form, then saves and can be edited', async ({ page }
 
   // The name field is `required`, so the browser blocks the submit itself — a
   // native constraint doing the job before any request is made.
-  const name = form.getByLabel('votre nom');
-  await form.getByRole('button', { name: 'envoyer' }).click();
+  const name = form.getByLabel('Votre nom');
+  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
   expect(await name.evaluate((el) => el.validity.valueMissing)).toBe(true);
 
   // With a name but no attendance choice, the browser is satisfied and the
   // SERVER has to catch it.
   await name.fill('Niloufar');
-  await form.getByRole('button', { name: 'envoyer' }).click();
+  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
   await expect(form).toContainText('Choisissez une réponse');
 
-  await form.getByRole('button', { name: "j'y serai" }).click();
+  await form.getByRole('button', { name: 'Je serai des vôtres' }).click();
   await form.getByRole('button', { name: '3', exact: true }).click();
-  await form.getByLabel('un morceau à passer').fill('Fairuz — Li Beirut');
-  await form.getByRole('button', { name: 'envoyer' }).click();
+  await form.getByLabel('Un morceau à faire jouer').fill('Fairuz — Li Beirut');
+  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
 
-  await expect(form).toContainText("C'est noté");
+  await expect(form).toContainText('Votre réponse nous est parvenue');
 
   // The artifact had no way back from the thank-you screen.
-  await form.getByRole('button', { name: 'modifier ma réponse' }).click();
-  await expect(form.getByLabel('votre nom')).toBeVisible();
+  await form.getByRole('button', { name: 'Modifier ma réponse' }).click();
+  await expect(form.getByLabel('Votre nom')).toBeVisible();
 });
 
 test('desktop shows a sticky rail beside a scrolling column', async ({ page }, testInfo) => {
@@ -201,7 +201,7 @@ test('an explicit choice outranks the browser preference on the next visit', asy
   const ctx = await browser.newContext({ locale: 'en-GB' });
   const page = await ctx.newPage();
   await visit(page, '/');
-  await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await page.getByRole('button', { name: 'Français', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
 
   await page.reload();
@@ -216,7 +216,7 @@ test('cookies are not marked Secure over plain HTTP', async ({ page, context }) 
   // language switch, the theme and the visitor id all silently stopped
   // persisting — while working perfectly on localhost.
   await visit(page);
-  await page.getByRole('button', { name: 'AR', exact: true }).click();
+  await page.getByRole('button', { name: 'العربية', exact: true }).click();
   await page.locator('html[dir="rtl"]').waitFor();
 
   const cookies = await context.cookies();
@@ -231,7 +231,7 @@ test('a language choice survives a full reload', async ({ page }) => {
   // The end-to-end shape of the same bug: if the cookie is rejected, the switch
   // appears to work (the client re-renders) and then reverts on reload.
   await visit(page);
-  await page.getByRole('button', { name: 'AR', exact: true }).click();
+  await page.getByRole('button', { name: 'العربية', exact: true }).click();
   await page.locator('html[dir="rtl"]').waitFor();
 
   const res = await page.reload();
@@ -307,7 +307,7 @@ test('an unknown url gets the localized 404, not the bare SvelteKit one', async 
   expect(res?.status()).toBe(404);
   // French is the negotiated default for the fr-FR browser locale in use here.
   await expect(page.getByRole('heading', { name: 'Page introuvable' })).toBeVisible();
-  await page.getByRole('link', { name: "retour à l'invitation" }).click();
+  await page.getByRole('link', { name: "Retour à l'invitation" }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Leïla');
 });
 
@@ -322,7 +322,7 @@ test('the calendar button opens the calendar app rather than saving a file', asy
   expect(res.headers()['content-type']).toContain('text/calendar');
   // `attachment` would force a save; `inline` lets the platform hand it off.
   expect(res.headers()['content-disposition']).toContain('inline');
-  const link = page.getByRole('link', { name: 'ajouter au calendrier' });
+  const link = page.getByRole('link', { name: 'Ajouter à mon calendrier' });
   await expect(link).toHaveAttribute('href', '/wedding.ics');
   // A `download` attribute would defeat the content-disposition above.
   await expect(link).not.toHaveAttribute('download', /.*/);

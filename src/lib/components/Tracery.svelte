@@ -1,68 +1,66 @@
 <!--
-  The stroked ornaments, in the shape Ornament.svelte already established for
-  star/petal: one component, one `kind`.
+  The ornaments. One component, one `kind`.
 
-  The page is a walk through the day, and these are its hours:
+  The page runs on three marks and only three — the eight-point star, the sprig
+  (Sprig.svelte) and the girih field (static/girih.svg) — plus the sun and the
+  moon, which are not decoration but the two ends of the day the page walks
+  through, one appearance each:
 
+    star    the eight-point khatim, SOLID, with a real hole cut through it.
+            Amine's side, and the one mark that recurs: scattered across every
+            content section (see Section.svelte), threaded through the dividers,
+            standing as separators in the rail, on the RSVP panel, the 404 and
+            the favicon.
     sun     the day opening — a Persian solar disc, alternating long and short
             rays around a double ring. Leïla's side of the family.
-    grass   the horizon it rises over, and sets behind. The wedding is on a lawn.
-    zellij  a 2x2 lattice of eight-point stars over cross rules — Maghrebi
-            tilework, Amine's side.
-    fan     concentric quarter arcs springing from one corner, inside an L bracket
     moon    the day closing — the crescent and five-pointed star, drawn to the
             usual proportions: the star nested INSIDE the horns, not beside them.
-            The Maghrebi half of the page is the zellij; this one is the hilal.
-    band    the footer divider — a rule threaded through eight lozenges.
+    band    the footer divider — a rule threaded through eight stars.
+
+  A `fan` of quarter arcs, a row of `grass` blades and a `zellij` lattice used to
+  live here too. The fan belonged to no tradition; the grass was a second
+  botanical vocabulary next to Sprig's; and the lattice was the star arranged on
+  a grid, which the scatter in Section.svelte replaced — four stars pinned to
+  rules read as a tile sample, and the same four thrown across the box read as
+  ornament.
 
   The geometry itself lives in $lib/tracery.js rather than here, because
   scripts/make-og.js draws the same marks on the social card and cannot import a
   component. This file is only the presentation: the svg box, the stroke weight,
   and the draw-on.
 
-  NO vector-effect="non-scaling-stroke", unlike Arch.svelte. It would move
-  stroke-dasharray into screen units while --dash stays in viewBox units, and the
-  draw-on animation would break. Hairline weight comes from the viewBox scale.
+  `star` is the exception to the draw-on: it is the one kind that rests, because
+  it is scattered by the dozen and forty marks drawing themselves in at once is a
+  page that will not settle.
+
+  It is also the one kind that MAY use vector-effect="non-scaling-stroke", for
+  the same reason — with no stroke-dasharray to put out of step, the hairline can
+  stay a hairline whether it is drawn at 10px or at 44px. Nothing else here can
+  do that; see the note below.
+
+  NO vector-effect="non-scaling-stroke" on anything that draws itself on, unlike
+  Arch.svelte. It would move stroke-dasharray into screen units while --dash
+  stays in viewBox units, and the animation would break. For those, hairline
+  weight comes from the viewBox scale.
 
   Colour is currentColor, so the caller sets it with a token class and it stays
   right in both themes.
 -->
 <script>
   import {
-    CELLS,
-    SIDE,
-    ZELLIJ_RULES,
-    RADII,
-    FAN_BRACKET,
+    star,
     SUN_RAYS,
     MOON_CRESCENT,
     MOON_STAR,
-    GRASS_BLADES,
     BAND_RULE,
-    BAND_LOZENGES,
+    BAND_STARS,
     DASH
   } from '$lib/tracery.js';
 
-  let { kind = 'fan', class: klass = '' } = $props();
+  let { kind = 'star', class: klass = '' } = $props();
 </script>
 
-{#if kind === 'zellij'}
-  <svg viewBox="0 0 120 120" class={klass} aria-hidden="true">
-    <g data-draw style="--dash:{DASH.zellij}" fill="none" stroke="currentColor" stroke-width="1.1">
-      {#each CELLS as cell (`${cell.x}-${cell.y}`)}
-        <rect x={cell.x} y={cell.y} width={SIDE} height={SIDE} />
-        <rect
-          x={cell.x}
-          y={cell.y}
-          width={SIDE}
-          height={SIDE}
-          transform="rotate(45 {cell.x + SIDE / 2} {cell.y + SIDE / 2})"
-        />
-      {/each}
-      <path d={ZELLIJ_RULES} />
-    </g>
-  </svg>
-{:else if kind === 'sun'}
+{#if kind === 'sun'}
   <svg viewBox="0 0 100 100" class={klass} aria-hidden="true">
     <g
       data-draw
@@ -84,24 +82,11 @@
       style="--dash:{DASH.moon}"
       fill="none"
       stroke="currentColor"
-      stroke-width="1.6"
       stroke-linejoin="round"
+      stroke-width="1.6"
     >
       <path d={MOON_CRESCENT} />
       <path d={MOON_STAR} />
-    </g>
-  </svg>
-{:else if kind === 'grass'}
-  <svg viewBox="0 0 100 24" class={klass} aria-hidden="true" preserveAspectRatio="xMidYMax meet">
-    <g
-      data-draw
-      style="--dash:{DASH.grass}"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.1"
-      stroke-linecap="round"
-    >
-      <path d={GRASS_BLADES} />
     </g>
   </svg>
 {:else if kind === 'band'}
@@ -111,27 +96,27 @@
       style="--dash:{DASH.band}"
       fill="none"
       stroke="currentColor"
-      stroke-width="1"
       stroke-linecap="round"
+      stroke-width="1"
     >
       <path d={BAND_RULE} />
-      <path d={BAND_LOZENGES} />
+      <path d={BAND_STARS} />
     </g>
   </svg>
 {:else}
-  <svg viewBox="0 0 80 80" class={klass} aria-hidden="true">
-    <g
-      data-draw
-      style="--dash:{DASH.fan}"
-      fill="none"
+  <!-- Outline only. Filled, with the centre punched out, it read as a gear:
+       eight teeth around a hole is a cog before it is a star. Drawn as a line it
+       is unmistakably the khatim, and it sits with the rest of the page, which
+       is line-work throughout.
+
+       R is 38 in a box of 80, not 40: half the stroke falls outside the path, so
+       a star drawn to the edge loses its points to the viewBox. -->
+  <svg viewBox="0 0 80 80" class={klass} fill="none" aria-hidden="true">
+    <path
+      d={star(40, 40, 38)}
       stroke="currentColor"
-      stroke-width="1"
-      stroke-linecap="round"
-    >
-      {#each RADII as r (r)}
-        <path d="M0 80 A{r} {r} 0 0 1 {r} {80 - r}" />
-      {/each}
-      <path d={FAN_BRACKET} />
-    </g>
+      stroke-width="1.3"
+      vector-effect="non-scaling-stroke"
+    />
   </svg>
 {/if}

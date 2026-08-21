@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { systemPrompt, cannedAnswer, MAX_MESSAGE, PER_VISITOR_HOURLY } from './chat-prompt.js';
-import { STR, LANGS } from './content/wedding.js';
+import { STR, LANGS, fallbackText } from './content/wedding.js';
 
 test('the system prompt is built from the same content the page renders', () => {
   const prompt = systemPrompt('fr');
@@ -9,6 +9,9 @@ test('the system prompt is built from the same content the page renders', () => 
   for (const item of STR.fr.schedule) {
     expect(prompt).toContain(item.time);
     expect(prompt).toContain(item.title);
+    // The programme's bullets are facts too — a guest asking "is there a cake?"
+    // gets an answer only if they reached the prompt.
+    for (const entry of item.items ?? []) expect(prompt).toContain(entry);
   }
   for (const fact of STR.fr.facts) expect(prompt).toContain(fact.value);
 });
@@ -33,8 +36,8 @@ test('canned answers match a chip regardless of case and spacing', () => {
 });
 
 test('an unknown question falls back to the handoff line, never a guess', () => {
-  expect(cannedAnswer('puis-je amener mon chien ?', 'fr')).toBe(STR.fr.fallback);
-  expect(cannedAnswer('what is the wifi password', 'en')).toBe(STR.en.fallback);
+  expect(cannedAnswer('puis-je amener mon chien ?', 'fr')).toBe(fallbackText('fr'));
+  expect(cannedAnswer('what is the wifi password', 'en')).toBe(fallbackText('en'));
 });
 
 test('the limits that protect the bill and the trust boundary are set', () => {
@@ -43,8 +46,10 @@ test('the limits that protect the bill and the trust boundary are set', () => {
 });
 
 test('the prompt carries no contact details and forbids inventing any', () => {
-  // There are no numbers on the site or in this repo. Without an explicit ban a
-  // model asked "how do I reach you?" will format a plausible-looking one.
+  // The page's one email lives in the FALLBACK line, not in the prompt: the
+  // model must never volunteer a contact detail, because a plausible-looking
+  // invented one is worse than "I don't know". The hand-off happens on the way
+  // out, in copy nobody generated.
   const prompt = systemPrompt('fr');
   expect(prompt).not.toContain('Contact:');
   expect(prompt).toContain('ask Leïla or Amine directly');

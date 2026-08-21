@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import { sql, dbOr } from '$lib/server/db.js';
 import { answer, checkRateLimit, history, MAX_MESSAGE } from '$lib/server/chat.js';
-import { pickLang, t } from '$lib/content/wedding.js';
+import { pickLang, t, fallbackText } from '$lib/content/wedding.js';
 
 /** @type {import('./$types').RequestHandler} */
 export async function POST({ request, locals }) {
@@ -24,7 +24,7 @@ export async function POST({ request, locals }) {
   } catch (e) {
     console.error('[chat] provider call failed:', e);
     // Never surface a provider error to a guest; give them the handoff line.
-    reply = t(lang).fallback;
+    reply = fallbackText(lang);
   }
 
   // Persist both halves together so the transcript can't end up lopsided.

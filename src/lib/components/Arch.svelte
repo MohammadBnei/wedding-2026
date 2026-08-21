@@ -1,59 +1,64 @@
 <!--
-  The cusped (multifoil) arch head — the silhouette from the henna invitation, so
-  the two events read as one set.
+  The arch — the hero's head and the door's frame, one component, one curve.
 
-  Geometry: lobes ride a guiding ellipse from the springing line towards the
-  crown, each a circular arc bulging outward so the joins read as cusps. The
-  crown is NOT a lobe — the last stretch is an ogee converging to a sharp point,
-  which is what keeps it from looking like a cloud.
+  The geometry is $lib/arch.js, because Door.svelte draws its leaf panels from
+  the same moorish() at a smaller scale and a component cannot be imported for
+  its numbers alone.
 
-  The viewBox ratio (100:34) matches the rendered box, since width:100% with no
-  height gives an SVG its intrinsic ratio — so nothing is distorted at any width
-  and the shape holds its proportions on every phone. Fill is currentColor so it
-  inherits the surface token rather than naming a colour.
+  Two props, and between them they cover both callers:
 
-  Two shapes, one outline. `inverse` gives the SPANDRELS — the bounding box minus
-  the arch head — which is what lets Door.svelte cut an arched opening into a
-  rectangle of door leaves without a clip-path. A clip-path would need this same
-  curve renormalised to 0..1 for objectBoundingBox units, i.e. a second,
-  hand-divided copy of the geometry; an even-odd fill needs none.
+    inverse  fill the SPANDRELS instead of the opening — the box minus the arch.
+             Laid over something in the background's own colour, that is what
+             cuts it to the curve; it is how the door's leaves become arched
+             without a clip-path.
+    foot     how far the jambs run below the springing line, in viewBox units.
+             0 is the hero, which is a head sitting on a card whose height is
+             whatever its text comes to and which draws its own sides in CSS.
+             The door passes the rest of its box and gets jambs and a threshold.
+
+  NO preserveAspectRatio="none". It used to have it, and stretching this curve is
+  what made the door out of it read as a rounded rectangle. The svg is `w-full`
+  and takes its height from the viewBox; a caller that wants it shorter has to
+  make it narrower.
+
+  Colour is currentColor for the fill and --color-arch-line for the frame, so
+  the caller sets both with token classes and they stay right in both themes.
 -->
 <script>
-  let { inverse = false, class: klass = 'text-surface' } = $props();
+  import { ARCH, CX } from '$lib/arch.js';
 
-  // The outline, springing line to springing line.
-  const OUTLINE =
-    'M 0 34 A 10.60 10.60 0 0 0 3.64 21.26 A 12.04 12.04 0 0 0 14.03 10.38 ' +
-    'C 26.62 3.11 44.25 1.66 50 0 C 55.75 1.66 73.38 3.11 85.97 10.38 ' +
-    'A 12.04 12.04 0 0 0 96.36 21.26 A 10.60 10.60 0 0 0 100 34';
+  let { inverse = false, foot = 0, class: klass = 'text-surface' } = $props();
 
-  // Filled shape closes across the bottom; the dotted tracery must NOT, or it
-  // draws a stray line straight across the base of the arch.
-  const D = inverse ? `M 0 0 H 100 V 34 H 0 Z ${OUTLINE} Z` : `${OUTLINE} L 100 34 Z`;
+  const L = CX - ARCH.narrow;
+  const R = CX + ARCH.narrow;
+
+  const H = $derived(ARCH.spring + foot);
+
+  const D = $derived(
+    inverse
+      ? `M0 0 H100 V${H} H0 Z ${ARCH.head} V${H} H${L} Z`
+      : `${ARCH.head} V${H} H${L} Z`
+  );
+
+  // The frame is drawn ON the outline rather than inset from it, so there is
+  // nothing for the two to drift apart by. It was a dotted hairline; it is a
+  // solid 3px now, because a doorway wants a frame with some timber in it.
+  const TRACERY = $derived(
+    foot
+      ? `${ARCH.head} M${L} ${ARCH.spring} V${H} M${R} ${ARCH.spring} V${H} M${L} ${H} H${R}`
+      : ARCH.head
+  );
 </script>
 
-<svg
-  class="block w-full {klass}"
-  viewBox="0 0 100 34"
-  preserveAspectRatio="none"
-  fill="currentColor"
-  aria-hidden="true"
->
+<svg class="block w-full {klass}" viewBox="0 0 100 {H}" fill="currentColor" aria-hidden="true">
   <path d={D} fill-rule="evenodd" />
-  <!-- The dotted line tracing the arch, straight off the henna invitation. Same
-       path scaled about the springing line so it sits parallel inside the edge.
-       non-scaling-stroke keeps the dots a fixed 1.4px every 7px no matter the
-       card width, which is what lets the CSS-drawn dots down the card's sides
-       (see +page.svelte) match it exactly at the join. -->
   <path
-    d={OUTLINE}
+    d={TRACERY}
     fill="none"
     stroke="var(--color-arch-line)"
-    stroke-width="1.4"
-    stroke-dasharray="0.1 7"
+    stroke-width="3"
+    stroke-linejoin="round"
     stroke-linecap="round"
     vector-effect="non-scaling-stroke"
-    opacity="0.55"
-    transform="translate(50 34) scale(0.9 0.82) translate(-50 -34)"
   />
 </svg>

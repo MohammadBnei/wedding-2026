@@ -7,7 +7,12 @@
   import Chip from './Chip.svelte';
   import { LANGS } from '$lib/content/wedding.js';
 
-  let { current, tone = 'on-primary' } = $props();
+  let { current, tone = 'on-primary', label } = $props();
+
+  // Endonyms, not translations: a language is named in itself everywhere, so the
+  // list reads the same whichever language the page is in.
+  const NAMES = { fr: 'Français', en: 'English', ar: 'العربية', fa: 'فارسی' };
+
 
   async function pick(lang) {
     if (lang === current) return;
@@ -29,16 +34,21 @@
   }
 </script>
 
-<div class="flex gap-1.5" role="group" aria-label="Language">
+<!-- Four equal columns filling whatever room the control bar leaves after the
+     theme toggle: four names of four different widths read as four different
+     kinds of thing.
+
+     `flex-1` because the bar is a flex row — this group takes the space, the
+     toggle stays its own size on the other side of it. -->
+<div class="grid flex-1 grid-cols-4 gap-1.5" role="group" aria-label={label}>
   {#each LANGS as lang (lang)}
     <Chip
       {tone}
       selected={lang === current}
       onclick={() => pick(lang)}
-      aria-label={lang.toUpperCase()}
-      lang="en"
+      {lang}
     >
-      {lang.toUpperCase()}
+      {NAMES[lang]}
     </Chip>
   {/each}
 </div>

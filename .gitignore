@@ -28,6 +28,11 @@ vite.config.ts.timestamp-*
 # The original design artifact (945KB, kept locally as the visual reference).
 *wedding site.html
 
+# The licensed Vecteezy stock drawing the arch was traced from. Kept locally as
+# the reference $lib/arch.js points at — this repo is public and the licence is
+# not ours to redistribute.
+vecteezy_*.svg
+
 # Playwright
 /test-results/
 /playwright-report/

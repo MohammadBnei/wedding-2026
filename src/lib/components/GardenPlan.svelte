@@ -11,7 +11,8 @@
   // the direction alone was never enough to pick them.
   let { pins, placeholder, lang } = $props();
 
-  // The artifact defaulted to the third pin, "the big tree" — the gathering point.
+  // The artifact defaulted to the third pin — the gathering point, where guests
+  // are met on arrival.
   let active = $state(2);
 </script>
 

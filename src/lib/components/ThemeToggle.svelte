@@ -10,7 +10,7 @@
 <script>
   import Chip from './Chip.svelte';
 
-  let { current = 'light', tone = 'on-primary' } = $props();
+  let { current = 'light', tone = 'on-primary', toLight, toDark } = $props();
   let theme = $state(current);
 
   function toggle() {
@@ -27,11 +27,11 @@
 <Chip
   {tone}
   onclick={toggle}
-  aria-label={theme === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre'}
+  aria-label={theme === 'dark' ? toLight : toDark}
 >
   <svg
-    width="13"
-    height="13"
+    width="16"
+    height="16"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"

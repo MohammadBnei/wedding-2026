@@ -3,7 +3,7 @@
   import { STR } from '$lib/content/wedding.js';
   import Section from '$lib/components/Section.svelte';
   import Button from '$lib/components/Button.svelte';
-  import Ornament from '$lib/components/Ornament.svelte';
+  import Tracery from '$lib/components/Tracery.svelte';
   import Flourish from '$lib/components/Flourish.svelte';
 
   // No `data` prop reaches +error.svelte — layout data arrives on page.data,
@@ -17,7 +17,7 @@
 <div class="flex min-h-dvh flex-col items-center justify-center bg-surface">
   <Section>
     <div class="flex flex-col items-center gap-5 text-center">
-      <Ornament kind="star" size={44} tone="accent" punch="surface" />
+      <Tracery kind="star" class="w-11 text-accent" />
       <p class="caps-wide text-[11px] font-light text-accent">{page.status}</p>
       <h1 class="font-display text-3xl text-ink">{t.lostTitle}</h1>
       <Flourish width="w-28" />
