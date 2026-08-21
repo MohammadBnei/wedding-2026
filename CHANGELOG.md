@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.7.0](https://github.com/MohammadBnei/wedding-2026/compare/0.6.0...0.7.0) (2026-08-21)
+
+
+### Features
+
+* **rsvp:** add an authentik-gated admin list and an optional email field ([d4b1d4d](https://github.com/MohammadBnei/wedding-2026/commit/d4b1d4da804a92ba3af0c3414b24ad1de4c45b3c))
+
 # [0.6.0](https://github.com/MohammadBnei/wedding-2026/compare/0.5.0...0.6.0) (2026-08-21)
 
 
