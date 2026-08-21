@@ -116,6 +116,61 @@ extraManifests:
       tls:
         certResolver: {{ .Values.ingress.certResolver }}
 
+  # /admin — the RSVP list. Its own route because the gate is path-scoped: the
+  # chart's IngressRoute matches Host() alone and carries no auth, which is what
+  # keeps the invitation itself public.
+  #
+  # TWO THINGS HERE WILL SERVE THE GUEST LIST TO THE INTERNET IF GOT WRONG.
+  #
+  # 1. `priority`. Traefik's default priority is the RULE LENGTH, so
+  #    Host(`wedding.bnei.dev`) scores around 26 on its own. Setting a tidy
+  #    small number here would put this route BELOW the chart's and every
+  #    /admin request would be served by the unauthenticated one, with a 200.
+  #    ADR-0039 Decision 5 requires the priority be explicit rather than
+  #    inherited from rule length; it also has to be comfortably higher.
+  #
+  # 2. The three baseline middlewares are repeated by hand. common-app-chart's
+  #    values.yaml states the limitation outright: the baseline chain is
+  #    prepended only to the IngressRoute the CHART renders, and any route
+  #    declared through extraManifests must wire the refs itself. Without them
+  #    /admin sits outside the Cloudflare origin lock — the one thing stopping
+  #    a direct connection to 82.65.231.50 with a forged Host header. Order is
+  #    cheapest-rejection-first, auth last.
+  #
+  # authentik-forwardauth lives in `default` and is shared; see
+  # infra-bootstrap's gitops/bootstrap/authentik-forwardauth-middleware.yaml.
+  # This app is its first consumer. If sign-in loops, the suspect is authentik's
+  # Base URL system setting, which proxy providers build redirect URLs from —
+  # see docs/runbook-authentik-identity.md §8.
+  - |
+    apiVersion: traefik.io/v1alpha1
+    kind: IngressRoute
+    metadata:
+      name: {{ .Release.Name }}-admin
+      namespace: {{ .Release.Namespace }}
+    spec:
+      entryPoints:
+        - websecure
+      routes:
+        - kind: Rule
+          match: Host(`{{ .Values.ingress.hostname }}`) && PathPrefix(`/admin`)
+          priority: 100
+          middlewares:
+            - name: {{ .Release.Name }}-baseline-originlock
+              namespace: {{ .Release.Namespace }}
+            - name: {{ .Release.Name }}-baseline-ratelimit
+              namespace: {{ .Release.Namespace }}
+            - name: {{ .Release.Name }}-baseline-headers
+              namespace: {{ .Release.Namespace }}
+            - name: authentik-forwardauth
+              namespace: default
+          services:
+            - kind: Service
+              name: {{ .Release.Name }}
+              port: {{ .Values.service.port }}
+      tls:
+        certResolver: {{ .Values.ingress.certResolver }}
+
 logAlerts:
   enabled: true
   datasourceUid: ds-loki

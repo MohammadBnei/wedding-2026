@@ -10,7 +10,7 @@ export async function load({ locals }) {
     dbOr(
       [],
       () =>
-        sql`SELECT going, name, headcount, song, message FROM rsvp WHERE visitor_id = ${locals.visitorId}`
+        sql`SELECT going, name, headcount, song, message, email FROM rsvp WHERE visitor_id = ${locals.visitorId}`
     )
   ]);
 
@@ -24,7 +24,7 @@ export async function load({ locals }) {
   };
 }
 
-const LIMITS = { name: 120, song: 200, message: 2000 };
+const LIMITS = { name: 120, song: 200, message: 2000, email: 200 };
 
 /** @type {import('./$types').Actions} */
 export const actions = {
@@ -54,6 +54,14 @@ export const actions = {
 
     const song = str('song').slice(0, LIMITS.song) || null;
     const message = str('message').slice(0, LIMITS.message) || null;
+    // Optional, and deliberately not format-checked. `type="email"` already
+    // catches the honest typo in the browser; a server-side regex here would
+    // reject addresses that are valid (new TLDs, plus-addressing, unicode
+    // locals) and the failure mode is silent — a guest whose address we refused
+    // is a guest we cannot reach, which is the exact thing this field exists to
+    // prevent. Stored verbatim, truncated, parameterised on the way in and
+    // escaped by Svelte on the way out, so there is nothing to inject through.
+    const email = str('email').slice(0, LIMITS.email) || null;
 
     if (Object.keys(errors).length) return fail(400, { errors });
 
@@ -63,12 +71,12 @@ export const actions = {
     // numbers are wrong.
     try {
       await sql`
-        INSERT INTO rsvp (visitor_id, going, name, headcount, song, message, lang)
-        VALUES (${locals.visitorId}, ${going}, ${name}, ${going ? count : 0}, ${song}, ${message}, ${locals.lang})
+        INSERT INTO rsvp (visitor_id, going, name, headcount, song, message, email, lang)
+        VALUES (${locals.visitorId}, ${going}, ${name}, ${going ? count : 0}, ${song}, ${message}, ${email}, ${locals.lang})
         ON CONFLICT (visitor_id) DO UPDATE SET
           going = EXCLUDED.going, name = EXCLUDED.name, headcount = EXCLUDED.headcount,
-          song = EXCLUDED.song, message = EXCLUDED.message, lang = EXCLUDED.lang,
-          updated_at = now()`;
+          song = EXCLUDED.song, message = EXCLUDED.message, email = EXCLUDED.email,
+          lang = EXCLUDED.lang, updated_at = now()`;
     } catch (err) {
       console.error('[rsvp] write failed:', err instanceof Error ? err.message : err);
       // 503, not 500: this is temporary and the guest should come back. Their
