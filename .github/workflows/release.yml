@@ -29,13 +29,19 @@ on:
     tags-ignore:
       - '*'
 
-# Not in the sibling repos, and they have a latent bug because of it: two
-# releases running at once compute the same version from the same latest tag,
-# and the loser's `git push --follow-tags` is rejected non-fast-forward after it
-# has already bumped package.json and made a local tag — a release silently lost.
+# Concurrent releases: keep the newest, cancel the rest. The survivor releases
+# from main's tip, so it carries the cancelled runs' commits with it — one tag
+# covering the lot, rather than a queue of one-commit releases.
+#
+# Without a group at all, both runs compute the same version from the same
+# latest tag and the loser's push is rejected non-fast-forward, after it has
+# already bumped package.json and made a local tag. The release is just lost.
+#
+# Cancelling is only safe because the push is atomic — see `git.pushArgs` in
+# package.json. Everything before it is local to the runner and dies with it.
 concurrency:
   group: release
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   release:
