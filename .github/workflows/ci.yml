@@ -4,6 +4,14 @@ on:
   pull_request:
   push:
     branches: [main]
+    # Same list as release.yml's, so the two stay in step: a push that cuts no
+    # release runs no ci either. Mainly this stops release-it's own release
+    # commit from spending a postgres + playwright run on a version bump.
+    paths-ignore:
+      - '*.md'
+      - '**.yml'
+      - '**.yaml'
+      - 'package.json'
 
 jobs:
   test:
