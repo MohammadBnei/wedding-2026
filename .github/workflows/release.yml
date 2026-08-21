@@ -51,7 +51,7 @@ jobs:
     # wasted run. head_commit is null on workflow_dispatch, which passes.
     if: "${{ !startsWith(github.event.head_commit.message, 'chore: release ') }}"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # conventional-changelog needs the full history and the tags.
           fetch-depth: 0

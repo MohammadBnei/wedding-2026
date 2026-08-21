@@ -33,7 +33,7 @@ jobs:
       WEDDING_DB_USER: postgres
       WEDDING_DB_PASSWORD: postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run test          # scoped to src/ — bare `bun test` also globs e2e/*.spec.js
