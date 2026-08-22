@@ -10,7 +10,9 @@ export async function load({ locals }) {
     dbOr(
       [],
       () =>
-        sql`SELECT going, name, headcount, song, message, email FROM rsvp WHERE visitor_id = ${locals.visitorId}`
+        sql`SELECT going, name, headcount, song, message, email
+             FROM rsvp
+            WHERE visitor_id = ${locals.visitorId} AND deleted_at IS NULL`
     )
   ]);
 
@@ -69,6 +71,12 @@ export const actions = {
     // used here: a guest shown the thank-you screen for an RSVP that was never
     // stored is a guest nobody counts, and nobody finds out until the catering
     // numbers are wrong.
+    //
+    // `deleted_at = NULL` in the DO UPDATE is not optional. The key is
+    // visitor_id, so a guest whose reply /admin soft-deleted comes back to this
+    // same row — without that assignment their new answer lands in a row still
+    // filtered out of /admin, and they have replied to nobody. Replying again
+    // IS the un-delete.
     try {
       await sql`
         INSERT INTO rsvp (visitor_id, going, name, headcount, song, message, email, lang)
@@ -76,7 +84,7 @@ export const actions = {
         ON CONFLICT (visitor_id) DO UPDATE SET
           going = EXCLUDED.going, name = EXCLUDED.name, headcount = EXCLUDED.headcount,
           song = EXCLUDED.song, message = EXCLUDED.message, email = EXCLUDED.email,
-          lang = EXCLUDED.lang, updated_at = now()`;
+          lang = EXCLUDED.lang, deleted_at = NULL, updated_at = now()`;
     } catch (err) {
       console.error('[rsvp] write failed:', err instanceof Error ? err.message : err);
       // 503, not 500: this is temporary and the guest should come back. Their

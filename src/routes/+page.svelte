@@ -18,6 +18,7 @@
   import RsvpForm from '$lib/components/RsvpForm.svelte';
   import LangSwitcher from '$lib/components/LangSwitcher.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import Chip from '$lib/components/Chip.svelte';
 
   let { data, form } = $props();
 
@@ -164,6 +165,26 @@
              that stretches; the toggle is one icon and stays one icon wide. -->
         <LangSwitcher current={data.lang} label={t.langLabel} />
         <ThemeToggle current={data.theme} toLight={t.themeToLight} toDark={t.themeToDark} />
+        <!--
+          The way in to /admin, drawn only when an authentik session cookie is
+          present (+layout.server.js). It sits in the control bar rather than the
+          card above because it is a utility control like the language and theme
+          chips; an accent Button in the card would compete with the one CTA the
+          card exists to lead to.
+
+          data-sveltekit-reload is REQUIRED and only fails in production.
+          Without it this is a client-side navigation, so SvelteKit fetches
+          /admin/__data.json — which goes through the PathPrefix(`/admin`) route,
+          hits forwardAuth, and comes back as a cross-origin 302 to
+          authentik.bnei.dev that the router cannot follow. Same reason
+          /wedding.ics carries it below.
+
+          English, and not in wedding.js: two people ever see this, and the page
+          it opens is English too.
+        -->
+        {#if data.admin}
+          <Chip href="/admin" tone="on-primary" data-sveltekit-reload>Admin</Chip>
+        {/if}
       </div>
 
       <!-- The address sits in the rail on desktop and in the footer on mobile.
