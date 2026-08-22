@@ -57,7 +57,25 @@
     DASH
   } from '$lib/tracery.js';
 
-  let { kind = 'star', class: klass = '' } = $props();
+  /**
+   * `small` and `fill` exist only for `kind="star"`, and only because two
+   * callers used to hand-draw their own copy of it rather than ask for one.
+   *
+   * `small` is not a style choice, it is the stroke margin. The stroke is
+   * non-scaling, so at a 10px render a 1.3px line is 13% of the mark and half of
+   * it falls OUTSIDE the path — a star drawn to R/box 0.95 loses its points to
+   * the viewBox clip. The small geometry pulls the radius in to 0.90 and the
+   * weight down to 1.1, which is what the divider and the timeline stops were
+   * already doing by hand (at 5.4 and 5.5, drifted by exactly the 1px that
+   * Button.svelte's header warns about).
+   *
+   * `fill` is for a star sitting ON something: the timeline rail runs behind its
+   * stops and would otherwise show through the middle.
+   *
+   * @type {{ kind?: 'star' | 'sun' | 'moon' | 'band', class?: string,
+   *          small?: boolean, fill?: string }}
+   */
+  let { kind = 'star', class: klass = '', small = false, fill = 'none' } = $props();
 </script>
 
 {#if kind === 'sun'}
@@ -111,11 +129,13 @@
 
        R is 38 in a box of 80, not 40: half the stroke falls outside the path, so
        a star drawn to the edge loses its points to the viewBox. -->
-  <svg viewBox="0 0 80 80" class={klass} fill="none" aria-hidden="true">
+  {@const box = small ? 12 : 80}
+  {@const r = small ? 5.4 : 38}
+  <svg viewBox="0 0 {box} {box}" class={klass} {fill} aria-hidden="true">
     <path
-      d={star(40, 40, 38)}
+      d={star(box / 2, box / 2, r)}
       stroke="currentColor"
-      stroke-width="1.3"
+      stroke-width={small ? 1.1 : 1.3}
       vector-effect="non-scaling-stroke"
     />
   </svg>

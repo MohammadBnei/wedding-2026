@@ -12,6 +12,10 @@
   class      appended last, so a caller can pin a width (the control bar does)
 -->
 <script>
+  /** @type {{ tone?: 'default' | 'on-primary', selected?: boolean,
+        selectedAs?: 'primary' | 'muted', size?: 'sm' | 'lg', block?: boolean,
+        type?: 'button' | 'submit' | 'reset', class?: string,
+        children?: import('svelte').Snippet, [key: string]: any }} */
   let {
     tone = 'default',
     selected = undefined,
@@ -30,7 +34,7 @@
 
   const sizes = {
     sm: 'px-3 py-2 text-xs font-light',
-    lg: 'px-4 py-3.5 text-[11px] font-semibold caps'
+    lg: 'px-4 py-3.5 text-caption font-semibold caps'
   };
 
   const tones = {

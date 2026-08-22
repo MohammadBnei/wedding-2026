@@ -1,8 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { sql, dbOr } from '$lib/server/db.js';
-import { match } from '$lib/match.js';
-
-const MIN_CHARS = 2;
+import { match, MIN_CHARS } from '$lib/match.js';
 const TTL = 60_000;
 
 /** @type {{ value: string, count: number }[]} */

@@ -46,7 +46,8 @@
 
   let shown = $state(true);
   let opening = $state(false);
-  let timer = 0;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timer;
 
   function open() {
     if (opening) return;
@@ -150,13 +151,21 @@
 {/snippet}
 
 {#if shown}
-  <button
-    type="button"
-    class="door-scrim night"
-    class:is-open={opening}
-    aria-label={t.doorHint}
-    onclick={open}
-  >
+  <!--
+    A <div>, not a <button>. This wraps two paragraphs, the door itself and an
+    <svg> — block content, which a <button> may not legally contain — and its
+    aria-label was overriding the accessible name computation, so the salam below
+    and the basmala carved on the leaves were announced to nobody. The greeting IS
+    the content of this screen; it has to be readable.
+
+    Click-anywhere stays, because "tap anywhere" is what the hint promises. It is
+    a pointer convenience layered over a real control: the hint at the foot is a
+    proper <button>, so the keyboard and screen-reader path goes through that.
+    open() is idempotent, so the click bubbling up from it is harmless.
+  -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="door-scrim night" class:is-open={opening} onclick={open}>
     <!-- Amiri, the same face the hero says these words in. A display hand was
          tried here and dropped: the greeting outside and the greeting inside are
          one voice, and two faces for one phrase read as two. -->
@@ -164,7 +173,7 @@
       {SHARED.salam}
     </p>
     {#if t.salamGloss}
-      <p class="caps-wide mt-2 text-[10px] font-light text-primary-faint">{t.salamGloss}</p>
+      <p class="caps-wide mt-2 text-micro font-light text-primary-faint">{t.salamGloss}</p>
     {/if}
 
     <div class="door mt-7">
@@ -195,9 +204,15 @@
       />
     </div>
 
-    <!-- mt-9, not mt-3: it used to sit under the basmala gloss and its margin,
+    <!-- The real control, and the only thing here that takes focus. It says what
+         it does, so it needs no aria-label — the previous one repeated this exact
+         string onto the wrapper and then hid everything else behind it.
+
+         mt-9, not mt-3: it used to sit under the basmala gloss and its margin,
          and dropping that line without giving the space back walks the hint up
          into the threshold. -->
-    <p class="door-hint caps mt-9 text-[11px] font-light text-gold-soft">{t.doorHint}</p>
-  </button>
+    <button type="button" class="caps mt-9 text-caption font-light text-gold-soft" onclick={open}>
+      {t.doorHint}
+    </button>
+  </div>
 {/if}

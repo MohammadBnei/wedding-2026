@@ -6,7 +6,10 @@
   import { invalidateAll } from '$app/navigation';
   import Chip from './Chip.svelte';
   import { LANGS } from '$lib/content/wedding.js';
+  import { postJSON } from '$lib/post.js';
 
+  /** @type {{ current: import('$lib/content/wedding.js').Lang,
+        tone?: 'default' | 'on-primary', label?: string }} */
   let { current, tone = 'on-primary', label } = $props();
 
   // Endonyms, not translations: a language is named in itself everywhere, so the
@@ -14,6 +17,7 @@
   const NAMES = { fr: 'Français', en: 'English', ar: 'العربية', fa: 'فارسی' };
 
 
+  /** @param {import('$lib/content/wedding.js').Lang} lang */
   async function pick(lang) {
     if (lang === current) return;
     // Dim the page for however long the round trip actually takes, rather than
@@ -22,11 +26,7 @@
     const root = document.documentElement;
     root.dataset.langSwitching = '';
     try {
-      await fetch('/api/prefs', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ lang })
-      });
+      await postJSON('/api/prefs', { lang });
       await invalidateAll();
     } finally {
       delete root.dataset.langSwitching;

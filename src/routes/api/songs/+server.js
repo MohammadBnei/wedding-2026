@@ -1,7 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { fold } from '$lib/match.js';
-
-const MIN_CHARS = 2;
+import { fold, MIN_CHARS } from '$lib/match.js';
 const LIMIT = 8;
 
 // ponytail: a plain Map, wiped wholesale when it gets big. Together with the

@@ -7,14 +7,16 @@
   artifact used physical border-left and the rules stayed stubbornly on the left.
 -->
 <script>
+  /** @type {{ lead?: string, leadWidth?: 'time' | 'label', title?: string,
+        children?: import('svelte').Snippet }} */
   let { lead = '', leadWidth = 'time', title = '', children } = $props();
 
   const widths = { time: 'w-14', label: 'w-24' };
   // The lead column is centred on both axes within the row, so a one-line time
   // sits opposite the middle of a three-line note rather than at its top edge.
   const leadStyle = {
-    time: 'text-[13px] font-semibold text-accent',
-    label: 'text-[11px] font-light caps text-accent'
+    time: 'text-note font-semibold text-accent',
+    label: 'text-caption font-light caps text-accent'
   };
 </script>
 
@@ -28,10 +30,10 @@
   </div>
   <div class="flex-1 border-b border-line-soft pb-4">
     {#if title}
-      <p class="text-[15px] font-normal text-ink">{title}</p>
+      <p class="text-body font-normal text-ink">{title}</p>
     {/if}
     {#if children}
-      <div class="text-[13px] leading-relaxed font-light text-ink-muted">{@render children()}</div>
+      <div class="text-note leading-relaxed font-light text-ink-muted">{@render children()}</div>
     {/if}
   </div>
 </div>

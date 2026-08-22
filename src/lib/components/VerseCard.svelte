@@ -31,9 +31,9 @@
   </blockquote>
 
   {#if gloss}
-    <figcaption class="text-[13px] leading-relaxed font-light text-ink-muted text-pretty">
+    <figcaption class="text-note leading-relaxed font-light text-ink-muted text-pretty">
       {gloss}
     </figcaption>
   {/if}
-  <p class="caps-wide text-[10px] font-light text-accent">{reference}</p>
+  <p class="caps-wide text-micro font-light text-accent">{reference}</p>
 </figure>

@@ -1,17 +1,15 @@
 import { migrate } from '$lib/server/db.js';
 import { pickLang, dirOf, LANGS } from '$lib/content/wedding.js';
+import { cookieOpts } from '$lib/server/cookies.js';
 
-// Whether to mark cookies Secure. Must be the real protocol, not a hostname
-// guess: `!hostname.includes('localhost')` marks cookies Secure on ANY other
-// origin, including http://192.168.x.x during LAN testing — and browsers
-// silently drop Secure cookies sent over plain HTTP, so language, theme and the
-// visitor id all stopped persisting on a phone while working fine on localhost.
-//
-// Behind Traefik this needs ORIGIN (or PROTOCOL_HEADER) set for adapter-node,
-// or the pod sees plain http and stops marking production cookies Secure —
-// see helm/values.yaml.
-
-const YEAR = 60 * 60 * 24 * 365;
+/**
+ * Narrowing guard for a language tag off the wire. `LANGS.includes(someString)`
+ * is a type error before it is ever a runtime check, and both the cookie and the
+ * Accept-Language header need the same narrowing — so the cast lives here once.
+ * @param {string | undefined} v
+ * @returns {v is import('$lib/content/wedding.js').Lang}
+ */
+const isLang = (v) => LANGS.includes(/** @type {any} */ (v));
 
 /** @type {import('@sveltejs/kit').Handle} */
 export async function handle({ event, resolve }) {
@@ -24,18 +22,12 @@ export async function handle({ event, resolve }) {
   let visitorId = cookies.get('wid');
   if (!visitorId || !/^[0-9a-f-]{36}$/i.test(visitorId)) {
     visitorId = crypto.randomUUID();
-    cookies.set('wid', visitorId, {
-      path: '/',
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: event.url.protocol === 'https:',
-      maxAge: YEAR
-    });
+    cookies.set('wid', visitorId, cookieOpts(event.url, { httpOnly: true }));
   }
 
   // Language: an explicit choice wins, then the browser's preference, then French.
   let lang = cookies.get('lang');
-  if (!LANGS.includes(lang)) {
+  if (!isLang(lang)) {
     lang = negotiate(event.request.headers.get('accept-language')) ?? 'fr';
   }
 
@@ -77,7 +69,7 @@ function negotiate(header) {
         const q = params.find((p) => p.trim().startsWith('q='));
         return { tag: tag.trim().toLowerCase().split('-')[0], q: q ? Number(q.split('=')[1]) : 1 };
       })
-      .filter((x) => LANGS.includes(x.tag) && x.q > 0)
+      .filter((x) => isLang(x.tag) && x.q > 0)
       .sort((a, b) => b.q - a.q)[0]?.tag ?? null
   );
 }

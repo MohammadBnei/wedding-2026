@@ -10,10 +10,27 @@
 		"sourceMap": true,
 		"strict": true,
 		"moduleResolution": "bundler"
-	}
+	},
+	// Copied from .svelte-kit/tsconfig.json — TypeScript does NOT merge
+	// include/exclude with the extended config, so overriding one means
+	// restating all of it. Paths are relative to THIS file, hence no `../`.
+	//
+	// The one addition is the last line. `bun:test` has no types without
+	// @types/bun, and installing that is not free: it replaces the DOM's
+	// setTimeout with Bun's, so every browser-side `setTimeout` handle in
+	// src/lib/components stops being a number and Door.svelte fails to
+	// compile. The tests are plain logic and `bun run test` runs them for
+	// real in CI, so type-checking them buys nothing that would pay for that.
+	"exclude": [
+		"node_modules/**",
+		"src/service-worker.js",
+		"src/service-worker/**/*.js",
+		"src/service-worker.ts",
+		"src/service-worker/**/*.ts",
+		"src/service-worker.d.ts",
+		"src/service-worker/**/*.d.ts",
+		"src/**/*.test.js"
+	]
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
-	//
-	// If you want to overwrite includes/excludes, make sure to copy over the relevant includes/excludes
-	// from the referenced tsconfig.json - TypeScript does not merge them in
 }

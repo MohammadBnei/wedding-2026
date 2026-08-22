@@ -18,10 +18,10 @@
   <Section>
     <div class="flex flex-col items-center gap-5 text-center">
       <Tracery kind="star" class="w-11 text-accent" />
-      <p class="caps-wide text-[11px] font-light text-accent">{page.status}</p>
+      <p class="caps-wide text-caption font-light text-accent">{page.status}</p>
       <h1 class="font-display text-3xl text-ink">{t.lostTitle}</h1>
       <Flourish width="w-28" />
-      <p class="max-w-sm text-[13px] leading-relaxed font-light text-ink-muted">{t.lostBody}</p>
+      <p class="max-w-sm text-note leading-relaxed font-light text-ink-muted">{t.lostBody}</p>
       <Button href="/">{t.lostCta}</Button>
     </div>
   </Section>

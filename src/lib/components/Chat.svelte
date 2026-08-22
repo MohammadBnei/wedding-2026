@@ -8,6 +8,8 @@
 <script>
   import Chip from './Chip.svelte';
   import Bubble from './Bubble.svelte';
+  import { INPUT_BASE } from './Field.svelte';
+  import { postJSON } from '$lib/post.js';
 
   let { t, messages: initial = [], lang } = $props();
 
@@ -15,7 +17,8 @@
   let draft = $state('');
   let pending = $state(false);
   let error = $state('');
-  let log;
+  /** @type {HTMLElement | undefined} */
+  let log = $state();
 
   // Keep the newest message in view without yanking the whole page around.
   // The first run is the restored transcript, not a new message: scrolling then
@@ -30,6 +33,7 @@
     log?.lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 
+  /** @param {string} text */
   async function ask(text) {
     const q = text.trim();
     if (!q || pending) return;
@@ -38,11 +42,7 @@
     messages = [...messages, { role: 'user', content: q }];
     pending = true;
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message: q, lang })
-      });
+      const res = await postJSON('/api/chat', { message: q, lang });
       const data = await res.json();
       if (!res.ok) {
         error = data.error ?? t.fallback;
@@ -87,7 +87,7 @@
 {/if}
 
 <form
-  class="flex border border-line bg-surface-raise"
+  class="flex border border-line bg-surface-raise focus-within:border-primary"
   onsubmit={(e) => {
     e.preventDefault();
     ask(draft);
@@ -100,12 +100,12 @@
     maxlength="500"
     placeholder={t.chatPlaceholder}
     disabled={pending}
-    class="flex-1 bg-transparent px-3.5 py-3.5 text-sm font-light text-ink placeholder:text-ink-muted focus:outline-none"
+    class="flex-1 bg-transparent {INPUT_BASE}"
   />
   <button
     type="submit"
     disabled={pending || !draft.trim()}
-    class="caps bg-primary px-4.5 text-[11px] font-semibold text-primary-ink disabled:opacity-50"
+    class="caps bg-primary px-4.5 text-caption font-semibold text-primary-ink disabled:opacity-50"
   >
     {t.send}
   </button>

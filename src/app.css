@@ -98,6 +98,23 @@
   --font-persian: 'Vazirmatn', system-ui, sans-serif;
   --font-script: 'Great Vibes', cursive; /* the signature, and nothing else */
 
+  /* Type.
+   *
+   * Tailwind's stock ramp is kept for everything it already names (text-xs
+   * through text-3xl). These four are the sizes this page actually uses that it
+   * has no name for — they were 32 hand-written `text-[11px]`-style literals
+   * spread over thirteen files, which is a scale nobody had written down. The
+   * numbers are unchanged; only the spelling is.
+   *
+   * They are small because most of the running text on this page is a label, a
+   * time or a note beside something else, and because the body face is Mulish at
+   * weight 300. A one-off display size (the hero clamp, the two signatures) stays
+   * a literal — a token used once is an indirection, not a scale. */
+  --text-micro: 10px; /* the finest caps labels — pin captions, admin table */
+  --text-caption: 11px; /* caps chips, the door hint, section kickers */
+  --text-note: 13px; /* notes under a row, secondary prose */
+  --text-body: 15px; /* the largest of the four: a row's own title */
+
   /* the signature wide letter-spacing on small caps */
   --tracking-caps: 0.18em;
   --tracking-caps-wide: 0.24em;

@@ -6,6 +6,17 @@
  * is 74 rows, so folding in JS costs nothing and needs no extension.
  */
 
+/**
+ * Shortest query that may be answered with suggestions.
+ *
+ * This is a privacy floor, not a debounce tuning knob: the guest roster is real
+ * names of real people on a public site, and the rule is that no query hands
+ * back the whole list. It has to hold on /api/guests and /api/songs AND stop the
+ * client issuing the request at all, which is three places — so it lives here,
+ * beside the matching it guards.
+ */
+export const MIN_CHARS = 2;
+
 /** @param {string} s */
 export const fold = (s) =>
   s
