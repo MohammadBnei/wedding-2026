@@ -1,5 +1,17 @@
 # Changelog
 
+# [0.12.0](https://github.com/MohammadBnei/wedding-2026/compare/0.11.0...0.12.0) (2026-08-22)
+
+
+### Bug Fixes
+
+* **chat:** the song list carries titles, not guests' names ([015c2eb](https://github.com/MohammadBnei/wedding-2026/commit/015c2eb9c0b8ddc3d77fbd8faf7d54ad6c3e6726))
+
+
+### Features
+
+* **chat:** the bot knows which songs guests requested, and by whom ([95569e1](https://github.com/MohammadBnei/wedding-2026/commit/95569e19e25a136ad78e8cb96370fac9235770bc))
+
 # [0.11.0](https://github.com/MohammadBnei/wedding-2026/compare/0.10.0...0.11.0) (2026-08-22)
 
 
