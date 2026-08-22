@@ -1,5 +1,18 @@
 # Changelog
 
+# [0.8.0](https://github.com/MohammadBnei/wedding-2026/compare/0.7.1...0.8.0) (2026-08-22)
+
+
+### Bug Fixes
+
+* **content:** act on Leïla's review of v0.7.1 ([d9a9c48](https://github.com/MohammadBnei/wedding-2026/commit/d9a9c488c0a0b0e0dfc9e09b4edd2f12d242ee9c)), closes [#22](https://github.com/MohammadBnei/wedding-2026/issues/22) [#21](https://github.com/MohammadBnei/wedding-2026/issues/21) [#20](https://github.com/MohammadBnei/wedding-2026/issues/20) [#19](https://github.com/MohammadBnei/wedding-2026/issues/19) [#18](https://github.com/MohammadBnei/wedding-2026/issues/18) [#17](https://github.com/MohammadBnei/wedding-2026/issues/17) [#16](https://github.com/MohammadBnei/wedding-2026/issues/16) [#15](https://github.com/MohammadBnei/wedding-2026/issues/15)
+* **door:** keep بسم الله on the leaves, drop only its caption ([5c88ad0](https://github.com/MohammadBnei/wedding-2026/commit/5c88ad07e70c096269bf457372dfa8558fb3bf3e)), closes [#16](https://github.com/MohammadBnei/wedding-2026/issues/16)
+
+
+### Features
+
+* **admin:** soft-delete replies, and a way in and out of the dashboard ([77e06e2](https://github.com/MohammadBnei/wedding-2026/commit/77e06e262a7c3e55f806f75a34045bc73e06a841))
+
 ## [0.7.1](https://github.com/MohammadBnei/wedding-2026/compare/0.7.0...0.7.1) (2026-08-22)
 
 

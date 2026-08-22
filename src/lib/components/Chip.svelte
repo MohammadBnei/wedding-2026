@@ -10,13 +10,15 @@
   size       'sm' (language, FAQ, headcount) or 'lg' (the yes/no toggle)
   block      stretch to fill a flex row
   class      appended last, so a caller can pin a width (the control bar does)
+  href       renders an <a> instead of a <button>, same as Button.svelte
 -->
 <script>
-  /** @type {{ tone?: 'default' | 'on-primary', selected?: boolean,
+  /** @type {{ href?: string, tone?: 'default' | 'on-primary', selected?: boolean,
         selectedAs?: 'primary' | 'muted', size?: 'sm' | 'lg', block?: boolean,
         type?: 'button' | 'submit' | 'reset', class?: string,
         children?: import('svelte').Snippet, [key: string]: any }} */
   let {
+    href = undefined,
     tone = 'default',
     selected = undefined,
     selectedAs = 'primary',
@@ -61,7 +63,12 @@
 </script>
 
 <!-- aria-pressed only when this chip really is a toggle; a plain action
-     button that reports aria-pressed="false" reads as a stuck toggle. -->
-<button {type} class={cls} aria-pressed={selected === undefined ? undefined : selected} {...rest}>
-  {@render children?.()}
-</button>
+     button that reports aria-pressed="false" reads as a stuck toggle. A link is
+     never a toggle, so the <a> branch does not carry it at all. -->
+{#if href}
+  <a {href} class="{cls} no-underline" {...rest}>{@render children?.()}</a>
+{:else}
+  <button {type} class={cls} aria-pressed={selected === undefined ? undefined : selected} {...rest}>
+    {@render children?.()}
+  </button>
+{/if}

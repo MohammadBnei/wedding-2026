@@ -30,7 +30,7 @@
         aria-hidden="true"
       ></div>
       <p
-        class="absolute inset-x-0 bottom-2.5 text-center font-mono text-[10px] tracking-wider text-ink-muted"
+        class="absolute inset-x-0 bottom-2.5 text-center font-mono text-micro tracking-wider text-ink-muted"
       >
         {placeholder}
       </p>

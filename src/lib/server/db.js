@@ -145,6 +145,11 @@ export function migrate() {
     // reason this is tolerable without a migration tool; a DESTRUCTIVE change
     // is the point at which the ponytail note above comes due.
     await sql`ALTER TABLE rsvp ADD COLUMN IF NOT EXISTS email text`;
+    // Soft delete for /admin. Additive and idempotent like the line above, which
+    // is what keeps the ponytail note at the top of this function from coming
+    // due: the delete itself is an UPDATE, so nothing here is destructive and no
+    // migration tool is needed. Recovery is one statement — see the README.
+    await sql`ALTER TABLE rsvp ADD COLUMN IF NOT EXISTS deleted_at timestamptz`;
     await sql`
       CREATE TABLE IF NOT EXISTS chat_message (
         id          bigserial PRIMARY KEY,
