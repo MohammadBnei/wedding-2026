@@ -133,7 +133,7 @@
             joie de vous convier à leur mariage".
           -->
           <p
-            class="font-display text-center text-[13px] leading-relaxed italic text-ink-body text-pretty lg:text-start lg:text-primary-ink"
+            class="font-display text-center text-note leading-relaxed italic text-ink-body text-pretty lg:text-start lg:text-primary-ink"
           >
             {t.heroInvite}
           </p>
@@ -141,7 +141,7 @@
           <Flourish width="w-28" />
 
           <p
-            class="caps-wide text-center text-[11px] leading-loose font-light text-ink-muted lg:text-start lg:text-primary-faint"
+            class="caps-wide text-center text-caption leading-loose font-light text-ink-muted lg:text-start lg:text-primary-faint"
           >
             {t.date}
           </p>
@@ -191,11 +191,11 @@
            There are deliberately no phone numbers anywhere — see wedding.js. -->
       <div class="hidden lg:mt-8 lg:block">
         <Tracery kind="band" class="w-full text-gold-soft" />
-        <p class="font-display mt-5 text-[15px] leading-relaxed italic text-primary-ink text-pretty">
+        <p class="font-display mt-5 text-body leading-relaxed italic text-primary-ink text-pretty">
           {t.closing}
         </p>
         <Tracery kind="star" class="mt-5 w-2.5 text-gold-soft" />
-        <p class="caps-wide mt-5 text-[11px] font-light text-primary-faint">{t.address}</p>
+        <p class="caps-wide mt-5 text-caption font-light text-primary-faint">{t.address}</p>
         <p dir="ltr" class="mt-1.5 text-sm leading-relaxed font-light text-primary-ink">
           {SHARED.addressLine1}<br />{SHARED.addressLine2}
         </p>
@@ -234,7 +234,7 @@
         >
           {SHARED.bismillah}
         </p>
-        <p class="text-center text-[15px] leading-loose font-light text-ink-body text-pretty">
+        <p class="text-center text-body leading-loose font-light text-ink-body text-pretty">
           {t.welcome1}
         </p>
         <VerseCard
@@ -264,7 +264,20 @@
         <GardenPlan pins={t.pins} placeholder={t.planPlaceholder} lang={data.lang} />
         <div class="mt-2 flex flex-col gap-3.5">
           {#each t.facts as fact (fact.label)}
-            <Row lead={fact.label} leadWidth="label">{fact.value}</Row>
+            <Row lead={fact.label} leadWidth="label">
+              {fact.value}
+              <!-- The maps link rides the row it answers — the driving one. A
+                   link, not an embedded map: the page pulls no third-party
+                   script, tile or cookie today, and this was the one place
+                   tempted to. The `?api=1` url opens the guest's own maps app. -->
+              {#if fact.map}
+                <div class="mt-3">
+                  <Button href={SHARED.mapsUrl} small rel="noopener noreferrer" target="_blank">
+                    {t.mapCta}
+                  </Button>
+                </div>
+              {/if}
+            </Row>
           {/each}
         </div>
         {#if data.photoDropUrl}
@@ -279,9 +292,9 @@
       <Zigzag reverse={false} />
 
       <Section title={t.chatTitle} tone="alt" fill seed="chat">
-        <p class="text-[13px] leading-relaxed font-light text-ink-muted">{t.chatSub}</p>
+        <p class="text-note leading-relaxed font-light text-ink-muted">{t.chatSub}</p>
         <Chat {t} messages={data.messages} lang={data.lang} />
-        <p class="text-[11px] font-light text-ink-muted">{t.botNote}</p>
+        <p class="text-caption font-light text-ink-muted">{t.botNote}</p>
       </Section>
 
       <Zigzag reverse={true} />
@@ -334,12 +347,12 @@
     <footer class="night flex flex-col items-center gap-3.5 px-6 py-9 text-center lg:hidden">
       <Tracery kind="band" class="w-full text-gold-soft" />
       <p
-        class="font-display mt-1 max-w-[19rem] text-[15px] leading-relaxed italic text-primary-ink text-pretty"
+        class="font-display mt-1 max-w-[19rem] text-body leading-relaxed italic text-primary-ink text-pretty"
       >
         {t.closing}
       </p>
       <Tracery kind="star" class="w-2.5 text-gold-soft" />
-      <p class="caps-wide text-[11px] font-light text-primary-faint">{t.address}</p>
+      <p class="caps-wide text-caption font-light text-primary-faint">{t.address}</p>
       <p dir="ltr" class="text-sm leading-relaxed font-light text-primary-ink">
         {SHARED.addressLine1}<br />{SHARED.addressLine2}
       </p>

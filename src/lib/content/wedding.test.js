@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { STR, LANGS, SHARED, t, fallbackText } from './wedding.js';
+import { STR, LANGS, SHARED, PIN_POS, t, fallbackText } from './wedding.js';
 
 /**
  * The gap this closes: `t()` derives its type from `STR.fr` alone, and the
@@ -15,9 +15,10 @@ test('every locale defines exactly the same keys as French', () => {
 test('the repeated structures keep the shape the components assume', () => {
   for (const lang of LANGS) {
     const s = STR[lang];
-    // GardenPlan indexes PIN_POS[i] and defaults to pins[2]; 4 is the only
-    // length that is safe at both ends.
-    expect(s.pins).toHaveLength(4);
+    // GardenPlan walks `pins` and indexes PIN_POS[i] on each, then defaults to
+    // pins[2] — so the two lists must be the same length, and must reach index 2.
+    expect(s.pins).toHaveLength(PIN_POS.length);
+    expect(PIN_POS.length).toBeGreaterThanOrEqual(3);
     // Keyed {#each} blocks — a duplicate key is a runtime crash, not a warning.
     expect(new Set(s.chips.map((c) => c.q)).size).toBe(s.chips.length);
     expect(new Set(s.facts.map((f) => f.label)).size).toBe(s.facts.length);

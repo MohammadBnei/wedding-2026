@@ -15,7 +15,7 @@
   let { data, form } = $props();
 
   const cell = 'px-3 py-2 align-top border-b border-line-soft';
-  const head = 'px-3 py-2 text-start caps text-[10px] font-light text-ink-muted border-b border-line';
+  const head = 'px-3 py-2 text-start caps text-micro font-light text-ink-muted border-b border-line';
 
   /**
    * Native confirm(), no dialog component. It is the one guard between a
@@ -50,7 +50,7 @@
         ← Invitation
       </a>
       {#if data.who}
-        <span class="caps text-[10px] font-light text-ink-muted">{data.who}</span>
+        <span class="caps text-micro font-light text-ink-muted">{data.who}</span>
       {/if}
     </div>
   </header>
@@ -82,7 +82,7 @@
     <p class="text-sm font-light text-ink-muted">No replies yet.</p>
   {:else}
     <div class="overflow-x-auto">
-      <table class="w-full border-collapse text-[13px] font-light">
+      <table class="w-full border-collapse text-note font-light">
         <thead>
           <tr>
             <th class={head}>Name</th>

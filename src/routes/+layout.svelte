@@ -2,7 +2,7 @@
   import '../app.css';
   import { page } from '$app/state';
   import { dirOf, SHARED } from '$lib/content/wedding.js';
-  import { venueInstant } from '$lib/ics.js';
+  import { venueInstant, GARDEN_FROM, GARDEN_UNTIL } from '$lib/ics.js';
 
   let { children, data } = $props();
 
@@ -38,8 +38,8 @@
       '@type': 'Event',
       name: data.t.icsSummary,
       // Same derived venue offset the .ics uses — not a second copy of "+02:00".
-      startDate: venueInstant(SHARED.isoDate, 15).toISOString(),
-      endDate: venueInstant(SHARED.isoDate, 23).toISOString(),
+      startDate: venueInstant(SHARED.isoDate, GARDEN_FROM).toISOString(),
+      endDate: venueInstant(SHARED.isoDate, GARDEN_UNTIL).toISOString(),
       eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
       eventStatus: 'https://schema.org/EventScheduled',
       image: ogImage,

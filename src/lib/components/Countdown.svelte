@@ -7,13 +7,13 @@
 <script>
   import { breakdown } from '$lib/countdown.js';
   import { localeDigits, SHARED } from '$lib/content/wedding.js';
-  import { venueInstant } from '$lib/ics.js';
+  import { venueInstant, GARDEN_FROM } from '$lib/ics.js';
 
   let { t, lang } = $props();
 
   // The same instant the .ics and the JSON-LD use — not a second copy of the
   // date, and not a second copy of the venue's UTC offset.
-  const target = venueInstant(SHARED.isoDate, 15).getTime();
+  const target = venueInstant(SHARED.isoDate, GARDEN_FROM).getTime();
 
   // Date.now() is UTC epoch and the target is an absolute instant, so this is
   // the same number on the server and in the browser even where they disagree

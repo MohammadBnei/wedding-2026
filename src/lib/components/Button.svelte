@@ -4,12 +4,19 @@
   Renders as <a> when href is given, <button> otherwise.
 -->
 <script>
-  let { href = undefined, type = 'button', block = false, children, ...rest } = $props();
+  /** @type {{ href?: string, type?: 'button' | 'submit' | 'reset', block?: boolean,
+        small?: boolean, children?: import('svelte').Snippet, [key: string]: any }} */
+  let { href = undefined, type = 'button', block = false, small = false, children, ...rest } =
+    $props();
 
   const cls = $derived(
     [
       'inline-flex items-center justify-center bg-accent text-accent-ink',
-      'px-8 py-4 text-xs font-semibold caps no-underline',
+      'font-semibold caps no-underline',
+      // `small` is for a button that rides inside body copy rather than
+      // standing alone as the section's call to action — the maps link in the
+      // essentials list. Same button, quieter presence.
+      small ? 'px-5 py-2.5 text-caption' : 'px-8 py-4 text-xs',
       'transition-opacity hover:opacity-90 cursor-pointer',
       block && 'w-full'
     ]

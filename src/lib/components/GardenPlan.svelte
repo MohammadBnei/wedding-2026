@@ -1,8 +1,10 @@
 <!--
-  The garden plan: four numbered pins over a background, with a callout for the
-  selected one. The background is a hatched placeholder until a real drawing is
-  dropped at static/plan.jpg and SHARED.gardenPlanImage points at it — the pins
-  are positioned in percentages, so they scale over whatever goes underneath.
+  The garden plan: numbered pins over the aerial shot of the house, with a
+  callout for the selected one. The box holds the photo's own 628:507 ratio, not
+  a fixed height — bg-cover in a box of the wrong shape crops the house away and
+  slides every pin off the thing it names. The pins are positioned in
+  percentages and translated -50%/-50%, so PIN_POS reads as image coordinates.
+  The hatch below is what shows if SHARED.gardenPlanImage is ever emptied.
 -->
 <script>
   import { PIN_POS, SHARED, localeDigits } from '$lib/content/wedding.js';
@@ -18,7 +20,7 @@
 
 <div class="flex flex-col gap-4">
   <div
-    class="relative h-70 border border-line bg-surface-alt bg-cover bg-center"
+    class="relative aspect-[628/507] border border-line bg-surface-alt bg-cover bg-center"
     style={SHARED.gardenPlanImage ? `background-image:url(${SHARED.gardenPlanImage})` : ''}
   >
     {#if !SHARED.gardenPlanImage}
@@ -28,7 +30,7 @@
         aria-hidden="true"
       ></div>
       <p
-        class="absolute inset-x-0 bottom-2.5 text-center font-mono text-[10px] tracking-wider text-ink-muted"
+        class="absolute inset-x-0 bottom-2.5 text-center font-mono text-micro tracking-wider text-ink-muted"
       >
         {placeholder}
       </p>
@@ -37,7 +39,7 @@
     {#each pins as pin, i (i)}
       <button
         type="button"
-        class="absolute flex h-7.5 w-7.5 items-center justify-center text-xs font-semibold transition-opacity {i ===
+        class="absolute flex h-7.5 w-7.5 -translate-x-1/2 -translate-y-1/2 items-center justify-center text-xs font-semibold transition-opacity {i ===
         active
           ? 'bg-accent text-accent-ink'
           : 'bg-primary text-primary-ink opacity-55 hover:opacity-80'}"

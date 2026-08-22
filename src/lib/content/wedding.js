@@ -43,6 +43,13 @@ export const SHARED = {
   addressLine1: '1b rue de la Prairie de Rocourt',
   addressLine2: '95470 Fosses',
 
+  // The same address as coordinates, from Nominatim. The universal `?api=1`
+  // form hands the pin to whatever the guest already has: the Maps app on
+  // Android, the app or the web map on iOS, the web map on desktop. A link,
+  // not an embed — this site loads no third-party script or tile, and adding a
+  // map iframe would be the first.
+  mapsUrl: 'https://www.google.com/maps/search/?api=1&query=49.0951880,2.4944159',
+
   // There are deliberately NO phone numbers anywhere on this site, and none in
   // this repo. One email is the single hand-off, and it appears in exactly one
   // place: the chat's give-up line, via `fallbackText()` below. It is NOT in the
@@ -55,9 +62,10 @@ export const SHARED = {
   // broken "write to us at ." on the page.
   email: '',
 
-  // Drop a hand-drawn plan at static/plan.jpg and set this to '/plan.jpg'.
-  // The four pins are positioned in percentages, so they scale over any image.
-  gardenPlanImage: '',
+  // The aerial shot of the house. The four pins are positioned in percentages
+  // of it, so they scale with the box — see PIN_POS. Emptying this string puts
+  // the hatched placeholder back, which is why GardenPlan still carries it.
+  gardenPlanImage: '/img/house.jpg',
   isoDate: '2026-09-05',
   names: { latin: ['Leïla', 'Mohammad-Amine'], arabic: 'ليلى و محمد أمين' },
 
@@ -90,12 +98,28 @@ export const SHARED = {
   bismillah: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ'
 };
 
-/** Pin positions over the garden plan, as percentages so they scale with it. */
+/**
+ * Pin positions over the garden plan, as percentages so they scale with it.
+ *
+ * Ordered as a guest arrives — park, gate, greeting, table, food, then the
+ * children's corner and the dancing — not by where they sit on the photo. The
+ * numbering a guest reads is this order, so the labels carry it explicitly.
+ *
+ * Read off `static/img/house.jpg` (628x507) against a 10% grid. These are
+ * feature CENTRES: the pin button is translated -50%/-50%, so the number below
+ * is where the marker actually lands, at any width. Retune by eye if the photo
+ * is ever replaced — and keep this list the same length as every locale's
+ * `pins`, which wedding.test.js checks.
+ */
 export const PIN_POS = [
-  { left: '14%', top: '16%' },
-  { left: '58%', top: '34%' },
-  { left: '22%', top: '58%' },
-  { left: '64%', top: '78%' }
+  { left: '50%', top: '83%' }, // 1 le stationnement — the street out front
+  { left: '44%', top: '61%' }, // 2 le portail — the white line between the
+  //                                cherry tree and the red maple
+  { left: '35%', top: '51%' }, // 3 l'accueil — the paved courtyard
+  { left: '68%', top: '51%' }, // 4 les tables — open lawn east of the house
+  { left: '30%', top: '35%' }, // 5 le buffet — under the low red roof
+  { left: '77%', top: '16%' }, // 6 les enfants — the far corner of the garden
+  { left: '50%', top: '9%' } //   7 la danse — open ground behind the house
 ];
 
 
@@ -131,14 +155,20 @@ export const STR = {
       }
     ],
     pins: [
-      { label: "1 · le portail", text: "L'entrée se fait par le portail vert, ouvert toute la journée." },
-      { label: "2 · les tables", text: "Les tables sont dressées côté jardin, sans plan de table." },
+      { label: "1 · le stationnement", text: "Le long de la rue, devant la maison et aux alentours." },
+      { label: "2 · le portail", text: "L'entrée se fait par le portail, ouvert toute la journée." },
       { label: "3 · l'accueil", text: "C'est là que nous nous retrouvons à l'arrivée." },
-      { label: "4 · le stationnement", text: "Le long de la rue, devant la maison et aux alentours." }
+      { label: "4 · les tables", text: "Les tables sont dressées côté jardin ; un plan de table vous y attend." },
+      { label: "5 · le buffet", text: "Sous le toit rouge, contre la maison : il est servi tout l'après-midi." },
+      { label: "6 · les enfants", text: "Un coin du jardin leur est réservé, tout au fond." },
+      { label: "7 · la danse", text: "Derrière la maison : c'est là que la musique et la danse prennent place." }
     ],
     facts: [
-      { label: "en train", value: "RER D jusqu'à Survilliers-Fosses, puis le bus 4 — une vingtaine de minutes depuis la gare." },
-      { label: "en voiture", value: "Une heure depuis Paris par l'A1. Stationnement libre dans la rue ; venez à plusieurs si vous pouvez." },
+      { label: "en train", value: "RER D jusqu'à Survilliers-Fosses, puis le bus R1 jusqu'à l'arrêt Bellevue, ou le R2 (direction Mairie annexe) jusqu'à l'arrêt Cottages — une vingtaine de minutes depuis la gare." },
+      // `map: true` marks the row that carries the maps link — see +page.svelte.
+      // A flag, not an index: the facts are ordered the same in all four
+      // locales today, and nothing would tell us if that stopped being true.
+      { label: "en voiture", value: "Une heure depuis Paris par l'A1. Stationnement libre dans la rue ; venez à plusieurs si vous pouvez.", map: true },
       { label: "au jardin", value: "Tout se passe dehors, sur l'herbe : prévoyez des chaussures qui s'en accommodent. Début septembre est doux l'après-midi et plus frais le soir — emportez une veste, et de quoi vous couvrir si le temps tourne." }
     ],
     // The chips deliberately do NOT restate the `facts` rows. Their job is the
@@ -147,7 +177,7 @@ export const STR = {
     // `facts` row stays the compressed reference.
     chips: [
       { q: "À quelle heure faut-il arriver ?", a: "Nous vous accueillons à partir de 15h. Le buffet se déroule tout l'après-midi : venez à l'heure qui vous convient, vous ne manquerez rien." },
-      { q: "Comment venir jusqu'à Fosses ?", a: "En RER D jusqu'à Survilliers-Fosses, puis le bus 4 : comptez une vingtaine de minutes depuis la gare. En voiture, une heure depuis Paris par l'A1, et le stationnement est libre dans la rue." },
+      { q: "Comment venir jusqu'à Fosses ?", a: "En RER D jusqu'à Survilliers-Fosses, puis le bus R1 jusqu'à l'arrêt Bellevue, ou le R2 (direction Mairie annexe) jusqu'à l'arrêt Cottages : comptez une vingtaine de minutes depuis la gare. En voiture, une heure depuis Paris par l'A1, et le stationnement est libre dans la rue." },
       { q: "Les enfants sont-ils les bienvenus ?", a: "Bien sûr. Le jardin est clos, il y a la place pour courir, et des jeux sont prévus." },
       { q: "Pourquoi nous demandez-vous un morceau ?", a: "La musique de la journée se construit à partir de vos réponses. Le morceau que vous indiquez a toutes les chances d'être joué." }
     ],
@@ -185,19 +215,22 @@ export const STR = {
       }
     ],
     pins: [
-      { label: "1 · the gate", text: "Come in through the green gate, open all day." },
-      { label: "2 · the tables", text: "The tables are set on the garden side, with no seating plan." },
+      { label: "1 · parking", text: "Along the street, in front of the house and nearby." },
+      { label: "2 · the gate", text: "Come in through the gate, open all day." },
       { label: "3 · the welcome", text: "This is where we gather as everyone arrives." },
-      { label: "4 · parking", text: "Along the street, in front of the house and nearby." }
+      { label: "4 · the tables", text: "The tables are set on the garden side; a seating plan will show you yours." },
+      { label: "5 · the buffet", text: "Under the red roof, against the house: served all afternoon." },
+      { label: "6 · the children", text: "A corner of the garden is set aside for them, right at the back." },
+      { label: "7 · the dancing", text: "Behind the house: this is where the music and the dancing happen." }
     ],
     facts: [
-      { label: "by train", value: "RER D to Survilliers-Fosses, then bus 4 — about twenty minutes from the station." },
-      { label: "by car", value: "An hour from Paris on the A1. Street parking is free; share a car if you can." },
+      { label: "by train", value: "RER D to Survilliers-Fosses, then bus R1 to the Bellevue stop, or the R2 (towards Mairie annexe) to the Cottages stop — about twenty minutes from the station." },
+      { label: "by car", value: "An hour from Paris on the A1. Street parking is free; share a car if you can.", map: true },
       { label: "in the garden", value: "Everything happens outdoors, on grass — bring shoes that suit it. Early September is mild in the afternoon and cooler by evening, so bring a jacket, and something warmer in case the weather turns." }
     ],
     chips: [
       { q: "What time should we arrive?", a: "You are welcome from 3pm. The buffet runs all afternoon, so come at whatever hour suits you — you will miss nothing." },
-      { q: "How do we get to Fosses?", a: "RER D to Survilliers-Fosses, then bus 4: about twenty minutes from the station. By car, an hour from Paris on the A1, with free street parking." },
+      { q: "How do we get to Fosses?", a: "RER D to Survilliers-Fosses, then bus R1 to the Bellevue stop, or the R2 (towards Mairie annexe) to the Cottages stop: about twenty minutes from the station. By car, an hour from Paris on the A1, with free street parking." },
       { q: "Are children welcome?", a: "Of course. The garden is enclosed, there is room to run, and games are planned." },
       { q: "Why are you asking for a song?", a: "The day's music is built from your replies. Whatever you name stands every chance of being played." }
     ],
@@ -235,19 +268,22 @@ export const STR = {
       }
     ],
     pins: [
-      { label: "١ · البوابة", text: "الدخول من البوابة الخضراء، وتبقى مفتوحة طوال اليوم." },
-      { label: "٢ · الطاولات", text: "الطاولات مُعدّة في جهة الحديقة، من غير ترتيب مسبق للجلوس." },
+      { label: "١ · مواقف السيارات", text: "على طول الشارع، أمام البيت وما حوله." },
+      { label: "٢ · البوابة", text: "الدخول من البوابة، وتبقى مفتوحة طوال اليوم." },
       { label: "٣ · الاستقبال", text: "هناك نلتقي بكم عند وصولكم." },
-      { label: "٤ · مواقف السيارات", text: "على طول الشارع، أمام البيت وما حوله." }
+      { label: "٤ · الطاولات", text: "الطاولات مُعدّة في جهة الحديقة، وهناك ترتيب للجلوس يدلّكم على مكانكم." },
+      { label: "٥ · البوفيه", text: "تحت السقف الأحمر، بجانب البيت: يُقدَّم طوال العصر." },
+      { label: "٦ · الأطفال", text: "ركن من الحديقة مخصّص لهم، في أقصاها." },
+      { label: "٧ · الرقص", text: "خلف البيت: هناك تكون الموسيقى والرقص." }
     ],
     facts: [
-      { label: "بالقطار", value: "خط RER D حتى محطة Survilliers-Fosses، ثم الحافلة رقم ٤ — نحو عشرين دقيقة من المحطة." },
-      { label: "بالسيارة", value: "ساعة من باريس عبر A1. الوقوف حرّ في الشارع؛ تعالوا معاً في سيارة واحدة إن أمكن." },
+      { label: "بالقطار", value: "خط RER D حتى محطة Survilliers-Fosses، ثم الحافلة R1 إلى موقف Bellevue، أو R2 (باتجاه Mairie annexe) إلى موقف Cottages — نحو عشرين دقيقة من المحطة." },
+      { label: "بالسيارة", value: "ساعة من باريس عبر A1. الوقوف حرّ في الشارع؛ تعالوا معاً في سيارة واحدة إن أمكن.", map: true },
       { label: "في الحديقة", value: "كلّ شيء في الهواء الطلق على العشب، فاختاروا حذاءً يناسب ذلك. مطلع سبتمبر معتدل بعد الظهر وأبرد مساءً: خذوا سترة، وما يقيكم إن تقلّب الجوّ." }
     ],
     chips: [
       { q: "متى نصل؟", a: "نستقبلكم من الثالثة بعد الظهر. تُقدَّم المائدة طوال العصر: تعالوا في الوقت الذي يناسبكم، ولن يفوتكم شيء." },
-      { q: "كيف نصل إلى فوس؟", a: "خط RER D حتى محطة Survilliers-Fosses ثم الحافلة رقم ٤: نحو عشرين دقيقة من المحطة. وبالسيارة ساعة من باريس عبر A1، والوقوف حرّ في الشارع." },
+      { q: "كيف نصل إلى فوس؟", a: "خط RER D حتى محطة Survilliers-Fosses، ثم الحافلة R1 إلى موقف Bellevue أو R2 (باتجاه Mairie annexe) إلى موقف Cottages: نحو عشرين دقيقة من المحطة. وبالسيارة ساعة من باريس عبر A1، والوقوف حرّ في الشارع." },
       { q: "هل الأطفال مدعوّون؟", a: "بكل تأكيد. الحديقة مسوّرة وفيها متّسع للّعب، وقد أعددنا ألعاباً." },
       { q: "لماذا تسألوننا عن أغنية؟", a: "موسيقى اليوم تُبنى من ردودكم. والأغنية التي تذكرونها لها كل الحظّ في أن تُعزف." }
     ],
@@ -287,19 +323,22 @@ export const STR = {
       }
     ],
     pins: [
-      { label: "۱ · دروازه", text: "از دروازهٔ سبز؛ تمام روز باز است." },
-      { label: "۲ · میزها", text: "سمت باغ چیده شده؛ هرجا دلتان خواست بنشینید." },
+      { label: "۱ · پارکینگ", text: "در طول خیابان، روبه‌روی خانه و گرداگرد آن." },
+      { label: "۲ · دروازه", text: "از دروازه؛ تمام روز باز است." },
       { label: "۳ · پذیرایی", text: "همان‌جا به پیشوازتان می‌آییم." },
-      { label: "۴ · پارکینگ", text: "در طول خیابان، روبه‌روی خانه و گرداگرد آن." }
+      { label: "۴ · میزها", text: "سمت باغ چیده شده؛ نقشهٔ نشستن جای شما را نشان می‌دهد." },
+      { label: "۵ · بوفه", text: "زیر سقف قرمز، کنار خانه؛ تمام بعدازظهر برقرار است." },
+      { label: "۶ · بچه‌ها", text: "گوشه‌ای از باغ برای آن‌هاست، در انتهای آن." },
+      { label: "۷ · رقص", text: "پشت خانه: موسیقی و رقص همان‌جاست." }
     ],
     facts: [
-      { label: "با قطار", value: "RER D تا ایستگاه Survilliers-Fosses، سپس اتوبوس ۴ — بیست دقیقه." },
-      { label: "با ماشین", value: "یک ساعت از پاریس با اتوبان A1. پارک در خیابان آزاد است؛ اگر می‌شود چند نفری بیایید." },
+      { label: "با قطار", value: "RER D تا ایستگاه Survilliers-Fosses، سپس اتوبوس R1 تا ایستگاه Bellevue، یا R2 (به سمت Mairie annexe) تا ایستگاه Cottages — حدود بیست دقیقه." },
+      { label: "با ماشین", value: "یک ساعت از پاریس با اتوبان A1. پارک در خیابان آزاد است؛ اگر می‌شود چند نفری بیایید.", map: true },
       { label: "در باغ", value: "همه‌چیز بیرون و روی چمن است؛ کفشی بپوشید که با آن جور باشد. نیمهٔ شهریور بعدازظهر ملایم و غروب خنک است: کتی همراه داشته باشید و اگر هوا برگشت، پوشش گرم‌تری هم." }
     ],
     chips: [
       { q: "چه ساعتی برسیم؟", a: "ما از ساعت ۱۵ آمادهٔ پذیرایی از شما عزیزان هستیم. سفره کم‌کم چیده می‌شود؛ هر وقت برسید، چیزی از دست نمی‌رود." },
-      { q: "چطور به فوس برسیم؟", a: "با RER D تا Survilliers-Fosses و اتوبوس ۴: بیست دقیقه. با ماشین یک ساعت از پاریس با A1؛ پارک در خیابان آزاد است." },
+      { q: "چطور به فوس برسیم؟", a: "با RER D تا Survilliers-Fosses، سپس اتوبوس R1 تا ایستگاه Bellevue یا R2 (به سمت Mairie annexe) تا ایستگاه Cottages: حدود بیست دقیقه. با ماشین یک ساعت از پاریس با A1؛ پارک در خیابان آزاد است." },
       { q: "بچه‌ها هم دعوت‌اند؟", a: "البته. باغ دیوار دارد و جا برای دویدن؛ برای بعدازظهر بازی هم در نظر گرفته‌ایم." },
       { q: "چرا از ما آهنگ می‌پرسید؟", a: "موسیقی آن روز را پاسخ‌های شما می‌سازد. آهنگی که بنویسید، به احتمال زیاد نواخته می‌شود." }
     ],
@@ -384,6 +423,7 @@ const EXTRA = {
   fr: {
     editReply: 'Modifier ma réponse',
     photoCta: 'Déposer vos photos',
+    mapCta: 'Voir sur une carte',
     rateLimited: 'Vous avez posé beaucoup de questions en peu de temps. Reprenons dans un instant.',
     botNote: 'Réponses automatiques, établies à partir des informations de cette page.',
     calendarCta: 'Ajouter à mon calendrier',
@@ -438,6 +478,7 @@ const EXTRA = {
   en: {
     editReply: 'Change my reply',
     photoCta: 'Share your photographs',
+    mapCta: 'View on a map',
     rateLimited: 'That is a great many questions in a short time. Let us pick this up in a moment.',
     botNote: 'Answered automatically, from the information on this page.',
     calendarCta: 'Add to my calendar',
@@ -474,6 +515,7 @@ const EXTRA = {
   ar: {
     editReply: 'تعديل ردّي',
     photoCta: 'شاركونا صوركم',
+    mapCta: 'الموقع على الخريطة',
     rateLimited: 'طرحتم أسئلة كثيرة في وقت قصير. نكمل بعد قليل.',
     botNote: 'إجابات آلية، مستندة إلى المعلومات الواردة في هذه الصفحة.',
     calendarCta: 'إضافة إلى تقويمي',
@@ -513,6 +555,7 @@ const EXTRA = {
   fa: {
     editReply: 'ویرایش پاسخم',
     photoCta: 'عکس‌هایتان را به یادگار بگذارید',
+    mapCta: 'نمایش روی نقشه',
     rateLimited: 'پرسش‌ها پشت سر هم زیاد شد. کمی درنگ کنید.',
     botNote: 'پاسخ‌ها خودکارند، بر پایهٔ همین صفحه.',
     calendarCta: 'افزودن به تقویم من',

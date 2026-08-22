@@ -7,8 +7,9 @@
   it is the eight-point star now, like every other mark.
 -->
 <script>
-  import { star } from '$lib/tracery.js';
+  import Tracery from './Tracery.svelte';
 
+  /** @type {{ width?: string, tone?: 'line' | 'soft' }} */
   let { width = 'w-28', tone = 'line' } = $props();
 
   const rule = { line: 'bg-line', soft: 'bg-primary-soft' };
@@ -17,13 +18,6 @@
 
 <div class="flex items-center justify-center gap-2 {width}" aria-hidden="true">
   <div class="h-px flex-1 {rule[tone]}"></div>
-  <svg viewBox="0 0 12 12" class="h-2.5 w-2.5 {mark[tone]}" fill="none">
-    <path
-      d={star(6, 6, 5.4)}
-      stroke="currentColor"
-      stroke-width="1.1"
-      vector-effect="non-scaling-stroke"
-    />
-  </svg>
+  <Tracery kind="star" small class="h-2.5 w-2.5 {mark[tone]}" />
   <div class="h-px flex-1 {rule[tone]}"></div>
 </div>

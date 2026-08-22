@@ -6,7 +6,30 @@
   in the callers because Field is already the single place every input renders,
   and a native <datalist> means no typeahead component and no dependency.
 -->
+<script module>
+  /**
+   * What a text input looks like. Exported because the chat composer is the one
+   * input on the site that is NOT a Field — it puts the border on the <form> so
+   * the box and the send button read as a single control — and it had drifted a
+   * half padding step away from this while looking identical.
+   *
+   * Border, background and width are deliberately NOT in here: those are exactly
+   * the parts the two callers legitimately differ on.
+   */
+  export const INPUT_BASE =
+    'px-3.5 py-3 text-sm font-light text-ink placeholder:text-ink-muted';
+
+  /**
+   * How a validation message looks. RsvpForm has two errors that belong to no
+   * single Field — the yes/no group, and the form-level one — so they cannot go
+   * through this component, but they must not look like a different thing.
+   */
+  export const ERROR_TEXT = 'text-xs font-light text-accent';
+</script>
+
 <script>
+  import { MIN_CHARS } from '$lib/match.js';
+
   let {
     label,
     name,
@@ -23,10 +46,9 @@
 
   const id = `f-${name}`;
   const input =
-    'w-full bg-surface-raise border border-line px-3.5 py-3 text-sm font-light text-ink ' +
-    'placeholder:text-ink-muted focus:border-primary focus:outline-none';
+    `w-full bg-surface-raise border border-line ${INPUT_BASE} ` +
+    'focus:border-primary focus:outline-none';
 
-  const MIN_CHARS = 2;
   const DEBOUNCE = 250;
 
   /** @type {{ value: string }[]} */
@@ -63,7 +85,7 @@
 </script>
 
 <div class="flex flex-col gap-1.5">
-  <label for={id} class="caps text-[11px] font-light text-ink-muted">{label}</label>
+  <label for={id} class="caps text-caption font-light text-ink-muted">{label}</label>
   {#if rows}
     <textarea
       {id}
@@ -101,6 +123,6 @@
     {/if}
   {/if}
   {#if error}
-    <p id="{id}-err" class="text-xs font-light text-accent">{error}</p>
+    <p id="{id}-err" class={ERROR_TEXT}>{error}</p>
   {/if}
 </div>

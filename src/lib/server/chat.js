@@ -37,7 +37,11 @@ export async function checkRateLimit(visitorId) {
   return { ok: true };
 }
 
-/** The last few turns for one visitor, oldest first. @param {string} visitorId */
+/**
+ * The last few turns for one visitor, oldest first.
+ * @param {string} visitorId
+ * @returns {Promise<{role: 'user' | 'assistant', content: string}[]>}
+ */
 export async function history(visitorId) {
   // No database, no transcript. The chat still answers — it just cannot
   // remember, so each question stands alone.
@@ -46,7 +50,9 @@ export async function history(visitorId) {
      WHERE visitor_id = ${visitorId}
      ORDER BY created_at DESC, id DESC
      LIMIT ${HISTORY_WINDOW}`);
-  return rows.reverse();
+  // postgres.js hands back an untyped Row[]; the column is written only by
+  // this module and only ever with these two roles.
+  return /** @type {{role: 'user' | 'assistant', content: string}[]} */ (rows.reverse());
 }
 
 /**
@@ -65,7 +71,7 @@ export function aiConfigured() {
 /**
  * @param {string} message
  * @param {'fr'|'en'|'ar'|'fa'} lang
- * @param {{role: string, content: string}[]} prior
+ * @param {{role: 'user' | 'assistant', content: string}[]} prior
  */
 export async function answer(message, lang, prior) {
   if (!aiConfigured()) return cannedAnswer(message, lang);

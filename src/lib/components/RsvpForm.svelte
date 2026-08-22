@@ -7,10 +7,11 @@
 <script>
   import { enhance } from '$app/forms';
   import Chip from './Chip.svelte';
-  import Field from './Field.svelte';
+  import Field, { ERROR_TEXT } from './Field.svelte';
   import Button from './Button.svelte';
   import Tracery from './Tracery.svelte';
   import { localeDigits } from '$lib/content/wedding.js';
+  import { COUNTS, MAX_COUNT } from '$lib/rsvp.js';
 
   // `canRsvp` false means Postgres is unreachable (see server/db.js). The rest
   // of the page is unaffected, so the form says so and stops rather than taking
@@ -32,22 +33,31 @@
     delay: i * 0.12
   }));
 
-  // The largest invites on the guest list bring six and five, which the original
-  // 1-4 picker silently under-counted. `+page.server.js` clamps to the same
-  // ceiling — widening only the chips would save a 6 as a 1.
-  const COUNTS = [1, 2, 3, 4, 5, 6];
-  const MAX_COUNT = COUNTS[COUNTS.length - 1];
 
   let going = $state(existing?.going ?? null);
   let count = $state(existing?.headcount ?? 1);
   let saved = $state(false);
+  /** @type {HTMLElement | undefined} */
+  let panel = $state();
+  $effect(() => {
+    if (saved) panel?.focus();
+  });
   let submitting = $state(false);
 
   const errors = $derived(form?.errors ?? {});
 </script>
 
 {#if saved}
-  <div class="night relative flex flex-col items-center gap-3 overflow-hidden px-5 py-6 text-center">
+  <!-- The form this replaces has just been unmounted with focus inside it, so
+       without both of these a screen-reader user presses "send" and gets
+       silence, with focus dumped on <body>. This is the site's whole point.
+       role="status" is polite: it waits for a pause rather than cutting in. -->
+  <div
+    role="status"
+    tabindex="-1"
+    bind:this={panel}
+    class="night relative flex flex-col items-center gap-3 overflow-hidden px-5 py-6 text-center focus:outline-none"
+  >
     {#each PETALS as petal (petal.i)}
       <span
         class="absolute top-0 rotate-45 {petal.tone}"
@@ -61,12 +71,12 @@
          from the enhance callback, so it cannot be a button clicked afterwards.
          The yes copy ends on the date and the garden, which is the one thing a
          guest who has just declined must not be told (issue #22). -->
-    <p class="text-[13px] leading-relaxed font-light text-primary-faint">
+    <p class="text-note leading-relaxed font-light text-primary-faint">
       {going === false ? t.thanksBodyNo : t.thanksBody}
     </p>
     <button
       type="button"
-      class="caps mt-1 text-[10px] font-light text-primary-faint underline"
+      class="caps mt-1 text-micro font-light text-primary-faint underline"
       onclick={() => (saved = false)}
     >
       {t.editReply}
@@ -90,7 +100,15 @@
     <input type="hidden" name="headcount" value={count} />
 
     <div class="flex flex-col gap-1.5">
-      <div class="flex gap-2">
+      <!-- Named from the section's own title rather than a new content string:
+           the pair IS the reply. aria-label, not aria-labelledby — the heading
+           lives in +page.svelte, outside this component. -->
+      <div
+        class="flex gap-2"
+        role="group"
+        aria-label={t.rsvpTitle}
+        aria-describedby={errors.going ? 'rsvp-going-err' : undefined}
+      >
         <Chip size="lg" block selected={going === true} onclick={() => (going = true)}>
           {t.yes}
         </Chip>
@@ -105,7 +123,7 @@
         </Chip>
       </div>
       {#if errors.going}
-        <p class="text-xs font-light text-accent">{errors.going}</p>
+        <p id="rsvp-going-err" class={ERROR_TEXT}>{errors.going}</p>
       {/if}
     </div>
 
@@ -132,8 +150,10 @@
 
     {#if going !== false}
       <div class="flex flex-col gap-1.5">
-        <span class="caps text-[11px] font-light text-ink-muted">{t.fCount}</span>
-        <div class="flex gap-1.5">
+        <span id="rsvp-count-label" class="caps text-caption font-light text-ink-muted"
+          >{t.fCount}</span
+        >
+        <div class="flex gap-1.5" role="group" aria-labelledby="rsvp-count-label">
           {#each COUNTS as n (n)}
             <Chip selected={count === n} onclick={() => (count = n)}>
               {localeDigits(n, lang)}
@@ -154,7 +174,7 @@
     <Field label={t.fWord} name="message" rows={3} maxlength={2000} />
 
     {#if errors.form || !canRsvp}
-      <p class="text-xs font-light text-accent">{errors.form || t.rsvpOffline}</p>
+      <p role="alert" class={ERROR_TEXT}>{errors.form || t.rsvpOffline}</p>
     {/if}
 
     <Button type="submit" block disabled={submitting || !canRsvp}>{t.sendRsvp}</Button>

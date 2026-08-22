@@ -81,6 +81,7 @@ RULES, in order of importance:
  */
 export function cannedAnswer(message, lang) {
   const s = t(lang);
+  /** @param {string} x */
   const norm = (x) => x.trim().toLowerCase().replace(/\s+/g, ' ');
   const hit = s.chips.find((c) => norm(c.q) === norm(message));
   return hit ? hit.a : fallbackText(lang);

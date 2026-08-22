@@ -9,18 +9,20 @@
 -->
 <script>
   import Chip from './Chip.svelte';
+  import { postJSON } from '$lib/post.js';
 
+  /** @type {{ current?: 'light' | 'dark', tone?: 'default' | 'on-primary',
+        toLight?: string, toDark?: string }} */
   let { current = 'light', tone = 'on-primary', toLight, toDark } = $props();
   let theme = $state(current);
 
   function toggle() {
     theme = theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = theme;
-    fetch('/api/prefs', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ theme })
-    });
+    // The page has already switched; persisting it is best-effort. Swallow the
+    // failure rather than throwing an unhandled rejection — offline, the theme
+    // simply reverts on the next load.
+    postJSON('/api/prefs', { theme }).catch(() => {});
   }
 </script>
 

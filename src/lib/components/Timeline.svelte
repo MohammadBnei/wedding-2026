@@ -16,23 +16,20 @@
   renders as one such stop.
 -->
 <script>
-  import { star } from '$lib/tracery.js';
+  import Tracery from './Tracery.svelte';
 
   let { items } = $props();
 </script>
 
 {#snippet mark(/** @type {string} */ cls)}
-  <!-- Outlined, and filled with the page rather than left transparent: the rail
-       runs behind them and would otherwise show through the middle. -->
-  <svg viewBox="0 0 12 12" class="absolute text-gold {cls}" aria-hidden="true">
-    <path
-      d={star(6, 6, 5.5)}
-      fill="var(--color-surface)"
-      stroke="currentColor"
-      stroke-width="1.1"
-      vector-effect="non-scaling-stroke"
-    />
-  </svg>
+  <!-- Filled with the page rather than left transparent: the rail runs behind
+       these and would otherwise show through the middle. -->
+  <Tracery
+    kind="star"
+    small
+    fill="var(--color-surface)"
+    class="absolute text-gold {cls}"
+  />
 {/snippet}
 
 <div class="relative ps-6.5">
@@ -48,8 +45,8 @@
       <li class="relative pb-3.5 {i ? 'pt-3' : ''}">
         {@render mark('h-3.5 w-3.5 -start-[27px] top-[4px]')}
         <div class="flex items-baseline gap-3.5">
-          <span class="w-13 shrink-0 text-[13px] font-semibold text-accent">{item.time}</span>
-          <p class="flex-1 text-[15px] text-ink">{item.title}</p>
+          <span class="w-13 shrink-0 text-note font-semibold text-accent">{item.time}</span>
+          <p class="flex-1 text-body text-ink">{item.title}</p>
         </div>
       </li>
       {#each item.items ?? [item.note] as entry (entry)}
@@ -58,7 +55,7 @@
           {@render mark('h-2.5 w-2.5 -start-[25.5px] top-[5.5px]')}
           <div class="flex gap-3.5">
             <span class="w-13 shrink-0" aria-hidden="true"></span>
-            <p class="flex-1 text-[13px] leading-relaxed font-light text-ink-muted text-pretty">
+            <p class="flex-1 text-note leading-relaxed font-light text-ink-muted text-pretty">
               {entry}
             </p>
           </div>

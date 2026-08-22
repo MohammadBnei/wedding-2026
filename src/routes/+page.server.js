@@ -2,6 +2,7 @@ import { fail } from '@sveltejs/kit';
 import { sql, dbUp, dbOr } from '$lib/server/db.js';
 import { history } from '$lib/server/chat.js';
 import { t } from '$lib/content/wedding.js';
+import { MAX_COUNT } from '$lib/rsvp.js';
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ locals }) {
@@ -32,6 +33,7 @@ const LIMITS = { name: 120, song: 200, message: 2000, email: 200 };
 export const actions = {
   rsvp: async ({ request, locals }) => {
     const form = await request.formData();
+    /** @param {string} k */
     const str = (k) => String(form.get(k) ?? '').trim();
 
     /** @type {Record<string,string>} */
@@ -49,10 +51,10 @@ export const actions = {
     else if (name.length > LIMITS.name) errors.name = msg.errNameLong;
 
     const headcount = Number(str('headcount') || '1');
-    // Not user-facing: the picker only offers 1-6, so anything else is a forged
-    // post. Keep this bound in step with COUNTS in RsvpForm.svelte — if the chips
-    // offer more than this allows, the extra heads are silently saved as 1.
-    const count = Number.isInteger(headcount) && headcount >= 1 && headcount <= 6 ? headcount : 1;
+    // Not user-facing: the picker only offers what COUNTS lists, so anything
+    // else is a forged post. The bound comes from that same list — see rsvp.js.
+    const count =
+      Number.isInteger(headcount) && headcount >= 1 && headcount <= MAX_COUNT ? headcount : 1;
 
     const song = str('song').slice(0, LIMITS.song) || null;
     const message = str('message').slice(0, LIMITS.message) || null;

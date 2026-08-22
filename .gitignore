@@ -37,3 +37,7 @@ vecteezy_*.svg
 /test-results/
 /playwright-report/
 /blob-report/
+
+# Claude Code session state — worktrees with their own node_modules, ~200MB.
+# Not "cache we could commit": one `git add -A` would put it in a public repo.
+.claude/

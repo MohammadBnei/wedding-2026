@@ -15,13 +15,15 @@ const esc = (s) =>
   s.replace(/\\/g, '\\\\').replace(/([;,])/g, '\\$1').replace(/\r?\n/g, '\\n');
 
 /**
- * Local wall-clock hours in Fosses. These are a SECOND copy of the programme's
- * 15h start — wedding.js's schedule, +layout.svelte's JSON-LD and
- * Countdown.svelte each hold their own. Only this one is covered by a test, so
- * if the hour moves, move all four by hand.
+ * Local wall-clock hours in Fosses, and the only copy. The .ics body, the
+ * JSON-LD in +layout.svelte and the Countdown target all read these, so moving
+ * the hour is one edit — and ics.test.js covers it, which means the test covers
+ * all three. (wedding.js's schedule still prints the hour as display copy, in
+ * four languages; that is text, not a time, and there is nothing to derive it
+ * from.)
  */
-const GARDEN_FROM = 15;
-const GARDEN_UNTIL = 23;
+export const GARDEN_FROM = 15;
+export const GARDEN_UNTIL = 23;
 
 /** Where the wedding is, for the purpose of "what does 15h mean". */
 const VENUE_TZ = 'Europe/Paris';
