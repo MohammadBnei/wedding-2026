@@ -710,9 +710,9 @@ html[data-lang-switching] .lang-fade {
   animation: celestial-rise 1.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* The sun turns. 120s is about two degrees a second: alive when you rest on it,
-   invisible when you don't. A full turn ends where it started, so the single
-   reduced-motion pass leaves it exactly as it was. */
+/* The sun turns. 194s is 120s x phi, about one degree every 1.6 seconds: alive
+   when you rest on it, invisible when you don't. A full turn ends where it
+   started, so the single reduced-motion pass leaves it exactly as it was. */
 @keyframes sun-turn {
   to {
     transform: rotate(360deg);
@@ -720,7 +720,7 @@ html[data-lang-switching] .lang-fade {
 }
 
 .turns {
-  animation: sun-turn 120s linear infinite;
+  animation: sun-turn 194.164s linear infinite;
 }
 
 /* A figure that has just changed drops into place. Re-keyed in Countdown.svelte,
