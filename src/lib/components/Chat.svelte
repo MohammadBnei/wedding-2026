@@ -18,8 +18,15 @@
   let log;
 
   // Keep the newest message in view without yanking the whole page around.
+  // The first run is the restored transcript, not a new message: scrolling then
+  // would drop an arriving visitor straight into the chat, past everything above.
+  let restored = false;
   $effect(() => {
     void messages.length;
+    if (!restored) {
+      restored = true;
+      return;
+    }
     log?.lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   });
 
