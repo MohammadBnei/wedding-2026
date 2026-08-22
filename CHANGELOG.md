@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.9.0](https://github.com/MohammadBnei/wedding-2026/compare/0.8.0...0.9.0) (2026-08-22)
+
+
+### Features
+
+* **garden:** put the real aerial photo behind the plan ([047e830](https://github.com/MohammadBnei/wedding-2026/commit/047e830d71b21e0fdd8e6bdcbc8750bd888b6d42))
+
 # [0.8.0](https://github.com/MohammadBnei/wedding-2026/compare/0.7.1...0.8.0) (2026-08-22)
 
 
