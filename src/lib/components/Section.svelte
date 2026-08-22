@@ -66,19 +66,7 @@
    */
   const RUNGS = [1, PHI, PHI ** 2];
   const BASE = 13;
-
-  /*
-   * The quote stars are drawn from the SAME scatter as the ornament ones, and
-   * appended to it, which is the whole reason there is one sampler and not two:
-   * a second pass could not see the first, and would eventually drop a clickable
-   * star on top of a decorative one.
-   *
-   * They all take the middle rung. Varying their size would make them read as
-   * more scatter; one size makes them read as a set, which is what a guest has
-   * to notice before it occurs to them to press one. It is also the rung that
-   * clears a 24px hit box once the button's padding is added.
-   */
-  const COUNT = $derived(RUNGS.length + quotes.length);
+  const COUNT = RUNGS.length;
 
   /*
    * The corners the two sprigs stand in, as a share of the box — the stars keep
@@ -132,7 +120,7 @@
       if (x < KEEP.x && y < KEEP.y) continue;
       if (x > 100 - KEEP.x * PHI && y > 100 - KEEP.y * PHI) continue;
       if (out.some((o) => Math.abs(o.x - x) < 15 && Math.abs(o.y - y) < 11)) continue;
-      const rung = RUNGS[out.length] ?? PHI;
+      const rung = RUNGS[out.length];
       out.push({ x, y, size: BASE * rung, rot: next() * 45, o: 0.2 / Math.sqrt(rung) });
     }
     /*
@@ -153,11 +141,46 @@
     return { out, sprigs };
   });
 
-  /* The first three rungs are the ornament, untouched; whatever follows is a
-     quote. Drawn in that order, so adding a quote cannot move a mark that was
-     already on the page. */
-  const ORNAMENTS = $derived(STARS.out.slice(0, RUNGS.length));
-  const MARKS = $derived(STARS.out.slice(RUNGS.length));
+  const ORNAMENTS = $derived(STARS.out);
+
+  /*
+   * The quote stars do NOT join the scatter above, and that is not a taste
+   * decision. app.css lifts every control in a section ABOVE the stars, so a
+   * quote star that lands on a button is not merely awkward — it is unreachable,
+   * and the quote behind it can never be opened by anyone. Scattered over the
+   * box, two of the ten sat under a chat chip and a textarea at every viewport.
+   *
+   * So they live in the section's own vertical padding instead: the strip above
+   * the heading and the strip below the last child, which is the only part of
+   * the box guaranteed to hold no content. `py-8` is 32px against a 29px button,
+   * so it fits, and `lg:py-12` only gives it more room.
+   *
+   * One per band, so two stars can never crowd each other either, and x is kept
+   * to the middle half — clear of both corner sprigs at any width, without
+   * needing to know how wide the section is.
+   *
+   * Its own LCG, seeded differently from the scatter's: sharing the stream would
+   * tie a quote's position to an ornament's, and moving one would move the other.
+   */
+  const MARKS = $derived.by(() => {
+    let s = 11;
+    for (const ch of seed || id || 'section') s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+    const next = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+
+    return quotes.map((/** @type {any} */ q, /** @type {number} */ i) => ({
+      q,
+      x: 25 + next() * 50,
+      rot: next() * 45,
+      // Alternating rather than random: with two quotes it guarantees one of
+      // each, and a section that grows a third simply starts the cycle again.
+      top: i % 2 === 0
+    }));
+  });
+
+  /* 21px of star — the scatter's middle rung, big enough that the eight points
+     stay open — plus the button's 4px padding either side, which is what carries
+     the hit box over the 24px minimum a finger needs. */
+  const MARK_PX = BASE * PHI + 8;
 </script>
 
 <svelte:window
@@ -223,11 +246,18 @@
 
        The layer keeps `pointer-events-none` and only the buttons take it back,
        so a star sitting over a paragraph still lets the paragraph be selected.
+       A paragraph is all it may sit over: app.css lifts every control in a
+       section to z-20, above the stars and below an open note, because a mark
+       that eats a tap meant for the RSVP button is not decoration, it is a bug.
+
+       Deliberately no z-index on the LAYER: it would make a stacking context and
+       trap the note at the stars' depth, where a control would show through it.
+       Star and note carry their own instead, in the section's own context.
 
        Nothing here exists without JavaScript, and that is acceptable where the
        door is not: this hides content that was never on the page to begin with,
        so a guest with scripting off loses an easter egg, not the invitation. -->
-  <div class="pointer-events-none absolute inset-0 z-10">
+  <div class="pointer-events-none absolute inset-0">
     {#each MARKS as mark, i (i)}
       {@const q = quotes[i]}
       <!-- The button holds still and the star inside it breathes. Not a detail:
@@ -236,10 +266,10 @@
            refuses to click at all, since it never settles between two frames. -->
       <button
         type="button"
-        class="quote-star pointer-events-auto absolute block p-1 text-gold hover:text-accent"
-        style="inset-inline-start:{mark.x.toFixed(2)}%;top:{mark.y.toFixed(2)}%;width:{(
-          mark.size + 8
-        ).toFixed(1)}px;rotate:{mark.rot.toFixed(1)}deg"
+        class="quote-star pointer-events-auto absolute z-10 block p-1 text-gold hover:text-accent"
+        style="inset-inline-start:{mark.x.toFixed(2)}%;{mark.top
+          ? 'top'
+          : 'bottom'}:2px;width:{MARK_PX.toFixed(1)}px;rotate:{mark.rot.toFixed(1)}deg"
         aria-label={hint}
         aria-expanded={open === i}
         aria-controls="{seed}-quote-{i}"
@@ -251,18 +281,20 @@
       </button>
 
       <!-- Always in the DOM, `hidden` when shut, so `aria-controls` above always
-           points at something real. Placed relative to its own star: back off the
-           end edge once past the middle, and above rather than below once past
-           60% down, which is what keeps it inside a section it is not clipped to. -->
+           points at something real. It opens INTO the section, away from the band
+           its star sits in — down from a top star, up from a bottom one — so it
+           lands over the content rather than over the seam with the next section,
+           which is the one place a section is not clipped and has no background
+           of its own to sit on. -->
       <div
         id="{seed}-quote-{i}"
         hidden={open !== i}
-        class="pointer-events-auto absolute flex max-w-[min(20rem,80%)] flex-col gap-2 border-s-[3px] border-primary bg-surface-raise px-4 py-3.5 shadow-lg"
+        class="quote-note pointer-events-auto absolute z-30 flex flex-col gap-2 border-s-[3px] border-primary bg-surface-raise px-4 py-3.5 shadow-lg"
         style="{mark.x < 50
-          ? `inset-inline-start:${mark.x.toFixed(2)}%`
-          : `inset-inline-end:${(100 - mark.x).toFixed(2)}%`};{mark.y > 60
-          ? `bottom:calc(${(100 - mark.y).toFixed(2)}% + 34px)`
-          : `top:calc(${mark.y.toFixed(2)}% + 34px)`}"
+          ? `--note-start:${mark.x.toFixed(2)}%`
+          : `--note-end:${(100 - mark.x).toFixed(2)}%`};{mark.top
+          ? 'top'
+          : 'bottom'}:{(MARK_PX + 8).toFixed(0)}px"
       >
         <!-- `lang` is the whole trick: app.css keys the typeface off `:lang()`,
              so Amiri, Vazirmatn and Mulish all arrive without a font class, and

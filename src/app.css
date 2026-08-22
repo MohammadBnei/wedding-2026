@@ -353,6 +353,25 @@
   :lang(fa) { font-family: var(--font-persian); }
   :lang(fr), :lang(en) { font-family: var(--font-body); }
 
+  /*
+   * A quote star paints above the running text on purpose (Section.svelte), and
+   * "above the text" also means above anything a guest can press: on a phone one
+   * landed exactly on the RSVP's "Modifier ma réponse" and swallowed the tap.
+   * A decorative mark must never take a press meant for a control, so controls
+   * are put back on top — z-20 against the stars' z-10 and the notes' z-30.
+   *
+   * Declared in `base`, and that is the load-bearing part: Tailwind's own
+   * `absolute`/`fixed`/`sticky` utilities live in `utilities`, which outranks
+   * this, so a control that is already positioned keeps its positioning and
+   * takes only the z-index. Only a statically-positioned one gets `relative`,
+   * which is exactly what it needs to obey a z-index at all. `.door-scrim` is
+   * unlayered further down the file and so outranks this too.
+   */
+  section :is(button, a, input, textarea, select, summary) {
+    position: relative;
+    z-index: 20;
+  }
+
   /* Visible focus everywhere — the artifact had none at all. */
   :focus-visible {
     outline: 2px solid var(--color-accent);
@@ -548,6 +567,29 @@
  * it, because four CSS gradients pretending to be a doorway is what made this
  * read as a box with a lid.
  */
+/*
+ * A quote note is pinned ACROSS the section on a phone, and anchored to its own
+ * star only once there is room for one. Anchored at 320px it cannot fit: the
+ * note starts a quarter to three quarters of the way along, and every one of
+ * them ran off the right edge — and narrowing it to fit buys a three-word
+ * measure, which is not a quote, it is a column of syllables.
+ *
+ * Unlayered on purpose, like `.door-scrim` below: it has to beat the Tailwind
+ * positioning utilities on the element, which is exactly what it is replacing.
+ * The custom properties are set inline per note; `auto` is the fallback so the
+ * side that is not anchored simply is not.
+ */
+.quote-note {
+  inset-inline: 1.5rem;
+}
+
+@media (width >= 64rem) {
+  .quote-note {
+    inset-inline: var(--note-start, auto) var(--note-end, auto);
+    max-width: 20rem;
+  }
+}
+
 .door-scrim {
   position: fixed;
   inset: 0;
