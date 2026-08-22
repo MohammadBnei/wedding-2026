@@ -342,9 +342,35 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Arabic and Persian get their own faces; Mulish has no Arabic glyphs. */
+  /* Arabic and Persian get their own faces; Mulish has no Arabic glyphs.
+     Latin is named explicitly rather than left to `body`, because these three
+     rules INHERIT: on an Arabic page every descendant computes to Amiri, and a
+     `lang="fr"` of its own does not undo that — it only stops matching :lang(ar).
+     Without the third rule a French quote inside an Arabic page is set in a
+     serif with no French character to it. Every language on the page has a face
+     here now, so nesting works in all four directions. */
   :lang(ar) { font-family: var(--font-arabic); }
   :lang(fa) { font-family: var(--font-persian); }
+  :lang(fr), :lang(en) { font-family: var(--font-body); }
+
+  /*
+   * A quote star paints above the running text on purpose (Section.svelte), and
+   * "above the text" also means above anything a guest can press: on a phone one
+   * landed exactly on the RSVP's "Modifier ma réponse" and swallowed the tap.
+   * A decorative mark must never take a press meant for a control, so controls
+   * are put back on top — z-20 against the stars' z-10 and the notes' z-30.
+   *
+   * Declared in `base`, and that is the load-bearing part: Tailwind's own
+   * `absolute`/`fixed`/`sticky` utilities live in `utilities`, which outranks
+   * this, so a control that is already positioned keeps its positioning and
+   * takes only the z-index. Only a statically-positioned one gets `relative`,
+   * which is exactly what it needs to obey a z-index at all. `.door-scrim` is
+   * unlayered further down the file and so outranks this too.
+   */
+  section :is(button, a, input, textarea, select, summary) {
+    position: relative;
+    z-index: 20;
+  }
 
   /* Visible focus everywhere — the artifact had none at all. */
   :focus-visible {
@@ -445,6 +471,40 @@
 }
 
 /*
+ * A quote star breathes. 11.326s is 7s x phi, the trick the sun already uses at
+ * 120s x phi: movement you notice only if you rest on it, and never while you are
+ * reading past it. It starts and ends on the resting state below, so the single
+ * capped reduced-motion pass changes nothing at all.
+ */
+@keyframes star-breathe {
+  0%, 100% { opacity: 0.34; transform: none; }
+  50% { opacity: 0.6; transform: translateY(-2px) scale(1.06); }
+}
+
+/* The resting opacity lives HERE and not only in the keyframe. An animation with
+   no fill-mode hands the property back the moment it stops, and under reduced
+   motion it DOES stop, after one iteration — without this the stars would settle
+   at full strength, which is the exact opposite of what they are for. */
+.breathes {
+  opacity: 0.34;
+  animation: star-breathe 11.326s ease-in-out infinite;
+}
+
+/* Dropping the animation is what lets a plain opacity through: an animated
+   property beats a normal declaration, so `:hover { opacity }` on its own would
+   do nothing here. The snap is deliberate — this is the only feedback a mark
+   with no label can give that it is worth pressing.
+
+   Keyed on the BUTTON and not on .breathes itself, because the two are no longer
+   the same element: the button is the fixed hit box, the span inside it is what
+   moves. See Section.svelte. */
+.quote-star:hover .breathes,
+.quote-star:focus-visible .breathes {
+  animation-name: none;
+  opacity: 0.85;
+}
+
+/*
  * `data-shown` is stamped on a section by the reveal action the moment it enters
  * view, and it drives BOTH the section's rise and its tracery's draw — so the
  * ornament arrives with the text it belongs to rather than on a timer of its own.
@@ -507,6 +567,29 @@
  * it, because four CSS gradients pretending to be a doorway is what made this
  * read as a box with a lid.
  */
+/*
+ * A quote note is pinned ACROSS the section on a phone, and anchored to its own
+ * star only once there is room for one. Anchored at 320px it cannot fit: the
+ * note starts a quarter to three quarters of the way along, and every one of
+ * them ran off the right edge — and narrowing it to fit buys a three-word
+ * measure, which is not a quote, it is a column of syllables.
+ *
+ * Unlayered on purpose, like `.door-scrim` below: it has to beat the Tailwind
+ * positioning utilities on the element, which is exactly what it is replacing.
+ * The custom properties are set inline per note; `auto` is the fallback so the
+ * side that is not anchored simply is not.
+ */
+.quote-note {
+  inset-inline: 1.5rem;
+}
+
+@media (width >= 64rem) {
+  .quote-note {
+    inset-inline: var(--note-start, auto) var(--note-end, auto);
+    max-width: 20rem;
+  }
+}
+
 .door-scrim {
   position: fixed;
   inset: 0;

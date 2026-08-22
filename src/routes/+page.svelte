@@ -1,5 +1,5 @@
 <script>
-  import { SHARED } from '$lib/content/wedding.js';
+  import { SHARED, starQuotes } from '$lib/content/wedding.js';
 
   import Section from '$lib/components/Section.svelte';
   import Zigzag from '$lib/components/Zigzag.svelte';
@@ -218,7 +218,7 @@
       would get no fade at all. Ending the wrapper here puts it exactly on that seam.
     -->
     <div class="relative isolate flex flex-col py-28 lg:py-32">
-      <Section seed="welcome">
+      <Section seed="welcome" quotes={starQuotes('welcome', data.lang)} hint={t.starHint}>
         <!--
           The Bismillah opens the invitation text, as it opens the document it
           is standing in for. Set alone and untranslated in all four locales —
@@ -246,7 +246,12 @@
         <Countdown {t} lang={data.lang} />
       </Section>
 
-      <Section title={t.dayTitle} seed="day">
+      <Section
+        title={t.dayTitle}
+        seed="day"
+        quotes={starQuotes('day', data.lang)}
+        hint={t.starHint}
+      >
         <Timeline items={t.schedule} />
         <!-- The .ics covers the garden gathering, 15h-23h — see wedding.ics/+server.js.
              No `download` attribute: the point is to hand the file to the phone's
@@ -260,7 +265,12 @@
 
       <Zigzag reverse={true} />
 
-      <Section title={t.essTitle} seed="essentials">
+      <Section
+        title={t.essTitle}
+        seed="essentials"
+        quotes={starQuotes('essentials', data.lang)}
+        hint={t.starHint}
+      >
         <GardenPlan pins={t.pins} placeholder={t.planPlaceholder} lang={data.lang} />
         <div class="mt-2 flex flex-col gap-3.5">
           {#each t.facts as fact (fact.label)}
@@ -291,7 +301,14 @@
 
       <Zigzag reverse={false} />
 
-      <Section title={t.chatTitle} tone="alt" fill seed="chat">
+      <Section
+        title={t.chatTitle}
+        tone="alt"
+        fill
+        seed="chat"
+        quotes={starQuotes('chat', data.lang)}
+        hint={t.starHint}
+      >
         <p class="text-note leading-relaxed font-light text-ink-muted">{t.chatSub}</p>
         <Chat {t} messages={data.messages} lang={data.lang} />
         <p class="text-caption font-light text-ink-muted">{t.botNote}</p>
@@ -299,7 +316,13 @@
 
       <Zigzag reverse={true} />
 
-      <Section title={t.rsvpTitle} id="rsvp" seed="rsvp">
+      <Section
+        title={t.rsvpTitle}
+        id="rsvp"
+        seed="rsvp"
+        quotes={starQuotes('rsvp', data.lang)}
+        hint={t.starHint}
+      >
         <!-- `rsvpSub` — the reply-by date — is deliberately NOT printed here any
              more. It still reaches the bot through $lib/chat-prompt.js, so a
              guest who asks when to reply by still gets the date. -->

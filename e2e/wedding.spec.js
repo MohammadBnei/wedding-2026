@@ -506,3 +506,125 @@ test('the door is not a trap for reduced motion or for scripting off', async ({ 
   await expect(p2.getByRole('heading', { level: 1 })).toBeVisible();
   await noJs.close();
 });
+
+test('a quote star opens its note, and only one is ever open', async ({ page }) => {
+  // The quote stars are the only thing on the page that hides content behind a
+  // click, and they carry no label — so if hydration or the open-index regresses
+  // they do not look broken, they look like decoration. Nothing else would fail.
+  await visit(page, '/');
+  const stars = page.getByRole('button', { name: 'une pensée' });
+  await expect(stars).toHaveCount(10);
+
+  const first = stars.first();
+  await expect(first).toHaveAttribute('aria-expanded', 'false');
+  await first.click();
+  await expect(first).toHaveAttribute('aria-expanded', 'true');
+  // The welcome pair, in order: the ayah, then Saint-Exupéry. Asserting the
+  // attribution rather than the quote proves the two halves of a starQuotes
+  // entry — SHARED text, EXTRA gloss — were joined for the right id.
+  await expect(page.getByText('Sourate Ar-Rûm, 30:21')).toBeVisible();
+  await expect(page.getByText('Antoine de Saint-Exupéry')).toBeHidden();
+
+  // One index, not a flag each: opening a second must shut the first.
+  await stars.nth(1).click();
+  await expect(first).toHaveAttribute('aria-expanded', 'false');
+  await expect(stars.nth(1)).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByText('Antoine de Saint-Exupéry')).toBeVisible();
+  await expect(page.getByText('Sourate Ar-Rûm, 30:21')).toBeHidden();
+
+  await page.keyboard.press('Escape');
+  await expect(stars.nth(1)).toHaveAttribute('aria-expanded', 'false');
+
+  // Every note, on this project's viewport. The mobile project is where this
+  // bites: anchored to its own star, a note at 320px started two thirds of the
+  // way along and ran off the right edge — legible on a laptop, cut off on the
+  // phone most guests will actually open this on.
+  const vw = page.viewportSize().width;
+  for (let i = 0; i < 10; i++) {
+    const star = stars.nth(i);
+    await star.scrollIntoViewIfNeeded();
+    await star.click();
+    const note = page.locator('#' + (await star.getAttribute('aria-controls')));
+    await expect(note).toBeVisible();
+    const b = await note.boundingBox();
+    expect(b.x, 'note ' + i + ' off the start edge').toBeGreaterThanOrEqual(0);
+    expect(b.x + b.width, 'note ' + i + ' off the end edge').toBeLessThanOrEqual(vw);
+    await star.click();
+  }
+});
+
+test('a quote keeps its own language inside a page set in another', async ({ page }) => {
+  // `lang` on the blockquote is not cosmetic: app.css keys the typeface off
+  // :lang(), so losing it sets a French quote in Amiri and a Persian one in an
+  // Arabic face. Neither is a crash, and neither is visible from a French page.
+  await visit(page, '/');
+  await page.getByRole('button', { name: 'العربية', exact: true }).click();
+
+  const stars = page.getByRole('button', { name: 'خاطرة' });
+  await expect(stars).toHaveCount(10);
+  await stars.first().click();
+
+  // The welcome pair is one Arabic ayah and one French line; the French one must
+  // still be ltr and still be set in the body face, on a page that is rtl.
+  const fr = page.locator('blockquote[lang="fr"]').first();
+  await expect(fr).toHaveAttribute('dir', 'ltr');
+  await expect(fr).toHaveCSS('font-family', /Mulish/);
+});
+
+test('no quote star can take a press meant for a control', async ({ page }) => {
+  // How this broke: on a phone one of the RSVP section's stars landed exactly on
+  // "Modifier ma réponse" and swallowed the tap — a guest would have got a Rumi
+  // quatrain instead of the form. The stars paint above the running text on
+  // purpose, so the fix is a z-order one in app.css.
+  //
+  // The overlap is FORCED rather than waited for. Where a star falls is a
+  // function of the section's seed and the section's rendered height, so the
+  // natural collision moves the moment any copy changes — a test that checked
+  // only where the stars happen to sit today would go quiet long before it went
+  // wrong. Parking one on each control tests the z-order rule itself.
+  await visit(page, '/');
+  await expect(page.locator('.quote-star')).toHaveCount(10);
+
+  const result = await page.evaluate(() => {
+    const stolen = [];
+    let checked = 0;
+    const name = (el) => el.textContent?.trim().slice(0, 40) || el.getAttribute('name') || el.tagName;
+
+    for (const el of document.querySelectorAll('section :is(button, a, input, textarea, select)')) {
+      if (el.classList.contains('quote-star')) continue;
+      if (!el.getBoundingClientRect().width) continue;
+      // A star from the control's OWN section. Every section is `isolate`, so a
+      // star can only ever cover something inside its own stacking context —
+      // borrowing the first star on the page proves nothing about the fifth.
+      const star = el.closest('section')?.querySelector('.quote-star');
+      if (!star) continue;
+      // elementFromPoint reads the VIEWPORT, so the control has to be on screen.
+      // 'instant': app.css sets scroll-behavior:smooth on <html>, so the default
+      // animates and every rect below would be read from before the scroll.
+      el.scrollIntoView({ block: 'center', behavior: 'instant' });
+      const b = el.getBoundingClientRect();
+      const x = b.left + b.width / 2;
+      const y = b.top + b.height / 2;
+      if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) continue;
+
+      // Park the star dead centre on the control, in viewport coordinates.
+      star.style.position = 'fixed';
+      star.style.inset = 'auto';
+      star.style.left = `${x - star.offsetWidth / 2}px`;
+      star.style.top = `${y - star.offsetHeight / 2}px`;
+
+      const hit = document.elementFromPoint(x, y);
+      checked++;
+      // A null hit is a broken probe, not a pass — that is exactly how the first
+      // version of this test managed to agree with a page that was still wrong.
+      if (!hit) stolen.push(`no hit over ${name(el)}`);
+      else if (hit.closest('.quote-star')) stolen.push(name(el));
+    }
+    return { stolen, checked };
+  });
+
+  expect(result.stolen).toEqual([]);
+  // The page has controls in four of its five sections; if this ever drops to a
+  // handful the loop above has stopped reaching them and is proving nothing.
+  expect(result.checked).toBeGreaterThan(8);
+});

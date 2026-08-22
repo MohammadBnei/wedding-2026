@@ -95,7 +95,85 @@ export const SHARED = {
   // sentence being made. The door carries the two-word `بسم الله` as well, and
   // neither is glossed — a translation under the full formula would render half
   // of it and stop, which is what `basmalaGloss` used to do (issue #16).
-  bismillah: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ'
+  bismillah: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+
+  /*
+   * The quote stars. One eight-point star per quote, scattered in the FOREGROUND
+   * of a section and opened by a click — see Section.svelte.
+   *
+   * The page stopped naming anyone's origins in print when the four-country grid
+   * went (issue #18). This puts the traditions back as something a guest FINDS
+   * rather than something they are told, which is the only reason it earns the
+   * decoration budget.
+   *
+   * Each quote keeps its ORIGINAL language, so `lang` is not metadata — it drives
+   * the direction AND the typeface, because app.css already keys the font off
+   * `:lang()`. The per-locale gloss and attribution live in EXTRA.<lang>.starGloss,
+   * exactly the split `verse` / `verseGloss` / `verseRef` above already uses.
+   *
+   * WRITTEN ORIGINALS ONLY. The Amazigh material researched alongside these is
+   * oral tradition with a French ethnographic record and no fixed original;
+   * printing a French sentence under "Amazigh proverb" would claim a source that
+   * does not exist. The Maghreb is carried here in Arabic instead — which is also
+   * the right register for this family.
+   *
+   * `id` is what the gloss tables key on, so this list can be reordered freely,
+   * and wedding.test.js fails if an id is missing a gloss in any of the four.
+   */
+  starQuotes: [
+    // Qur'an 30:21, EXCERPTED to the mawadda-wa-rahma clause. The whole verse is
+    // about four times the weight of the other nine and would leave one note
+    // visibly taller than the rest; the reference under it names the full ayah.
+    { id: 'rum30', section: 'welcome', lang: 'ar', text: 'وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً' },
+    {
+      id: 'stex',
+      section: 'welcome',
+      lang: 'fr',
+      text: "Aimer, ce n'est pas se regarder l'un l'autre, c'est regarder dans la même direction."
+    },
+    {
+      id: 'hafez',
+      section: 'day',
+      lang: 'fa',
+      text: 'فاش می‌گویم و از گفتهٔ خود دلشادم / بنده عشقم و از هر دو جهان آزادم'
+    },
+    {
+      id: 'bazin',
+      section: 'day',
+      lang: 'fr',
+      text: "Une vie sans amour, c'est une vie sans soleil."
+    },
+    {
+      id: 'darija',
+      section: 'essentials',
+      lang: 'ar',
+      text: 'حل عينيك قبل الزواج، أما بعدو غير غمضهوم'
+    },
+    {
+      id: 'augustin',
+      section: 'essentials',
+      lang: 'fr',
+      text: 'Le véritable amour ne se consume jamais ; plus on le donne, plus on en a.'
+    },
+    // TODO(content): the first two lines of the rubāʿī. Sufi, much-loved, and it
+    // opens on "beyond disbelief and Islam" — read it aloud to family before
+    // launch, since it sits on the same page as two Qur'anic verses. If it lands
+    // wrong, a second Hafez replaces it with no other change.
+    {
+      id: 'rumi',
+      section: 'chat',
+      lang: 'fa',
+      text: 'از کفر و ز اسلام برون صحرائی است / ما را به میان آن فضا سودائی است'
+    },
+    { id: 'dzkalam', section: 'chat', lang: 'ar', text: 'كل كلام الخير ولا سكوت خير' },
+    {
+      id: 'hugo',
+      section: 'rsvp',
+      lang: 'fr',
+      text: "Il faut s'aimer, et puis il faut se le dire."
+    },
+    { id: 'libas', section: 'rsvp', lang: 'ar', text: 'هُنَّ لِبَاسٌ لَّكُمْ وَأَنتُمْ لِبَاسٌ لَّهُنَّ' }
+  ]
 };
 
 /**
@@ -414,6 +492,37 @@ export function t(lang) {
 }
 
 /**
+ * The quote stars anchored to one section, with this locale's gloss folded in.
+ *
+ * The join lives here rather than in Section.svelte because the two halves —
+ * the original text and its gloss — are split across SHARED and EXTRA for a
+ * content reason, and nothing outside this file should have to know that.
+ *
+ * @param {string} section  a Section's `seed`
+ * @param {Lang} lang
+ */
+export function starQuotes(section, lang) {
+  return SHARED.starQuotes
+    .filter((q) => q.section === section)
+    .map((q) => ({ text: q.text, lang: q.lang, ...starGloss(q.id, lang) }));
+}
+
+/**
+ * One quote star's gloss and attribution. The cast is the whole point of the
+ * function: SHARED.starQuotes widens `id` to `string`, and only this file knows
+ * that the two halves of a quote are keyed on each other — so every caller
+ * outside would otherwise have to repeat the same assertion. Same reasoning as
+ * the cast in `t()` above.
+ *
+ * @param {string} id  a SHARED.starQuotes[].id
+ * @param {Lang} lang
+ */
+export function starGloss(id, lang) {
+  const g = t(lang).starGloss;
+  return g[/** @type {keyof typeof g} */ (id)];
+}
+
+/**
  * Strings this build needs that the original artifact had no equivalent for.
  * Kept separate so the STR block above stays the couple's own copy, then merged
  * in below. Add new copy HERE, in all four languages — `wedding.test.js` fails
@@ -473,6 +582,45 @@ const EXTRA = {
     errNameLong: 'Ce nom est trop long.',
     themeToLight: 'Passer au thème clair',
     themeToDark: 'Passer au thème sombre',
+    // Gloss and attribution for each quote star, keyed on SHARED.starQuotes[].id.
+    // `gloss` is EMPTY when the quote is already in this locale's own language —
+    // the same rule salamGloss and verseGloss follow, generalised. `ref` always
+    // shows, and is always localised.
+    starGloss: {
+      rum30: {
+        gloss: '« Et Il a mis entre vous affection et miséricorde. »',
+        ref: 'Sourate Ar-Rûm, 30:21'
+      },
+      stex: { gloss: '', ref: 'Antoine de Saint-Exupéry' },
+      hafez: {
+        gloss:
+          "« Je le dis ouvertement, et de mes propres mots je me réjouis : je suis l'esclave de l'amour, et libre des deux mondes. »",
+        ref: 'Hafez de Chiraz, Divan, ghazal 317'
+      },
+      bazin: { gloss: '', ref: 'Hervé Bazin' },
+      darija: {
+        gloss: '« Ouvre les yeux avant le mariage ; après, tu ne peux plus que les fermer. »',
+        ref: 'Proverbe marocain'
+      },
+      augustin: { gloss: '', ref: 'attribué à saint Augustin' },
+      rumi: {
+        gloss:
+          "« Au-delà de l'incroyance et de l'islam s'étend une plaine ; c'est vers cet espace que va notre désir. »",
+        ref: 'Roumi, quatrain'
+      },
+      dzkalam: {
+        gloss: '« Ne dis que le bien, sinon le silence vaut mieux. »',
+        ref: 'Proverbe algérien'
+      },
+      hugo: { gloss: '', ref: 'Victor Hugo' },
+      libas: {
+        gloss: '« Elles sont un vêtement pour vous et vous êtes un vêtement pour elles. »',
+        ref: 'Sourate Al-Baqara, 2:187'
+      }
+    },
+    // The quote star's accessible name. The stars carry no visible label on
+    // purpose — a screen reader still needs one, and "button" alone is not it.
+    starHint: 'une pensée',
     langLabel: 'Langue'
   },
   en: {
@@ -510,6 +658,43 @@ const EXTRA = {
     errNameLong: 'That name is too long.',
     themeToLight: 'Switch to the light theme',
     themeToDark: 'Switch to the dark theme',
+    starGloss: {
+      rum30: {
+        gloss: '“And He placed between you affection and mercy.”',
+        ref: 'Sūrat ar-Rūm, 30:21'
+      },
+      stex: {
+        gloss:
+          '“To love is not to gaze at one another, but to look together in the same direction.”',
+        ref: 'Antoine de Saint-Exupéry'
+      },
+      hafez: {
+        gloss:
+          '“Openly I speak, and of my own words I am glad: I am love’s slave, and free of both worlds.”',
+        ref: 'Hafez of Shiraz, Divan, ghazal 317'
+      },
+      bazin: { gloss: '“A life without love is a life without sun.”', ref: 'Hervé Bazin' },
+      darija: {
+        gloss: '“Open your eyes before marriage; afterwards, all you can do is close them.”',
+        ref: 'Moroccan proverb'
+      },
+      augustin: {
+        gloss: '“True love is never spent: the more you give, the more you have.”',
+        ref: 'attributed to Saint Augustine'
+      },
+      rumi: {
+        gloss:
+          '“Beyond disbelief and Islam there lies an open plain; it is towards that expanse our longing goes.”',
+        ref: 'Rumi, quatrain'
+      },
+      dzkalam: { gloss: '“Speak only kindly, or silence is better.”', ref: 'Algerian proverb' },
+      hugo: { gloss: '“We must love one another, and then we must say so.”', ref: 'Victor Hugo' },
+      libas: {
+        gloss: '“They are a garment for you and you are a garment for them.”',
+        ref: 'Sūrat al-Baqara, 2:187'
+      }
+    },
+    starHint: 'a thought',
     langLabel: 'Language'
   },
   ar: {
@@ -550,6 +735,33 @@ const EXTRA = {
     errNameLong: 'هذا الاسم طويل أكثر من اللازم.',
     themeToLight: 'التحويل إلى المظهر الفاتح',
     themeToDark: 'التحويل إلى المظهر الداكن',
+    // Empty for the four quotes already in Arabic, for the same reason
+    // verseGloss is: a paraphrase under the original reads as a correction of it.
+    starGloss: {
+      rum30: { gloss: '', ref: 'سورة الروم، ٢١' },
+      stex: {
+        gloss: '«ليس الحبّ أن ينظر أحدنا إلى الآخر، بل أن ننظر معًا في اتجاه واحد.»',
+        ref: 'أنطوان دو سانت-إكزوبيري'
+      },
+      hafez: {
+        gloss: '«أقولها جهارًا وأفرح بما أقول: أنا عبدُ العشق، وحرٌّ من العالَمين.»',
+        ref: 'حافظ الشيرازي، الديوان، الغزل ٣١٧'
+      },
+      bazin: { gloss: '«حياةٌ بلا حبّ حياةٌ بلا شمس.»', ref: 'إيرفيه بازان' },
+      darija: { gloss: '', ref: 'مثل مغربي' },
+      augustin: {
+        gloss: '«الحبّ الحقّ لا ينفد؛ كلّما أعطيتَ منه زاد.»',
+        ref: 'يُنسب إلى القدّيس أوغسطينوس'
+      },
+      rumi: {
+        gloss: '«وراء الكفر والإسلام صحراء، وإلى ذلك الفضاء يمضي شوقنا.»',
+        ref: 'جلال الدين الرومي، رباعية'
+      },
+      dzkalam: { gloss: '', ref: 'مثل جزائري' },
+      hugo: { gloss: '«علينا أن يحبّ بعضنا بعضًا، ثمّ علينا أن نقول ذلك.»', ref: 'فيكتور هوغو' },
+      libas: { gloss: '', ref: 'سورة البقرة، ١٨٧' }
+    },
+    starHint: 'خاطرة',
     langLabel: 'اللغة'
   },
   fa: {
@@ -587,6 +799,30 @@ const EXTRA = {
     errNameLong: 'این نام بیش از اندازه بلند است.',
     themeToLight: 'تغییر به پوستهٔ روشن',
     themeToDark: 'تغییر به پوستهٔ تیره',
+    // Empty for the two Persian quotes. Persian DOES gloss the Arabic ones —
+    // exactly as verseGloss above already does, unlike ar.
+    starGloss: {
+      rum30: { gloss: '«و میان شما دوستی و مهربانی نهاد.»', ref: 'سورهٔ روم، ۲۱' },
+      stex: {
+        gloss: '«عشق آن نیست که به یکدیگر بنگریم، بلکه آن است که با هم به یک سو بنگریم.»',
+        ref: 'آنتوان دو سنت‌اگزوپری'
+      },
+      hafez: { gloss: '', ref: 'حافظ شیرازی، دیوان، غزل ۳۱۷' },
+      bazin: { gloss: '«زندگی بی‌عشق، زندگی بی‌آفتاب است.»', ref: 'اروه بازن' },
+      darija: {
+        gloss: '«پیش از ازدواج چشم‌هایت را باز کن؛ پس از آن جز بستنشان کاری نمی‌توانی.»',
+        ref: 'ضرب‌المثل مراکشی'
+      },
+      augustin: {
+        gloss: '«عشق راستین هرگز تمام نمی‌شود؛ هرچه بیشتر ببخشی، بیشتر داری.»',
+        ref: 'منسوب به آگوستین قدیس'
+      },
+      rumi: { gloss: '', ref: 'مولانا، رباعی' },
+      dzkalam: { gloss: '«جز نیکو مگو، وگرنه خاموشی بهتر است.»', ref: 'ضرب‌المثل الجزایری' },
+      hugo: { gloss: '«باید یکدیگر را دوست بداریم، و سپس باید آن را بگوییم.»', ref: 'ویکتور هوگو' },
+      libas: { gloss: '«آنان پوشش شمایند و شما پوشش آنان.»', ref: 'سورهٔ بقره، ۱۸۷' }
+    },
+    starHint: 'اندیشه‌ای',
     langLabel: 'زبان'
   }
 };
