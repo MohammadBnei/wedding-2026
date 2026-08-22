@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.11.0](https://github.com/MohammadBnei/wedding-2026/compare/0.10.0...0.11.0) (2026-08-22)
+
+
+### Features
+
+* **ui:** the quote stars pulse indigo, turn, and let go of their notes ([c7716e3](https://github.com/MohammadBnei/wedding-2026/commit/c7716e3ba56008adb152c61c9083d715153ecd58))
+
 # [0.10.0](https://github.com/MohammadBnei/wedding-2026/compare/0.9.0...0.10.0) (2026-08-22)
 
 
