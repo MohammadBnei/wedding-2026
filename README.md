@@ -71,6 +71,7 @@ need it go quiet:
 | Chat rate limits | enforced in SQL | not needed — no provider call is made |
 | RSVP name autocomplete | suggests | suggests nothing |
 | `/admin` | lists the replies | says so — an empty list would read as "nobody came" |
+| Deleting a reply | saved | **refused, and the admin is told** |
 | **RSVP** | saved | **refused, and the guest is told** |
 
 `dbUp()` and `dbOr()` in `src/lib/server/db.js` are the whole mechanism.
@@ -173,12 +174,12 @@ bun run test:e2e    # 38 browser tests, needs `bun run dev` (pinned to :5188)
 ### `/admin` is gated at Traefik, not in the app
 
 `/admin` lists every reply — name, going, heads, email, song, message — with the
-three numbers above it. It is linked from nowhere and there is no login form,
-because the gate is not in this codebase at all: `helm/values.yaml` declares a
-second IngressRoute matching ``Host(...) && PathPrefix(`/admin`)`` and hangs
-authentik's shared `default/authentik-forwardauth` middleware on it. The chart's
-own route matches the host alone and carries no auth, which is what keeps the
-invitation public. This app is that middleware's first consumer cluster-wide.
+three numbers above it, and can delete one. There is no login form, because the
+gate is not in this codebase at all: `helm/values.yaml` declares a second
+IngressRoute matching ``Host(...) && PathPrefix(`/admin`)`` and hangs authentik's
+shared `default/authentik-forwardauth` middleware on it. The chart's own route
+matches the host alone and carries no auth, which is what keeps the invitation
+public. This app is that middleware's first consumer cluster-wide.
 
 Two things in that manifest will serve the guest list to the internet if got
 wrong, and both are commented at length where they live:
@@ -203,6 +204,54 @@ be tested without a database. It deduplicates on the lowercased name because the
 `rsvp` primary key is `visitor_id` — a cookie, not a person — so a guest who
 replies on their phone and again on a laptop is two rows, and summing both books
 a table for people who do not exist. Newest wins.
+
+#### The way in is a cookie, and it authorises nothing
+
+The invitation draws an `Admin` chip in the rail's control bar, next to the
+language and theme ones — but only for a visitor who already has an authentik
+session. It cannot ask the middleware, because `/` is deliberately outside it, so
+no `X-authentik-*` header ever reaches that page. What does reach it is the proxy
+session cookie: the forwardAuth provider runs in `forward_domain` mode with
+`cookie_domain: bnei.dev`, so the cookie is sent to every host in the zone. The
+check in `src/routes/+layout.server.js` is one `startsWith('authentik_')`.
+
+Like the header check above it, this is a **hint**: it decides whether a link is
+drawn and nothing else. It fails closed — a wrong cookie name means no chip, ever
+— and signing in to any other `bnei.dev` app draws it too, which is harmless
+because the link leads to a route Traefik still gates.
+
+The chip carries `data-sveltekit-reload`, and that is not decoration. Without it
+the click is a client-side navigation, so SvelteKit fetches `/admin/__data.json`,
+that request meets the forwardAuth, and the cross-origin 302 to authentik comes
+back as something the router cannot follow — a dead button, in production only.
+
+Note also that this makes `/` vary per visitor. SSR responses carry no
+`Cache-Control` and Cloudflare does not cache HTML without a Cache Everything
+rule, so nothing caches an admin-rendered page for a guest today. Do not add one
+without revisiting that.
+
+#### Delete is soft
+
+`Delete` sets `deleted_at` and every read filters on it, so the row keeps its
+song and its message. It is keyed on the **lowercased name**, not `visitor_id`,
+so it takes the phone reply and the laptop reply together — the same key
+`summarise()` dedupes on, because deleting the row you can see should not leave
+its twin behind.
+
+The undo strip covers the delete you just made. Anything older needs one
+statement, because there is no view of deleted rows:
+
+```sql
+UPDATE rsvp SET deleted_at = NULL WHERE lower(trim(name)) = 'their name';
+```
+
+A guest who simply replies again un-deletes themselves: the RSVP upsert clears
+`deleted_at`. Without that the key is `visitor_id`, so their new answer would
+land in the same still-hidden row and they would have replied to nobody.
+
+The delete does **not** use `dbOr`, for the reason the RSVP write does not: an
+admin shown "deleted" for a row that is still there counts that guest again when
+the catering numbers are due.
 
 ## Deliberately absent
 

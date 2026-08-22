@@ -185,6 +185,86 @@ test('/admin lists the replies with their totals', async ({ page }) => {
   await expect(row).toContainText('2');
 });
 
+/**
+ * Reply as a guest so there is a row to work on, and hand back the name used.
+ * Every /admin test below needs one and none of them is about the form.
+ */
+async function reply(page, name) {
+  await visit(page, '/#rsvp');
+  const form = page.locator('#rsvp');
+  await form.getByLabel('Votre nom').fill(name);
+  await form.getByRole('button', { name: 'Je serai des vôtres' }).click();
+  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
+  await expect(form).toContainText('Votre réponse nous est parvenue');
+  return name;
+}
+
+/** The `replies` number out of the /admin heading. */
+async function replyCount(page) {
+  const text = await page.getByRole('heading', { level: 1 }).textContent();
+  return Number(text.match(/(\d+) replies/)[1]);
+}
+
+test('the intro links to /admin and the dashboard links back', async ({ page }) => {
+  // In the cluster the chip is drawn only when an authentik session cookie is
+  // present; here the `dev` half of that check in +layout.server.js stands in
+  // for it, the same way /admin's own gate is bypassed in dev.
+  await visit(page, '/');
+  const chip = page.getByRole('link', { name: 'Admin', exact: true });
+  await expect(chip).toBeVisible();
+
+  await chip.click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('replies');
+
+  await page.getByRole('link', { name: 'Invitation' }).click();
+  // The heading first: it is the assertion that WAITS, and reading page.url()
+  // straight after a click reads the old url. Port-agnostic on purpose — the
+  // pinned :5188 in playwright.config.js is not worth hardcoding twice.
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Leïla');
+  expect(new URL(page.url()).pathname).toBe('/');
+});
+
+test('/admin soft-deletes a reply and undoes it', async ({ page }) => {
+  await reply(page, 'Delete Me');
+  // confirm() blocks the submit until something answers it.
+  page.on('dialog', (d) => d.accept());
+
+  await page.goto('/admin');
+  const before = await replyCount(page);
+  const row = page.getByRole('row').filter({ hasText: 'Delete Me' });
+  await expect(row).toBeVisible();
+
+  await row.getByRole('button', { name: 'Delete the reply from Delete Me' }).click();
+  await expect(row).toHaveCount(0);
+  expect(await replyCount(page)).toBe(before - 1);
+
+  // Soft, not gone: the row comes back with its own totals.
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'Delete Me' })).toBeVisible();
+  expect(await replyCount(page)).toBe(before);
+});
+
+test('a deleted reply blanks the guest form, and replying again restores it', async ({ page }) => {
+  await reply(page, 'Second Thoughts');
+  page.on('dialog', (d) => d.accept());
+
+  await page.goto('/admin');
+  await page.getByRole('button', { name: 'Delete the reply from Second Thoughts' }).click();
+  await expect(page.getByRole('row').filter({ hasText: 'Second Thoughts' })).toHaveCount(0);
+
+  // Same browser, same `wid` cookie, so this is the guest whose row was just
+  // deleted looking at their own form. It must not prefill from a deleted row.
+  await visit(page, '/#rsvp');
+  await expect(page.locator('#rsvp').getByLabel('Votre nom')).toHaveValue('');
+
+  // And replying again is the un-delete — the upsert clears deleted_at. Without
+  // that, this answer lands in a row /admin still filters out.
+  await reply(page, 'Second Thoughts');
+  await page.goto('/admin');
+  await expect(page.getByRole('row').filter({ hasText: 'Second Thoughts' })).toBeVisible();
+});
+
 test('desktop shows a sticky rail beside a scrolling column', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'desktop layout only');
   await visit(page, '/');
