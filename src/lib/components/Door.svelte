@@ -171,18 +171,12 @@
       <div class="door-glow" aria-hidden="true"></div>
 
       <!-- Physical left/right, deliberately NOT logical start/end: a door's left
-           leaf is on the left in every language, and the basmala's two words are
-           placed to read right-to-left across the pair while it is shut. They sit
-           in the arch head, where an inscription goes on a door of this kind —
-           which is also what the zellij used to occupy. -->
-      <div class="door-leaf door-leaf-l">
-        <span dir="rtl" lang="ar" class="font-arabic">{SHARED.basmala[1]}</span>
-        {@render panel()}
-      </div>
-      <div class="door-leaf door-leaf-r">
-        <span dir="rtl" lang="ar" class="font-arabic">{SHARED.basmala[0]}</span>
-        {@render panel()}
-      </div>
+           leaf is on the left in every language. The pair used to carry بسم الله
+           across the two arch heads, one word each, with its gloss under the
+           door; both are gone — see issue #16. The carved panel is the whole
+           leaf now. -->
+      <div class="door-leaf door-leaf-l">{@render panel()}</div>
+      <div class="door-leaf door-leaf-r">{@render panel()}</div>
 
       <!-- LAST in the DOM on purpose: .door is transform-style: flat, so paint
            order is what keeps a swinging leaf behind the arch rather than in front
@@ -194,9 +188,9 @@
       />
     </div>
 
-    {#if t.basmalaGloss}
-      <p class="caps-wide mt-6 text-[10px] font-light text-primary-faint">{t.basmalaGloss}</p>
-    {/if}
-    <p class="door-hint caps mt-3 text-[11px] font-light text-gold-soft">{t.doorHint}</p>
+    <!-- mt-9, not mt-3: it used to sit under the basmala gloss and its margin,
+         and dropping that line without giving the space back walks the hint up
+         into the threshold. -->
+    <p class="door-hint caps mt-9 text-[11px] font-light text-gold-soft">{t.doorHint}</p>
   </button>
 {/if}

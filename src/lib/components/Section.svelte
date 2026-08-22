@@ -26,7 +26,6 @@
   // marked to scroll takes over — no dead space when the content is short.
   let {
     title = '',
-    kicker = '',
     tone = 'paper',
     id = undefined,
     seed = '',
@@ -158,9 +157,6 @@
     <Sprig flip class="absolute end-1 bottom-1 h-26 w-26 text-gold opacity-25 lg:h-32 lg:w-32" />
   </div>
 
-  {#if kicker}
-    <p class="caps-wide text-[11px] leading-relaxed font-light text-accent">{kicker}</p>
-  {/if}
   {#if title}
     <h2 class="font-display text-2xl font-normal text-ink lg:text-3xl">{title}</h2>
   {/if}

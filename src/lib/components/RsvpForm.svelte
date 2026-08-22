@@ -57,7 +57,13 @@
     {/each}
     <Tracery kind="star" class="w-8 text-blush" />
     <p class="font-display text-xl text-primary-ink">{t.thanksTitle}</p>
-    <p class="text-[13px] leading-relaxed font-light text-primary-faint">{t.thanksBody}</p>
+    <!-- `going` is the answer that was just posted — `saved` is only ever set
+         from the enhance callback, so it cannot be a button clicked afterwards.
+         The yes copy ends on the date and the garden, which is the one thing a
+         guest who has just declined must not be told (issue #22). -->
+    <p class="text-[13px] leading-relaxed font-light text-primary-faint">
+      {going === false ? t.thanksBodyNo : t.thanksBody}
+    </p>
     <button
       type="button"
       class="caps mt-1 text-[10px] font-light text-primary-faint underline"

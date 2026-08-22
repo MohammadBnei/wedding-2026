@@ -1,11 +1,10 @@
 <!--
-  The welcome card: the couple's line about the two families, and under it the
-  verse it is pointing at — Qur'an 78:8, per issue #11.
+  The welcome card: Qur'an 78:8, per issue #11.
 
-  It replaced a 2x2 grid of the four countries, and the `welcome2` line above it
-  that named the same four. Both said the same thing; the verse says it once, and
-  says it better. The countries survive as bot facts (see chat-prompt.js), just
-  not as a list a guest has to read.
+  It replaced a 2x2 grid of the four countries and the `welcome2` line above it.
+  It then lost its own heading too — "Quatre pays. Deux familles. Une histoire."
+  was still naming the origins the grid had stopped naming (issue #18). The
+  countries survive as bot facts (see chat-prompt.js) and nowhere in print.
 
   `gloss` is EMPTY in Arabic and Persian — nothing to translate for someone
   already reading the script. Same rule the door's `salamGloss` follows.
@@ -17,14 +16,12 @@
 <script>
   import Tracery from './Tracery.svelte';
 
-  let { title, verse, gloss, reference } = $props();
+  let { verse, gloss, reference } = $props();
 </script>
 
 <figure
   class="relative isolate mx-auto flex w-full max-w-xl flex-col items-center gap-3.5 overflow-hidden bg-surface-alt px-4.5 py-6.5 text-center"
 >
-  <p class="font-display text-[17px] italic text-ink">{title}</p>
-
   <Tracery kind="star" class="w-2.5 text-gold" />
 
   <!-- dir=rtl + lang=ar regardless of the page locale: the آية is Arabic in all

@@ -40,8 +40,7 @@ export const DEFAULT_LANG = 'fr';
 export const SHARED = {
   // The venue address is public information — guests need it, and it is printed
   // on the page. It lives here.
-  // TODO(content): the street number is missing from the original artifact.
-  addressLine1: 'rue de la Prairie de Rocourt',
+  addressLine1: '1b rue de la Prairie de Rocourt',
   addressLine2: '95470 Fosses',
 
   // There are deliberately NO phone numbers anywhere on this site, and none in
@@ -67,26 +66,20 @@ export const SHARED = {
   // fr/en get a gloss under it (see `salamGloss`); ar/fa need none.
   salam: 'السلام عليكم',
 
-  // Two words, carved one per leaf and read across the shut pair. The array is
-  // the split, so the component never has to cut a string it does not own: the
-  // line is right-to-left, so [0] is the RIGHT leaf.
-  basmala: ['بسم', 'الله'],
-
   // The couple's phrase — "Iman o Sabr", faith and patience. Arabic script in
   // every locale, like the names: it is a name for the thing, not a sentence to
   // translate.
   motto: 'إيمان و صبر',
 
-  // Qur'an 78:8, in the welcome section under the origins block. Arabic script
+  // Qur'an 78:8, in the welcome section's verse card. Arabic script
   // in every locale for the same reason as the motto; the meaning is carried by
   // `verseGloss`, which is deliberately empty in Arabic — see EXTRA.ar.
   verse: 'وَخَلَقْنَاكُمْ أَزْوَاجًا',
 
   // The invocation that opens the invitation text, above `welcome1`. Set alone
   // and untranslated in every locale: this is the opening of a document, not a
-  // sentence being made. `basmalaGloss` is NOT reused here — it glosses the
-  // door's two-word `بسم الله`, and using it under the full formula would
-  // translate half of what is written.
+  // sentence being made. It is the only place the formula is written now — the
+  // door used to carry `بسم الله` across its two leaves and no longer does.
   bismillah: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ'
 };
 
@@ -102,7 +95,6 @@ export const PIN_POS = [
 export const STR = {
   fr: {
     date: "Samedi 5 septembre 2026", town: "Fosses", rsvpCta: "Je réponds",
-    welcomeKicker: "Bienvenue",
     welcome1: "Nous avons la joie de vous convier à célébrer notre mariage chez la famille Banaei, dans une ambiance intimiste. Nous serions heureux de vous compter parmi nous.",
     dayTitle: "Le déroulé",
     essTitle: "Informations pratiques", planPlaceholder: "plan annoté du jardin — à venir",
@@ -113,6 +105,10 @@ export const STR = {
     fName: "Votre nom", fCount: "Combien serez-vous", fSong: "Un morceau à faire jouer", fSongPh: "titre, artiste…",
     fWord: "Un mot pour nous", sendRsvp: "Envoyer ma réponse",
     thanksTitle: "Votre réponse nous est parvenue", thanksBody: "Merci du fond du cœur. Rendez-vous le 5 septembre, au jardin.",
+    // Shown instead of `thanksBody` when the answer is no — see RsvpForm.svelte.
+    // The yes line ends on the date and the garden, which is exactly what a
+    // guest who has just said they cannot come must not be told.
+    thanksBodyNo: "Merci de nous avoir répondu. Vous nous manquerez ce jour-là, et nous penserons à vous.",
     address: "L'adresse",
     /** @type {ScheduleEntry[]} */
     schedule: [
@@ -136,8 +132,7 @@ export const STR = {
     facts: [
       { label: "en train", value: "RER D jusqu'à Survilliers-Fosses, puis le bus 4 — une vingtaine de minutes depuis la gare." },
       { label: "en voiture", value: "Une heure depuis Paris par l'A1. Stationnement libre dans la rue ; venez à plusieurs si vous pouvez." },
-      { label: "la tenue", value: "Élégante et confortable. La journée se passe au jardin, sur l'herbe." },
-      { label: "la météo", value: "Début septembre : doux l'après-midi, plus frais le soir. Prévoyez une veste." }
+      { label: "au jardin", value: "Tout se passe dehors, sur l'herbe : prévoyez des chaussures qui s'en accommodent. Début septembre est doux l'après-midi et plus frais le soir — emportez une veste, et de quoi vous couvrir si le temps tourne." }
     ],
     // The chips deliberately do NOT restate the `facts` rows. Their job is the
     // questions the page does not already answer in print — and where they do
@@ -154,7 +149,6 @@ export const STR = {
   },
   en: {
     date: "Saturday 5 September 2026", town: "Fosses", rsvpCta: "Reply",
-    welcomeKicker: "Welcome",
     welcome1: "It is our joy to invite you to celebrate our marriage at the home of the Banaei family, among those closest to us. We would love to have you with us.",
     dayTitle: "The day",
     essTitle: "Practical information", planPlaceholder: "annotated garden plan — to come",
@@ -165,6 +159,10 @@ export const STR = {
     fName: "Your name", fCount: "How many of you", fSong: "A song to play", fSongPh: "title, artist…",
     fWord: "A word for us", sendRsvp: "Send my reply",
     thanksTitle: "Your reply has reached us", thanksBody: "Thank you, warmly. See you on 5 September, in the garden.",
+    // Shown instead of `thanksBody` when the answer is no — see RsvpForm.svelte.
+    // The yes line ends on the date and the garden, which is exactly what a
+    // guest who has just said they cannot come must not be told.
+    thanksBodyNo: "Thank you for letting us know. You will be missed on the day, and we will be thinking of you.",
     address: "The address",
     /** @type {ScheduleEntry[]} */
     schedule: [
@@ -188,8 +186,7 @@ export const STR = {
     facts: [
       { label: "by train", value: "RER D to Survilliers-Fosses, then bus 4 — about twenty minutes from the station." },
       { label: "by car", value: "An hour from Paris on the A1. Street parking is free; share a car if you can." },
-      { label: "dress", value: "Elegant and comfortable. The day is spent in the garden, on grass." },
-      { label: "weather", value: "Early September: mild in the afternoon, cooler by evening. Bring a jacket." }
+      { label: "in the garden", value: "Everything happens outdoors, on grass — bring shoes that suit it. Early September is mild in the afternoon and cooler by evening, so bring a jacket, and something warmer in case the weather turns." }
     ],
     chips: [
       { q: "What time should we arrive?", a: "You are welcome from 3pm. The buffet runs all afternoon, so come at whatever hour suits you — you will miss nothing." },
@@ -202,7 +199,6 @@ export const STR = {
   },
   ar: {
     date: "السبت ٥ سبتمبر ٢٠٢٦", town: "فوس", rsvpCta: "أُلبّي الدعوة",
-    welcomeKicker: "أهلاً وسهلاً",
     welcome1: "يسرّنا أن ندعوكم لمشاركتنا فرحة زفافنا في بيت عائلة بنائي، في جوٍّ حميم بين الأقربين. يسعدنا أن تكونوا معنا.",
     dayTitle: "برنامج اليوم",
     essTitle: "معلومات عملية", planPlaceholder: "مخطط الحديقة — سيُضاف قريباً",
@@ -213,6 +209,10 @@ export const STR = {
     fName: "اسمكم", fCount: "عدد الحاضرين", fSong: "أغنية تودّون سماعها", fSongPh: "العنوان، الفنان…",
     fWord: "كلمة لنا", sendRsvp: "إرسال ردّي",
     thanksTitle: "وصلنا ردّكم", thanksBody: "شكراً لكم من القلب. ننتظركم في الخامس من سبتمبر، في الحديقة.",
+    // Shown instead of `thanksBody` when the answer is no — see RsvpForm.svelte.
+    // The yes line ends on the date and the garden, which is exactly what a
+    // guest who has just said they cannot come must not be told.
+    thanksBodyNo: "شكراً لكم على ردّكم. سنفتقدكم في ذلك اليوم، وستكونون في خاطرنا.",
     address: "العنوان",
     /** @type {ScheduleEntry[]} */
     schedule: [
@@ -236,8 +236,7 @@ export const STR = {
     facts: [
       { label: "بالقطار", value: "خط RER D حتى محطة Survilliers-Fosses، ثم الحافلة رقم ٤ — نحو عشرين دقيقة من المحطة." },
       { label: "بالسيارة", value: "ساعة من باريس عبر A1. الوقوف حرّ في الشارع؛ تعالوا معاً في سيارة واحدة إن أمكن." },
-      { label: "اللباس", value: "أنيق ومريح. اليوم كلّه في الحديقة، على العشب." },
-      { label: "الطقس", value: "مطلع سبتمبر: معتدل بعد الظهر، أبرد مساءً. خذوا سترة." }
+      { label: "في الحديقة", value: "كلّ شيء في الهواء الطلق على العشب، فاختاروا حذاءً يناسب ذلك. مطلع سبتمبر معتدل بعد الظهر وأبرد مساءً: خذوا سترة، وما يقيكم إن تقلّب الجوّ." }
     ],
     chips: [
       { q: "متى نصل؟", a: "نستقبلكم من الثالثة بعد الظهر. تُقدَّم المائدة طوال العصر: تعالوا في الوقت الذي يناسبكم، ولن يفوتكم شيء." },
@@ -252,7 +251,6 @@ export const STR = {
     // Jalali, with the Gregorian alongside it because the guests are in France.
     // Everywhere ELSE in this locale the date is Jalali only — see thanksBody.
     date: "شنبه ۱۴ شهریور ۱۴۰۵ · ۵ سپتامبر ۲۰۲۶", town: "فوس", rsvpCta: "پاسخ می‌فرستم",
-    welcomeKicker: "مقدمتان گلباران",
     welcome1: "شما را به جشن پیوند خود در خانهٔ خانوادهٔ بنایی دعوت می‌کنیم؛ جمعی کوچک و خودمانی، در باغ خانه. خوشحال می‌شویم کنارمان باشید.",
     dayTitle: "آنچه در آن روز می‌گذرد",
     essTitle: "دانستنی‌های سفر", planPlaceholder: "نقشهٔ باغ — به‌زودی",
@@ -263,6 +261,10 @@ export const STR = {
     fName: "نام شما", fCount: "چند نفر تشریف می‌آورید", fSong: "آهنگی که دوست دارید بشنوید", fSongPh: "نام آهنگ، خواننده…",
     fWord: "سخنی برای ما", sendRsvp: "پاسخم را می‌فرستم",
     thanksTitle: "پاسخ شما به دستمان رسید", thanksBody: "از صمیم دل سپاسگزاریم. چهاردهم شهریور، در باغ چشم‌به‌راهتان هستیم.",
+    // Shown instead of `thanksBody` when the answer is no — see RsvpForm.svelte.
+    // The yes line ends on the date and the garden, which is exactly what a
+    // guest who has just said they cannot come must not be told.
+    thanksBodyNo: "سپاسگزاریم که ما را بی‌خبر نگذاشتید. جای شما آن روز خالی است و یادتان با ماست.",
     address: "نشانی",
     /** @type {ScheduleEntry[]} */
     schedule: [
@@ -286,8 +288,7 @@ export const STR = {
     facts: [
       { label: "با قطار", value: "RER D تا ایستگاه Survilliers-Fosses، سپس اتوبوس ۴ — بیست دقیقه." },
       { label: "با ماشین", value: "یک ساعت از پاریس با اتوبان A1. پارک در خیابان آزاد است؛ اگر می‌شود چند نفری بیایید." },
-      { label: "پوشش", value: "شیک و راحت؛ تمام روز در باغ و روی چمن." },
-      { label: "هوا", value: "نیمهٔ شهریور: بعدازظهر ملایم، غروب خنک. کتی همراه داشته باشید." }
+      { label: "در باغ", value: "همه‌چیز بیرون و روی چمن است؛ کفشی بپوشید که با آن جور باشد. نیمهٔ شهریور بعدازظهر ملایم و غروب خنک است: کتی همراه داشته باشید و اگر هوا برگشت، پوشش گرم‌تری هم." }
     ],
     chips: [
       { q: "چه ساعتی برسیم؟", a: "ما از ساعت ۱۵ آمادهٔ پذیرایی از شما عزیزان هستیم. سفره کم‌کم چیده می‌شود؛ هر وقت برسید، چیزی از دست نمی‌رود." },
@@ -393,22 +394,23 @@ const EXTRA = {
     cdDays: 'jours',
     cdHours: 'heures',
     cdMins: 'minutes',
-    originsTitle: 'Quatre pays. Deux familles. Une histoire.',
+    // Read by the chatbot only (see chat-prompt.js) — the welcome section used
+    // to head its verse card with "Quatre pays. Deux familles. Une histoire.",
+    // and no longer names anyone's origins in print.
     origins: [
       { country: 'Maroc', cities: 'Azrou' },
       { country: 'Iran', cities: 'Téhéran' },
       { country: 'Algérie', cities: 'Alger · Chelghoum Laïd' },
       { country: 'France', cities: 'Paris · Chauny' }
     ],
-    // The door. `salamGloss`/`basmalaGloss` translate what is written on it, so
-    // they are EMPTY in ar/fa rather than restated — there is nothing to gloss for
-    // someone already reading the script. `doorHint` doubles as the button's
-    // aria-label, which is why it is an instruction and not a greeting.
+    // The door. `salamGloss` translates what is written on it, so it is EMPTY in
+    // ar/fa rather than restated — there is nothing to gloss for someone already
+    // reading the script. `doorHint` doubles as the button's aria-label, which is
+    // why it is an instruction and not a greeting.
     // `verseGloss` below follows exactly the same rule.
     salamGloss: 'que la paix soit sur vous',
-    basmalaGloss: 'au nom de Dieu',
     doorHint: 'touchez pour entrer',
-    verseGloss: '« Et Nous vous avons créés par couples. »',
+    verseGloss: '« Et Nous vous avons créés par paires. »',
     verseRef: "Sourate An-Naba', 8",
     // Reads straight off the two names above it in the hero — the one line that
     // says what this page is. Everything else up there (names, date, town) is
@@ -443,7 +445,6 @@ const EXTRA = {
     cdDays: 'days',
     cdHours: 'hours',
     cdMins: 'minutes',
-    originsTitle: 'Four countries. Two families. One story.',
     origins: [
       { country: 'Morocco', cities: 'Azrou' },
       { country: 'Iran', cities: 'Tehran' },
@@ -451,7 +452,6 @@ const EXTRA = {
       { country: 'France', cities: 'Paris · Chauny' }
     ],
     salamGloss: 'peace be upon you',
-    basmalaGloss: 'in the name of God',
     doorHint: 'tap to enter',
     verseGloss: '“And We created you in pairs.”',
     verseRef: "Sūrat an-Naba', 8",
@@ -481,7 +481,6 @@ const EXTRA = {
     cdDays: 'أيام',
     cdHours: 'ساعات',
     cdMins: 'دقائق',
-    originsTitle: 'أربعة بلدان. عائلتان. حكاية واحدة.',
     origins: [
       { country: 'المغرب', cities: 'أزرو' },
       { country: 'إيران', cities: 'طهران' },
@@ -492,7 +491,6 @@ const EXTRA = {
     // paraphrase set beneath the آية would read as a correction of it. The page
     // renders the gloss line only when it is non-empty.
     salamGloss: '',
-    basmalaGloss: '',
     doorHint: 'انقروا للدخول',
     verseGloss: '',
     verseRef: 'سورة النبأ، ٨',
@@ -522,7 +520,6 @@ const EXTRA = {
     cdDays: 'روز',
     cdHours: 'ساعت',
     cdMins: 'دقیقه',
-    originsTitle: 'چهار سرزمین. دو خانواده. یک قصه.',
     origins: [
       { country: 'مراکش', cities: 'ازرو' },
       { country: 'ایران', cities: 'تهران' },
@@ -530,7 +527,6 @@ const EXTRA = {
       { country: 'فرانسه', cities: 'پاریس · شونی' }
     ],
     salamGloss: '',
-    basmalaGloss: '',
     doorHint: 'برای گشودن در، لمس کنید',
     verseGloss: '«و شما را جفت آفریدیم.»',
     verseRef: 'سورهٔ نبأ، ۸',
