@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/MohammadBnei/wedding-2026/compare/0.7.0...0.7.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* **ui:** skip chat autoscroll on load, slow the sun by phi ([ea69b0b](https://github.com/MohammadBnei/wedding-2026/commit/ea69b0b7722086dea0fc5470f7626f942272fbff))
+
 # [0.7.0](https://github.com/MohammadBnei/wedding-2026/compare/0.6.0...0.7.0) (2026-08-21)
 
 
