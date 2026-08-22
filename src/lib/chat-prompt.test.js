@@ -81,3 +81,13 @@ test('the album link reaches the bot only when one is configured', () => {
   const url = 'https://photos.example/abc';
   expect(systemPrompt('fr', { photoDropUrl: url })).toContain(url);
 });
+
+test('requested songs reach the bot only when there are some', () => {
+  expect(systemPrompt('fr')).not.toContain('SONGS GUESTS HAVE REQUESTED');
+  const prompt = systemPrompt('fr', {
+    songs: [{ name: 'Yasmine', song: 'Ya Rayah — Rachid Taha' }]
+  });
+  expect(prompt).toContain('Ya Rayah — Rachid Taha — requested by Yasmine');
+  // The names are guests', so the rule that fences them in has to travel with them.
+  expect(prompt).toContain('never list who is coming');
+});
