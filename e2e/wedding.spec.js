@@ -535,11 +535,19 @@ test('a quote star opens its note, and only one is ever open', async ({ page }) 
   await page.keyboard.press('Escape');
   await expect(stars.nth(1)).toHaveAttribute('aria-expanded', 'false');
 
+  // A press anywhere else shuts it. Without this a note can only be dismissed by
+  // finding the unlabelled mark that opened it again, which nobody does — they
+  // tap past it and leave a card sitting on the invitation.
+  await first.click();
+  await expect(first).toHaveAttribute('aria-expanded', 'true');
+  await page.mouse.click(5, 5);
+  await expect(first).toHaveAttribute('aria-expanded', 'false');
+
   // Every note, on this project's viewport. The mobile project is where this
   // bites: anchored to its own star, a note at 320px started two thirds of the
   // way along and ran off the right edge — legible on a laptop, cut off on the
   // phone most guests will actually open this on.
-  const vw = page.viewportSize().width;
+  const { width: vw, height: vh } = page.viewportSize();
   for (let i = 0; i < 10; i++) {
     const star = stars.nth(i);
     await star.scrollIntoViewIfNeeded();
@@ -549,6 +557,17 @@ test('a quote star opens its note, and only one is ever open', async ({ page }) 
     const b = await note.boundingBox();
     expect(b.x, 'note ' + i + ' off the start edge').toBeGreaterThanOrEqual(0);
     expect(b.x + b.width, 'note ' + i + ' off the end edge').toBeLessThanOrEqual(vw);
+    // Vertically too, which is what the nudge in Section.svelte exists for: the
+    // seeded placement knows the section but not the screen, so a star opened
+    // near the fold hangs its note off the bottom until something measures it.
+    //
+    // A pixel of slack, on this bound only: when the nudge cannot fit the note
+    // without covering its own star it scrolls the page instead, and the scroll
+    // lands on a whole pixel while the note's edge does not. The 0.3px that
+    // leaves over is rounding, not a note off the screen. The horizontal bounds
+    // are a computed translate and stay exact.
+    expect(b.y, 'note ' + i + ' above the fold').toBeGreaterThanOrEqual(-1);
+    expect(b.y + b.height, 'note ' + i + ' below the fold').toBeLessThanOrEqual(vh + 1);
     await star.click();
   }
 });

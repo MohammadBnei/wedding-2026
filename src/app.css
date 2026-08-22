@@ -471,35 +471,56 @@
 }
 
 /*
- * A quote star breathes. 11.326s is 7s x phi, the trick the sun already uses at
- * 120s x phi: movement you notice only if you rest on it, and never while you are
- * reading past it. It starts and ends on the resting state below, so the single
- * capped reduced-motion pass changes nothing at all.
+ * A quote star pulses, and turns.
+ *
+ * 1.618s is phi itself — the unit the star's own size, its hit box and the girih
+ * behind every night field are already built out of — and the pulse is a COLOUR
+ * swap, the paper gold going to the paper indigo and back, with nothing moving.
+ * Nothing moving is not a taste call: an animated transform on the star would
+ * drift the hit box out from under a slow tap, which is why the button holds
+ * still and only the span inside it is animated. See Section.svelte.
+ *
+ * The flash is brief and the rest of the cycle is gold, so a page of ten stars
+ * reads as a rhythm rather than as a strobe. It starts and ends on that resting
+ * gold, so the one capped pass under reduced motion changes nothing at all —
+ * the same contract star-breathe kept before it.
+ *
+ * The turn is the SUN's, reused outright rather than written twice: 194.164s is
+ * 120s x phi, a whole turn in a little over three minutes. On an eight-point
+ * star, which repeats every 45deg, the mark comes back to itself every ~24s. A
+ * full turn ends where it started, so it too is a no-op under reduced motion.
  */
-@keyframes star-breathe {
-  0%, 100% { opacity: 0.34; transform: none; }
-  50% { opacity: 0.6; transform: translateY(-2px) scale(1.06); }
+@keyframes star-pulse {
+  0%, 30%, 100% { color: var(--color-gold); }
+  12% { color: var(--color-primary); }
 }
 
 /* The resting opacity lives HERE and not only in the keyframe. An animation with
    no fill-mode hands the property back the moment it stops, and under reduced
    motion it DOES stop, after one iteration — without this the stars would settle
    at full strength, which is the exact opposite of what they are for. */
-.breathes {
+.pulses {
   opacity: 0.34;
-  animation: star-breathe 11.326s ease-in-out infinite;
+  animation:
+    star-pulse 1.618s ease-in-out infinite,
+    sun-turn 194.164s linear infinite;
 }
 
-/* Dropping the animation is what lets a plain opacity through: an animated
-   property beats a normal declaration, so `:hover { opacity }` on its own would
-   do nothing here. The snap is deliberate — this is the only feedback a mark
-   with no label can give that it is worth pressing.
+/* Dropping the animation is what lets a plain colour and opacity through: an
+   animated property beats a normal declaration, so the button's own
+   `hover:text-accent` and the opacity below would both do nothing while
+   star-pulse is running. The snap is deliberate — this is the only feedback a
+   mark with no label can give that it is worth pressing.
 
-   Keyed on the BUTTON and not on .breathes itself, because the two are no longer
-   the same element: the button is the fixed hit box, the span inside it is what
-   moves. See Section.svelte. */
-.quote-star:hover .breathes,
-.quote-star:focus-visible .breathes {
+   `animation-name`, never the `animation` shorthand: the shorthand would also
+   wipe the animation-delay Section.svelte sets inline, and the star would jump
+   to the head of the cycle on hover.
+
+   Keyed on the BUTTON and not on .pulses itself, because the two are not the
+   same element: the button is the fixed hit box, the span inside it is what
+   turns. See Section.svelte. */
+.quote-star:hover .pulses,
+.quote-star:focus-visible .pulses {
   animation-name: none;
   opacity: 0.85;
 }
@@ -810,9 +831,10 @@ html[data-lang-switching] .lang-fade {
   animation: celestial-rise 1.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* The sun turns. 194s is 120s x phi, about one degree every 1.6 seconds: alive
-   when you rest on it, invisible when you don't. A full turn ends where it
-   started, so the single reduced-motion pass leaves it exactly as it was. */
+/* The sun turns. 194s is 120s x phi — a whole turn in a little over three
+   minutes: alive when you rest on it, invisible when you don't. A full turn ends
+   where it started, so the single reduced-motion pass leaves it exactly as it
+   was. */
 @keyframes sun-turn {
   to {
     transform: rotate(360deg);
