@@ -61,6 +61,12 @@ export const SHARED = {
   isoDate: '2026-09-05',
   names: { latin: ['Leïla', 'Mohammad-Amine'], arabic: 'ليلى و محمد أمين' },
 
+  // Two words, carved one per leaf and read across the shut pair. The array is
+  // the split, so the component never has to cut a string it does not own: the
+  // line is right-to-left, so [0] is the RIGHT leaf. It carries no gloss under
+  // the door any more — see issue #16.
+  basmala: ['بسم', 'الله'],
+
   // What is said at the door, in Arabic script in every locale — the same rule the
   // names follow: this is the greeting itself, not a sentence to be translated.
   // fr/en get a gloss under it (see `salamGloss`); ar/fa need none.
@@ -78,8 +84,9 @@ export const SHARED = {
 
   // The invocation that opens the invitation text, above `welcome1`. Set alone
   // and untranslated in every locale: this is the opening of a document, not a
-  // sentence being made. It is the only place the formula is written now — the
-  // door used to carry `بسم الله` across its two leaves and no longer does.
+  // sentence being made. The door carries the two-word `بسم الله` as well, and
+  // neither is glossed — a translation under the full formula would render half
+  // of it and stop, which is what `basmalaGloss` used to do (issue #16).
   bismillah: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ'
 };
 

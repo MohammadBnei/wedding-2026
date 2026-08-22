@@ -171,12 +171,19 @@
       <div class="door-glow" aria-hidden="true"></div>
 
       <!-- Physical left/right, deliberately NOT logical start/end: a door's left
-           leaf is on the left in every language. The pair used to carry بسم الله
-           across the two arch heads, one word each, with its gloss under the
-           door; both are gone — see issue #16. The carved panel is the whole
-           leaf now. -->
-      <div class="door-leaf door-leaf-l">{@render panel()}</div>
-      <div class="door-leaf door-leaf-r">{@render panel()}</div>
+           leaf is on the left in every language, and the basmala's two words are
+           placed to read right-to-left across the pair while it is shut. They sit
+           in the arch head, where an inscription goes on a door of this kind —
+           which is also what the zellij used to occupy. Carved, not captioned:
+           the gloss that used to sit under the door is gone (issue #16). -->
+      <div class="door-leaf door-leaf-l">
+        <span dir="rtl" lang="ar" class="font-arabic">{SHARED.basmala[1]}</span>
+        {@render panel()}
+      </div>
+      <div class="door-leaf door-leaf-r">
+        <span dir="rtl" lang="ar" class="font-arabic">{SHARED.basmala[0]}</span>
+        {@render panel()}
+      </div>
 
       <!-- LAST in the DOM on purpose: .door is transform-style: flat, so paint
            order is what keeps a swinging leaf behind the arch rather than in front

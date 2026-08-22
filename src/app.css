@@ -590,6 +590,19 @@
   opacity: 0.58;
 }
 
+/* The word sits in the arch head, where a door of this kind carries its
+   inscription — and where the zellij used to be. Absolute rather than centred by
+   flex: the leaf is now the whole box tall, so its middle is not the door's. */
+.door-leaf span {
+  position: absolute;
+  top: 26%;
+  left: 0;
+  right: 0;
+  font-size: clamp(15px, 4.4vw, 21px);
+  /* stays clear of the panel below it — the two together fill the leaf */
+  color: var(--color-gold-soft);
+}
+
 /* The meeting stile: one hairline where the two leaves shut against each other. */
 .door-leaf-l {
   left: 10%;

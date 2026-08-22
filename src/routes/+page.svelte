@@ -201,9 +201,10 @@
         <!--
           The Bismillah opens the invitation text, as it opens the document it
           is standing in for. Set alone and untranslated in all four locales —
-          it is an invocation, not a sentence to be rendered into French. It is
-          also the only place the formula is written now — the door carried
-          `بسم الله` across its leaves until issue #16.
+          it is an invocation, not a sentence to be rendered into French. The
+          door carries the two-word `بسم الله` and is likewise unglossed since
+          issue #16 — a caption under the full formula would translate half of
+          what is written and stop.
         -->
         <p
           dir="rtl"
