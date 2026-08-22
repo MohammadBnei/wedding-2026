@@ -165,12 +165,32 @@
   const MARKS = $derived.by(() => {
     let s = 11;
     for (const ch of seed || id || 'section') s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+    /*
+     * The rung this section's stars start their pulse on, taken from the hash
+     * BEFORE the LCG touches it. `i` alone will not do: it only ever runs 0..1
+     * here, so every section's pair would pulse in lockstep with every other
+     * section's, and ten stars would beat as two.
+     *
+     * 233 is Fibonacci — phi said another way, and far enough above the five
+     * section seeds that no two of them land on the same rung.
+     */
+    const base = s % 233;
     const next = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
 
     return quotes.map((/** @type {any} */ q, /** @type {number} */ i) => ({
       q,
       x: 25 + next() * 50,
       rot: next() * 45,
+      /*
+       * The golden angle, in seconds. The cycle IS phi (see app.css), so
+       * consecutive integers taken modulo it land 1/phi of a cycle apart —
+       * evenly spread, never repeating, no two stars ever firing together.
+       *
+       * Negative so a star opens mid-cycle instead of holding still through its
+       * first pass. The one delay applies to both animations on the span; on the
+       * 194s turn that is simply a different starting angle, which is free.
+       */
+      phase: -((base + i) % PHI),
       // Alternating rather than random: with two quotes it guarantees one of
       // each, and a section that grows a third simply starts the cycle again.
       top: i % 2 === 0
@@ -181,11 +201,93 @@
      stay open — plus the button's 4px padding either side, which is what carries
      the hit box over the 24px minimum a finger needs. */
   const MARK_PX = BASE * PHI + 8;
+
+  /** The <section> itself, and one entry per star and per note — see the two
+   *  blocks below.
+   *  @type {HTMLElement} */
+  let root;
+  /** @type {HTMLElement[]} */
+  let marks = [];
+  /** @type {HTMLElement[]} */
+  let notes = [];
+
+  /*
+   * A note is placed by CSS from a seeded percentage (--note-start/--note-end in
+   * app.css), which knows the section but not the screen. This is the only thing
+   * in the repo that measures anything at run time, and it does the least it can:
+   * one read when a note opens, and a translate only if that placement ran it
+   * off an edge.
+   *
+   * It reads `open` and writes to the DOM, never to state, so it cannot loop.
+   * Clearing `translate` first is what makes it measure the CSS placement rather
+   * than the last note's correction.
+   *
+   * ponytail: measured at open time only. Scrolling afterwards does not re-nudge
+   * — add a scroll listener if a note ever has to stay pinned while the page moves.
+   */
+  $effect(() => {
+    const el = open < 0 ? null : notes[open];
+    if (!el) return;
+    el.style.translate = '';
+    const r = el.getBoundingClientRect();
+    const M = 8; // a little paper left at the edge
+    let dx = 0;
+    let dy = 0;
+    if (r.right > innerWidth - M) dx = innerWidth - M - r.right;
+    // After dx, not instead of it: a note wider than the screen pins to the
+    // start edge rather than being pulled off the other side.
+    if (r.left + dx < M) dx = M - r.left;
+    if (r.bottom > innerHeight - M) dy = innerHeight - M - r.bottom;
+    if (r.top + dy < M) dy = M - r.top;
+
+    /*
+     * And then no further than its own star. A note takes pointer events and
+     * sits above the star in the stack, so one pulled far enough to cover it
+     * takes the press meant to close it — a star tapped near the bottom of the
+     * screen would open a card and then vanish underneath it.
+     *
+     * So the nudge stops at the star's edge, and a note too tall to fit in what
+     * is left simply keeps hanging off the fold, exactly as it did before any of
+     * this: partly off screen is a scroll away, unreachable is not.
+     */
+    const sr = marks[open].getBoundingClientRect();
+    dy = r.top >= sr.bottom ? Math.max(dy, sr.bottom - r.top) : Math.min(dy, sr.top - r.bottom);
+
+    if (dx || dy) el.style.translate = `${dx}px ${dy}px`;
+
+    /*
+     * And if it STILL does not fit — a long quote opened from a star pressed near
+     * the fold, where the clamp above will not trade the star away for it — then
+     * move the PAGE rather than the note. `nearest` scrolls the least it can, and
+     * the star travels with the note, so everything just measured stays true.
+     *
+     * `instant`: the page scrolls smoothly everywhere else, but this is a
+     * correction and not a journey, and a note that has to be waited for is the
+     * thing this whole effect exists to avoid.
+     */
+    const f = el.getBoundingClientRect();
+    if (f.bottom > innerHeight || f.top < 0)
+      el.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+  });
 </script>
 
 <svelte:window
   onkeydown={(e) => {
     if (e.key === 'Escape') open = -1;
+  }}
+  onclick={(e) => {
+    /*
+     * THIS section's star or note, not any section's. `open` is per-section, so
+     * a press on another section's star is an outside click here and has to shut
+     * this note — without the containment test two notes stay open at once.
+     *
+     * The star's own handler runs first and the event then bubbles up to here,
+     * where the star matches, so opening never immediately closes.
+     */
+    const t = e.target;
+    if (open < 0) return;
+    if (!(t instanceof Element && root.contains(t) && t.closest('.quote-star, .quote-note')))
+      open = -1;
   }}
 />
 
@@ -199,6 +301,7 @@
      ornaments vanish. -->
 <section
   {id}
+  bind:this={root}
   use:reveal
   class="relative isolate flex flex-col gap-4 px-6 py-8 lg:px-10 lg:py-12 {tone === 'alt' ? 'bg-surface-alt' : ''} {fill
     ? 'max-h-dvh lg:max-h-none'
@@ -266,6 +369,7 @@
            refuses to click at all, since it never settles between two frames. -->
       <button
         type="button"
+        bind:this={marks[i]}
         class="quote-star pointer-events-auto absolute z-10 block p-1 text-gold hover:text-accent"
         style="inset-inline-start:{mark.x.toFixed(2)}%;{mark.top
           ? 'top'
@@ -275,7 +379,7 @@
         aria-controls="{seed}-quote-{i}"
         onclick={() => (open = open === i ? -1 : i)}
       >
-        <span class="breathes block" style="animation-delay:{(i * PHI).toFixed(2)}s">
+        <span class="pulses block" style="animation-delay:{mark.phase.toFixed(2)}s">
           <Tracery kind="star" class="w-full" />
         </span>
       </button>
@@ -288,6 +392,7 @@
            of its own to sit on. -->
       <div
         id="{seed}-quote-{i}"
+        bind:this={notes[i]}
         hidden={open !== i}
         class="quote-note pointer-events-auto absolute z-30 flex flex-col gap-2 border-s-[3px] border-primary bg-surface-raise px-4 py-3.5 shadow-lg"
         style="{mark.x < 50
