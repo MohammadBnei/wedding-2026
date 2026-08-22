@@ -342,9 +342,16 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Arabic and Persian get their own faces; Mulish has no Arabic glyphs. */
+  /* Arabic and Persian get their own faces; Mulish has no Arabic glyphs.
+     Latin is named explicitly rather than left to `body`, because these three
+     rules INHERIT: on an Arabic page every descendant computes to Amiri, and a
+     `lang="fr"` of its own does not undo that — it only stops matching :lang(ar).
+     Without the third rule a French quote inside an Arabic page is set in a
+     serif with no French character to it. Every language on the page has a face
+     here now, so nesting works in all four directions. */
   :lang(ar) { font-family: var(--font-arabic); }
   :lang(fa) { font-family: var(--font-persian); }
+  :lang(fr), :lang(en) { font-family: var(--font-body); }
 
   /* Visible focus everywhere — the artifact had none at all. */
   :focus-visible {
@@ -442,6 +449,40 @@
 @keyframes pin-pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 42%, transparent); }
   50% { box-shadow: 0 0 0 9px transparent; }
+}
+
+/*
+ * A quote star breathes. 11.326s is 7s x phi, the trick the sun already uses at
+ * 120s x phi: movement you notice only if you rest on it, and never while you are
+ * reading past it. It starts and ends on the resting state below, so the single
+ * capped reduced-motion pass changes nothing at all.
+ */
+@keyframes star-breathe {
+  0%, 100% { opacity: 0.34; transform: none; }
+  50% { opacity: 0.6; transform: translateY(-2px) scale(1.06); }
+}
+
+/* The resting opacity lives HERE and not only in the keyframe. An animation with
+   no fill-mode hands the property back the moment it stops, and under reduced
+   motion it DOES stop, after one iteration — without this the stars would settle
+   at full strength, which is the exact opposite of what they are for. */
+.breathes {
+  opacity: 0.34;
+  animation: star-breathe 11.326s ease-in-out infinite;
+}
+
+/* Dropping the animation is what lets a plain opacity through: an animated
+   property beats a normal declaration, so `:hover { opacity }` on its own would
+   do nothing here. The snap is deliberate — this is the only feedback a mark
+   with no label can give that it is worth pressing.
+
+   Keyed on the BUTTON and not on .breathes itself, because the two are no longer
+   the same element: the button is the fixed hit box, the span inside it is what
+   moves. See Section.svelte. */
+.quote-star:hover .breathes,
+.quote-star:focus-visible .breathes {
+  animation-name: none;
+  opacity: 0.85;
 }
 
 /*

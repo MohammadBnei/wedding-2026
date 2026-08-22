@@ -506,3 +506,50 @@ test('the door is not a trap for reduced motion or for scripting off', async ({ 
   await expect(p2.getByRole('heading', { level: 1 })).toBeVisible();
   await noJs.close();
 });
+
+test('a quote star opens its note, and only one is ever open', async ({ page }) => {
+  // The quote stars are the only thing on the page that hides content behind a
+  // click, and they carry no label — so if hydration or the open-index regresses
+  // they do not look broken, they look like decoration. Nothing else would fail.
+  await visit(page, '/');
+  const stars = page.getByRole('button', { name: 'une pensée' });
+  await expect(stars).toHaveCount(10);
+
+  const first = stars.first();
+  await expect(first).toHaveAttribute('aria-expanded', 'false');
+  await first.click();
+  await expect(first).toHaveAttribute('aria-expanded', 'true');
+  // The welcome pair, in order: the ayah, then Saint-Exupéry. Asserting the
+  // attribution rather than the quote proves the two halves of a starQuotes
+  // entry — SHARED text, EXTRA gloss — were joined for the right id.
+  await expect(page.getByText('Sourate Ar-Rûm, 30:21')).toBeVisible();
+  await expect(page.getByText('Antoine de Saint-Exupéry')).toBeHidden();
+
+  // One index, not a flag each: opening a second must shut the first.
+  await stars.nth(1).click();
+  await expect(first).toHaveAttribute('aria-expanded', 'false');
+  await expect(stars.nth(1)).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByText('Antoine de Saint-Exupéry')).toBeVisible();
+  await expect(page.getByText('Sourate Ar-Rûm, 30:21')).toBeHidden();
+
+  await page.keyboard.press('Escape');
+  await expect(stars.nth(1)).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('a quote keeps its own language inside a page set in another', async ({ page }) => {
+  // `lang` on the blockquote is not cosmetic: app.css keys the typeface off
+  // :lang(), so losing it sets a French quote in Amiri and a Persian one in an
+  // Arabic face. Neither is a crash, and neither is visible from a French page.
+  await visit(page, '/');
+  await page.getByRole('button', { name: 'العربية', exact: true }).click();
+
+  const stars = page.getByRole('button', { name: 'خاطرة' });
+  await expect(stars).toHaveCount(10);
+  await stars.first().click();
+
+  // The welcome pair is one Arabic ayah and one French line; the French one must
+  // still be ltr and still be set in the body face, on a page that is rtl.
+  const fr = page.locator('blockquote[lang="fr"]').first();
+  await expect(fr).toHaveAttribute('dir', 'ltr');
+  await expect(fr).toHaveCSS('font-family', /Mulish/);
+});

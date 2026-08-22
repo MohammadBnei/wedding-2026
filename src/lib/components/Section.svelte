@@ -18,6 +18,7 @@
 -->
 <script>
   import { reveal } from '$lib/actions/reveal.js';
+  import { RTL } from '$lib/content/wedding.js';
   import Sprig from './Sprig.svelte';
   import Tracery from './Tracery.svelte';
 
@@ -30,8 +31,17 @@
     id = undefined,
     seed = '',
     fill = false,
+    quotes = [],
+    hint = '',
     children
   } = $props();
+
+  /*
+   * Which quote star is open, or -1. ONE index rather than a flag per star, so
+   * opening a second closes the first for nothing — the same shape GardenPlan's
+   * `active` pin uses.
+   */
+  let open = $state(-1);
 
   /*
    * The golden ratio, which the page's own ornament is already built out of: the
@@ -56,7 +66,19 @@
    */
   const RUNGS = [1, PHI, PHI ** 2];
   const BASE = 13;
-  const COUNT = RUNGS.length;
+
+  /*
+   * The quote stars are drawn from the SAME scatter as the ornament ones, and
+   * appended to it, which is the whole reason there is one sampler and not two:
+   * a second pass could not see the first, and would eventually drop a clickable
+   * star on top of a decorative one.
+   *
+   * They all take the middle rung. Varying their size would make them read as
+   * more scatter; one size makes them read as a set, which is what a guest has
+   * to notice before it occurs to them to press one. It is also the rung that
+   * clears a 24px hit box once the button's padding is added.
+   */
+  const COUNT = $derived(RUNGS.length + quotes.length);
 
   /*
    * The corners the two sprigs stand in, as a share of the box — the stars keep
@@ -110,12 +132,39 @@
       if (x < KEEP.x && y < KEEP.y) continue;
       if (x > 100 - KEEP.x * PHI && y > 100 - KEEP.y * PHI) continue;
       if (out.some((o) => Math.abs(o.x - x) < 15 && Math.abs(o.y - y) < 11)) continue;
-      const rung = RUNGS[out.length];
+      const rung = RUNGS[out.length] ?? PHI;
       out.push({ x, y, size: BASE * rung, rot: next() * 45, o: 0.2 / Math.sqrt(rung) });
     }
-    return out;
+    /*
+     * The two sprigs, drawn from the same stream AFTER the stars so that adding
+     * this could not move a mark that was already placed.
+     *
+     * A phi half-step either way — 1.618^±0.5, so about 0.79x to 1.27x — which
+     * is the same span the lg: breakpoint already moves them across, and keeps
+     * the pair's own phi gap intact since both ends scale. Corner ornament at
+     * quarter opacity: it is allowed to differ section to section, and the point
+     * is that five sections stop looking stamped from one plate.
+     *
+     * The scale goes on the WRAPPER, never on <Sprig> itself — `flip` there is
+     * `-scale-x-100`, and two `scale`s on one element is the last one winning.
+     */
+    const sprigs = [PHI ** (next() - 0.5), PHI ** (next() - 0.5)];
+
+    return { out, sprigs };
   });
+
+  /* The first three rungs are the ornament, untouched; whatever follows is a
+     quote. Drawn in that order, so adding a quote cannot move a mark that was
+     already on the page. */
+  const ORNAMENTS = $derived(STARS.out.slice(0, RUNGS.length));
+  const MARKS = $derived(STARS.out.slice(RUNGS.length));
 </script>
+
+<svelte:window
+  onkeydown={(e) => {
+    if (e.key === 'Escape') open = -1;
+  }}
+/>
 
 <!-- `relative` so a section can anchor its own ornaments. Deliberately NOT
      `overflow-hidden`: that would clip the focus ring in the chat panel.
@@ -143,8 +192,13 @@
     <!-- The pair is a phi step apart: 64 and 104, or 80 and 128 at lg. The
          larger anchors the bottom-end corner, where a section's content has
          usually run out. -->
-    <Sprig class="absolute start-1 top-1 h-16 w-16 text-gold opacity-25 lg:h-20 lg:w-20" />
-    {#each STARS as star, i (i)}
+    <span
+      class="absolute start-1 top-1 block h-16 w-16 text-gold opacity-25 lg:h-20 lg:w-20"
+      style="scale:{STARS.sprigs[0].toFixed(3)}"
+    >
+      <Sprig class="h-full w-full" />
+    </span>
+    {#each ORNAMENTS as star, i (i)}
       <span
         class="absolute block text-gold"
         style="inset-inline-start:{star.x.toFixed(2)}%;top:{star.y.toFixed(2)}%;width:{star.size.toFixed(
@@ -154,7 +208,79 @@
         <Tracery kind="star" class="w-full" />
       </span>
     {/each}
-    <Sprig flip class="absolute end-1 bottom-1 h-26 w-26 text-gold opacity-25 lg:h-32 lg:w-32" />
+    <span
+      class="absolute end-1 bottom-1 block h-26 w-26 text-gold opacity-25 lg:h-32 lg:w-32"
+      style="scale:{STARS.sprigs[1].toFixed(3)}"
+    >
+      <Sprig flip class="h-full w-full" />
+    </span>
+  </div>
+
+  <!-- The quote stars, in FRONT of the text rather than behind it. That is the
+       only difference from the layer above, and it is why this one is neither
+       `aria-hidden` nor `overflow-hidden`: the buttons take focus, and clipping
+       would cut their focus ring — the same trap the <section> itself avoids.
+
+       The layer keeps `pointer-events-none` and only the buttons take it back,
+       so a star sitting over a paragraph still lets the paragraph be selected.
+
+       Nothing here exists without JavaScript, and that is acceptable where the
+       door is not: this hides content that was never on the page to begin with,
+       so a guest with scripting off loses an easter egg, not the invitation. -->
+  <div class="pointer-events-none absolute inset-0 z-10">
+    {#each MARKS as mark, i (i)}
+      {@const q = quotes[i]}
+      <!-- The button holds still and the star inside it breathes. Not a detail:
+           an animated transform on the button itself moves the hit box, which is
+           a target that drifts out from under a slow tap — and which Playwright
+           refuses to click at all, since it never settles between two frames. -->
+      <button
+        type="button"
+        class="quote-star pointer-events-auto absolute block p-1 text-gold hover:text-accent"
+        style="inset-inline-start:{mark.x.toFixed(2)}%;top:{mark.y.toFixed(2)}%;width:{(
+          mark.size + 8
+        ).toFixed(1)}px;rotate:{mark.rot.toFixed(1)}deg"
+        aria-label={hint}
+        aria-expanded={open === i}
+        aria-controls="{seed}-quote-{i}"
+        onclick={() => (open = open === i ? -1 : i)}
+      >
+        <span class="breathes block" style="animation-delay:{(i * PHI).toFixed(2)}s">
+          <Tracery kind="star" class="w-full" />
+        </span>
+      </button>
+
+      <!-- Always in the DOM, `hidden` when shut, so `aria-controls` above always
+           points at something real. Placed relative to its own star: back off the
+           end edge once past the middle, and above rather than below once past
+           60% down, which is what keeps it inside a section it is not clipped to. -->
+      <div
+        id="{seed}-quote-{i}"
+        hidden={open !== i}
+        class="pointer-events-auto absolute flex max-w-[min(20rem,80%)] flex-col gap-2 border-s-[3px] border-primary bg-surface-raise px-4 py-3.5 shadow-lg"
+        style="{mark.x < 50
+          ? `inset-inline-start:${mark.x.toFixed(2)}%`
+          : `inset-inline-end:${(100 - mark.x).toFixed(2)}%`};{mark.y > 60
+          ? `bottom:calc(${(100 - mark.y).toFixed(2)}% + 34px)`
+          : `top:calc(${mark.y.toFixed(2)}% + 34px)`}"
+      >
+        <!-- `lang` is the whole trick: app.css keys the typeface off `:lang()`,
+             so Amiri, Vazirmatn and Mulish all arrive without a font class, and
+             a French quote inside an Arabic page stays upright and set in Mulish.
+             VerseCard hardcodes ar/rtl because it only ever carries the one آية. -->
+        <blockquote
+          lang={q.lang}
+          dir={RTL.has(q.lang) ? 'rtl' : 'ltr'}
+          class="text-body leading-loose text-gold"
+        >
+          {q.text}
+        </blockquote>
+        {#if q.gloss}
+          <p class="text-note leading-relaxed font-light text-ink-muted text-pretty">{q.gloss}</p>
+        {/if}
+        <p class="caps-wide text-micro font-light text-accent">{q.ref}</p>
+      </div>
+    {/each}
   </div>
 
   {#if title}

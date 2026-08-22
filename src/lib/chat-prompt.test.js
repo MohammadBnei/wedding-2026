@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { systemPrompt, cannedAnswer, MAX_MESSAGE, PER_VISITOR_HOURLY } from './chat-prompt.js';
-import { STR, LANGS, fallbackText } from './content/wedding.js';
+import { STR, SHARED, LANGS, starGloss, fallbackText } from './content/wedding.js';
 
 test('the system prompt is built from the same content the page renders', () => {
   const prompt = systemPrompt('fr');
@@ -14,6 +14,18 @@ test('the system prompt is built from the same content the page renders', () => 
     for (const entry of item.items ?? []) expect(prompt).toContain(entry);
   }
   for (const fact of STR.fr.facts) expect(prompt).toContain(fact.value);
+});
+
+test('the quote stars reach the bot, so it can talk about what a guest pressed', () => {
+  // The quotes are decoration the page hides behind a click. Without them in the
+  // prompt the bot declines under rule 1 — "not in the facts" — which reads as
+  // the site not knowing its own content.
+  const prompt = systemPrompt('fr');
+  for (const q of SHARED.starQuotes) {
+    expect(prompt).toContain(q.text);
+    expect(prompt).toContain(starGloss(q.id, 'fr').ref);
+  }
+  expect(prompt).toContain('Never invent a quote');
 });
 
 test('the prompt tells the model to refuse rather than improvise', () => {
