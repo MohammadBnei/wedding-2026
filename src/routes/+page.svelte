@@ -108,7 +108,7 @@
           <p
             dir="rtl"
             lang="ar"
-            class="-mt-[27%] font-arabic text-xl text-gold lg:mt-0 lg:text-gold-soft"
+            class="-mt-[27%] font-arabic text-[21px] text-gold lg:mt-0 lg:text-gold-soft"
           >
             {SHARED.salam}
           </p>
@@ -121,19 +121,19 @@
             {SHARED.names.latin[1]}
           </h1>
 
-          <p dir="rtl" lang="ar" class="font-arabic text-lg font-bold text-primary lg:text-primary-faint">
+          <p dir="rtl" lang="ar" class="font-arabic text-[21px] text-primary lg:text-primary-faint">
             {SHARED.names.arabic}
           </p>
 
           <!--
-            The point of the page. Everything else in this card — the names, the
-            date, the town — is equally true of a dinner invitation; this is the
+            The point of the page. Everything else in this card — the names and
+            the date — is equally true of a dinner invitation; this is the
             only line that says what is being celebrated. It sits directly under
             the names because it reads off them: "Leïla & Mohammad-Amine / ont la
             joie de vous convier à leur mariage".
           -->
           <p
-            class="font-display text-center text-[14px] leading-relaxed italic text-ink-body text-pretty lg:text-start lg:text-primary-ink"
+            class="font-display text-center text-[13px] leading-relaxed italic text-ink-body text-pretty lg:text-start lg:text-primary-ink"
           >
             {t.heroInvite}
           </p>
@@ -141,9 +141,9 @@
           <Flourish width="w-28" />
 
           <p
-            class="caps-wide text-center text-xs leading-loose font-light text-ink-muted lg:text-start lg:text-primary-faint"
+            class="caps-wide text-center text-[11px] leading-loose font-light text-ink-muted lg:text-start lg:text-primary-faint"
           >
-            {t.date}<br />{t.town}
+            {t.date}
           </p>
 
           <div class="mb-4 lg:mb-6">
@@ -218,13 +218,14 @@
       would get no fade at all. Ending the wrapper here puts it exactly on that seam.
     -->
     <div class="relative isolate flex flex-col py-28 lg:py-32">
-      <Section kicker={t.welcomeKicker} seed="welcome">
+      <Section seed="welcome">
         <!--
           The Bismillah opens the invitation text, as it opens the document it
           is standing in for. Set alone and untranslated in all four locales —
-          it is an invocation, not a sentence to be rendered into French, and
-          the fr/en gloss that exists (`basmalaGloss`) covers only the door's
-          two-word `بسم الله`, so it would translate half of this and stop.
+          it is an invocation, not a sentence to be rendered into French. The
+          door carries the two-word `بسم الله` and is likewise unglossed since
+          issue #16 — a caption under the full formula would translate half of
+          what is written and stop.
         -->
         <p
           dir="rtl"
@@ -233,9 +234,10 @@
         >
           {SHARED.bismillah}
         </p>
-        <p class="text-[15px] leading-loose font-light text-ink-body text-pretty">{t.welcome1}</p>
+        <p class="text-center text-[15px] leading-loose font-light text-ink-body text-pretty">
+          {t.welcome1}
+        </p>
         <VerseCard
-          title={t.originsTitle}
           verse={SHARED.verse}
           gloss={t.verseGloss}
           reference={t.verseRef}

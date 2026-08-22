@@ -174,7 +174,8 @@
            leaf is on the left in every language, and the basmala's two words are
            placed to read right-to-left across the pair while it is shut. They sit
            in the arch head, where an inscription goes on a door of this kind —
-           which is also what the zellij used to occupy. -->
+           which is also what the zellij used to occupy. Carved, not captioned:
+           the gloss that used to sit under the door is gone (issue #16). -->
       <div class="door-leaf door-leaf-l">
         <span dir="rtl" lang="ar" class="font-arabic">{SHARED.basmala[1]}</span>
         {@render panel()}
@@ -194,9 +195,9 @@
       />
     </div>
 
-    {#if t.basmalaGloss}
-      <p class="caps-wide mt-6 text-[10px] font-light text-primary-faint">{t.basmalaGloss}</p>
-    {/if}
-    <p class="door-hint caps mt-3 text-[11px] font-light text-gold-soft">{t.doorHint}</p>
+    <!-- mt-9, not mt-3: it used to sit under the basmala gloss and its margin,
+         and dropping that line without giving the space back walks the hint up
+         into the threshold. -->
+    <p class="door-hint caps mt-9 text-[11px] font-light text-gold-soft">{t.doorHint}</p>
   </button>
 {/if}

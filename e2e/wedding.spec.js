@@ -151,6 +151,21 @@ test('RSVP refuses an empty form, then saves and can be edited', async ({ page }
   await expect(form.getByLabel('Votre nom')).toBeVisible();
 });
 
+test('a guest who cannot come is not sent away with "see you there"', async ({ page }) => {
+  // Issue #22. Every other RSVP test here says yes, which is exactly how the yes
+  // copy — "Rendez-vous le 5 septembre, au jardin" — shipped on the no path.
+  await visit(page, '/#rsvp');
+  const form = page.locator('#rsvp');
+
+  await form.getByLabel('Votre nom').fill('Absente');
+  await form.getByRole('button', { name: 'Je ne pourrai pas venir' }).click();
+  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
+
+  await expect(form).toContainText('Votre réponse nous est parvenue');
+  await expect(form).toContainText('Vous nous manquerez');
+  await expect(form).not.toContainText('Rendez-vous le 5 septembre');
+});
+
 test('the email field is optional and does not block a reply', async ({ page }) => {
   await visit(page, '/#rsvp');
   const form = page.locator('#rsvp');
