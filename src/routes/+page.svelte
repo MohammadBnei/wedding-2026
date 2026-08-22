@@ -243,7 +243,20 @@
         <GardenPlan pins={t.pins} placeholder={t.planPlaceholder} lang={data.lang} />
         <div class="mt-2 flex flex-col gap-3.5">
           {#each t.facts as fact (fact.label)}
-            <Row lead={fact.label} leadWidth="label">{fact.value}</Row>
+            <Row lead={fact.label} leadWidth="label">
+              {fact.value}
+              <!-- The maps link rides the row it answers — the driving one. A
+                   link, not an embedded map: the page pulls no third-party
+                   script, tile or cookie today, and this was the one place
+                   tempted to. The `?api=1` url opens the guest's own maps app. -->
+              {#if fact.map}
+                <div class="mt-3">
+                  <Button href={SHARED.mapsUrl} small rel="noopener noreferrer" target="_blank">
+                    {t.mapCta}
+                  </Button>
+                </div>
+              {/if}
+            </Row>
           {/each}
         </div>
         {#if data.photoDropUrl}
