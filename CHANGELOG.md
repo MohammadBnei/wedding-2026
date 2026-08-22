@@ -1,5 +1,17 @@
 # Changelog
 
+# [0.10.0](https://github.com/MohammadBnei/wedding-2026/compare/0.9.0...0.10.0) (2026-08-22)
+
+
+### Bug Fixes
+
+* **ui:** a quote star must never take a press meant for a control ([7aea6d4](https://github.com/MohammadBnei/wedding-2026/commit/7aea6d47395c7182762948c4792b04b6ffd1c961))
+
+
+### Features
+
+* **ui:** quote stars — a khatim per quote, opened by a click ([290ae65](https://github.com/MohammadBnei/wedding-2026/commit/290ae65048af8676bcd0393c2b31668b84540bf8)), closes [#18](https://github.com/MohammadBnei/wedding-2026/issues/18)
+
 # [0.9.0](https://github.com/MohammadBnei/wedding-2026/compare/0.8.0...0.9.0) (2026-08-22)
 
 
