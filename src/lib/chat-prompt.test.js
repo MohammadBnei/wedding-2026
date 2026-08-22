@@ -81,3 +81,12 @@ test('the album link reaches the bot only when one is configured', () => {
   const url = 'https://photos.example/abc';
   expect(systemPrompt('fr', { photoDropUrl: url })).toContain(url);
 });
+
+test('requested songs reach the bot only when there are some, and never with a name', () => {
+  expect(systemPrompt('fr')).not.toContain('SONGS GUESTS HAVE REQUESTED');
+  const prompt = systemPrompt('fr', { songs: ['Ya Rayah — Rachid Taha'] });
+  expect(prompt).toContain('- Ya Rayah — Rachid Taha');
+  // The endpoint is public. A guest's name must not be reachable through it.
+  expect(prompt).not.toContain('requested by');
+  expect(prompt).toContain('You do not know who requested which song');
+});

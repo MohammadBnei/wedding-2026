@@ -76,6 +76,14 @@ export function aiConfigured() {
 export async function answer(message, lang, prior) {
   if (!aiConfigured()) return cannedAnswer(message, lang);
 
+  // Titles only, no names: this prompt goes to a public endpoint. DISTINCT is
+  // also the dedup — a guest who replied twice, or two guests who asked for the
+  // same track, are one line either way.
+  const songs = await dbOr([], () => sql`
+    SELECT DISTINCT song FROM rsvp
+     WHERE deleted_at IS NULL AND going AND coalesce(song, '') <> ''
+     ORDER BY song`);
+
   // ponytail: the OpenAI SDK with a swappable baseURL IS the provider abstraction.
   // No adapter interface — point OPENAI_BASE_URL at OpenAI, Venice, OpenRouter or
   // a local Ollama. Add a real adapter only if two providers are needed at once.
@@ -89,7 +97,10 @@ export async function answer(message, lang, prior) {
     max_tokens: 300,
     temperature: 0.3,
     messages: [
-      { role: 'system', content: systemPrompt(lang, { photoDropUrl: env.PHOTO_DROP_URL }) },
+      { role: 'system', content: systemPrompt(lang, {
+          photoDropUrl: env.PHOTO_DROP_URL,
+          songs: songs.map((r) => String(r.song))
+        }) },
       ...prior.map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: message }
     ]
