@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.13.0](https://github.com/MohammadBnei/wedding-2026/compare/0.12.0...0.13.0) (2026-08-24)
+
+
+### Features
+
+* **admin:** give the song and the message room to be read ([#30](https://github.com/MohammadBnei/wedding-2026/issues/30)) ([63a848f](https://github.com/MohammadBnei/wedding-2026/commit/63a848f9b6489769f4fd9f3bec55a50e2cbdc921))
+
 # [0.12.0](https://github.com/MohammadBnei/wedding-2026/compare/0.11.0...0.12.0) (2026-08-22)
 
 
