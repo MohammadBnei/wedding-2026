@@ -205,6 +205,10 @@ export function migrate() {
     // the rows it polls, in the order it wants them, so the poll needs no sort.
     // Ordered by created_at, NOT decided_at — a post approved three minutes late
     // belongs where it was written, not at the front of the queue.
+    // Song requests moved here when the RSVP section came off the page: the
+    // wall composer is now the only thing a guest fills in on the day. Additive
+    // ALTER because CREATE TABLE IF NOT EXISTS is a no-op on an existing table.
+    await sql`ALTER TABLE wall_post ADD COLUMN IF NOT EXISTS song text`;
     await sql`
       CREATE INDEX IF NOT EXISTS wall_post_live_idx
         ON wall_post (created_at DESC) WHERE status = 'approved'`;

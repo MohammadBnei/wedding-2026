@@ -76,6 +76,7 @@ export async function load({ request }) {
       id: r.id,
       author: r.author,
       message: r.message,
+      song: r.song,
       lang: r.lang,
       status: r.status,
       verdict: r.verdict,

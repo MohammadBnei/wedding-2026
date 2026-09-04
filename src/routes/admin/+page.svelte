@@ -361,6 +361,12 @@
                     class="text-body leading-relaxed whitespace-pre-wrap text-ink-body"
                     dir={w.lang === 'ar' || w.lang === 'fa' ? 'rtl' : 'ltr'}
                   >{w.message ?? ''}</p>
+                  {#if w.song}
+                    <!-- Never goes to the projector — this is for whoever is
+                         running the music, and this table is the only place it
+                         can be read. -->
+                    <p class="mt-1 text-caption font-light text-ink-muted">♪ {w.song}</p>
+                  {/if}
                 </td>
                 <td class="{cell} whitespace-nowrap">
                   <!-- Buttons, not a select: this is used standing up, at a

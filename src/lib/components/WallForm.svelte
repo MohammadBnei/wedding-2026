@@ -94,6 +94,18 @@
         error={errors.note ?? ''}
       />
 
+      <!-- Song requests used to live in the RSVP form, which came off the page
+           the day of the wedding. This is now the only place a guest can ask for
+           one, so it belongs here rather than nowhere. Same /api/songs
+           autocomplete the RSVP form used. -->
+      <Field
+        label={t.fSong}
+        name="song"
+        placeholder={t.fSongPh}
+        maxlength={200}
+        suggest="/api/songs"
+      />
+
       <label class="flex flex-col gap-1.5">
         <span class="text-micro tracking-caps uppercase text-ink-muted">{t.wallPhotoLabel}</span>
         <input

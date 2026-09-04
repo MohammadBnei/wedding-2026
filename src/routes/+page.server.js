@@ -147,6 +147,11 @@ export const actions = {
     const message = str('note');
     if (message.length > MAX_MESSAGE) errors.note = msg.errWallMessageLong;
 
+    // A song request rides along with the card. It never reaches the projector
+    // — it is for whoever is running the music — so it has no bearing on whether
+    // the post is "empty" below.
+    const song = str('song').slice(0, 200) || null;
+
     const photo = form.get('photo');
     const hasPhoto = photo instanceof File && photo.size > 0;
     if (!message && !hasPhoto) errors.note = msg.errWallEmpty;
@@ -218,6 +223,7 @@ export const actions = {
         visitorId: locals.visitorId,
         author,
         message: message || null,
+        song,
         origKey,
         wallKey,
         lang: locals.lang

@@ -68,13 +68,15 @@ export async function checkWallLimit(visitorId) {
  * invisible until they spend the evening watching for a card that never comes.
  *
  * @param {{visitorId: string, author: string|null, message: string|null,
- *          origKey: string|null, wallKey: string|null, lang: string}} p
+ *          song: string|null, origKey: string|null, wallKey: string|null,
+ *          lang: string}} p
  * @returns {Promise<string>} the new id
  */
 export async function insertPost(p) {
   const [row] = await sql`
-    INSERT INTO wall_post (visitor_id, author, message, orig_key, wall_key, lang)
-    VALUES (${p.visitorId}, ${p.author}, ${p.message}, ${p.origKey}, ${p.wallKey}, ${p.lang})
+    INSERT INTO wall_post (visitor_id, author, message, song, orig_key, wall_key, lang)
+    VALUES (${p.visitorId}, ${p.author}, ${p.message}, ${p.song},
+            ${p.origKey}, ${p.wallKey}, ${p.lang})
     RETURNING id`;
   return row.id;
 }
@@ -162,7 +164,7 @@ export async function setPinned(id) {
  */
 export async function reviewQueue() {
   return await dbOr([], () => sql`
-    SELECT id, author, message, lang, status, verdict, created_at,
+    SELECT id, author, message, song, lang, status, verdict, created_at,
            (wall_key IS NOT NULL) AS photo
       FROM wall_post
      ORDER BY (status = 'pending') DESC, created_at DESC
