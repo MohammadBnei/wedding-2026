@@ -16,6 +16,7 @@
   import GardenPlan from '$lib/components/GardenPlan.svelte';
   import Chat from '$lib/components/Chat.svelte';
   import RsvpForm from '$lib/components/RsvpForm.svelte';
+  import WallForm from '$lib/components/WallForm.svelte';
   import LangSwitcher from '$lib/components/LangSwitcher.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import Chip from '$lib/components/Chip.svelte';
@@ -297,6 +298,22 @@
             </Button>
           </div>
         {/if}
+      </Section>
+
+      <Zigzag reverse={true} />
+
+      <!--
+        The wall. Deliberately its own section rather than a control tucked under
+        the photo-drop button: this is the thing that will be projected, and it
+        earns the same weight as the chat and the RSVP.
+
+        The ente drop link above stays exactly where it is. It is the zero-code
+        path that already works, it is the only one that survives every failure
+        this feature can have, and it is where full-resolution sets belong.
+      -->
+      <Section title={t.wallTitle} tone="alt" fill seed="wall">
+        <p class="text-note leading-relaxed font-light text-ink-muted">{t.wallIntro}</p>
+        <WallForm {t} {form} canPost={data.canPost} />
       </Section>
 
       <Zigzag reverse={false} />

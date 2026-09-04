@@ -272,6 +272,71 @@
         </table>
       {/if}
     {/if}
+
+    <!--
+      The wall queue. Photos fail closed: when the model is unreachable, or says
+      nothing useful, a photo stays pending and this is the ONLY way it reaches
+      the projector. Text is not like that — it publishes itself — so most of
+      what lands here is images.
+
+      Newest first, pending first. No pagination and no filters: for one evening
+      the list fits on a screen, and anything cleverer is a thing to debug at a
+      wedding.
+    -->
+    <section class="mt-12">
+      <h2 class="text-body font-light text-ink">Wall queue</h2>
+      {#if !data.wall?.length}
+        <p class="mt-2 text-caption font-light text-ink-muted">Nothing waiting.</p>
+      {:else}
+        <ul class="mt-3 flex flex-col gap-3">
+          {#each data.wall as w (w.id)}
+            <li class="flex items-start gap-3 border border-line bg-surface-raise p-3">
+              {#if w.photo}
+                <!-- The derivative, from /admin/img — inside the forwardAuth
+                     PathPrefix, so it needs no route of its own. -->
+                <img
+                  src="/admin/img/{w.id}.jpg"
+                  alt=""
+                  class="h-24 w-24 shrink-0 object-cover"
+                  loading="lazy"
+                />
+              {/if}
+              <div class="min-w-0 flex-1">
+                <p class="text-caption text-ink-muted">
+                  {w.author ?? '—'} · {w.status}{w.verdict ? ` · ${w.verdict}` : ''}
+                </p>
+                {#if w.message}
+                  <p
+                    class="text-body font-light whitespace-pre-wrap text-ink-body"
+                    dir={w.lang === 'ar' || w.lang === 'fa' ? 'rtl' : 'ltr'}
+                  >{w.message}</p>
+                {/if}
+                <div class="mt-2 flex gap-2">
+                  {#if w.status !== 'approved'}
+                    <form method="POST" action="?/wallDecide">
+                      <input type="hidden" name="id" value={w.id} />
+                      <input type="hidden" name="to" value="approved" />
+                      <button class="border border-line px-3 py-1 text-xs font-light text-ink">
+                        Publish
+                      </button>
+                    </form>
+                  {/if}
+                  {#if w.status !== 'rejected'}
+                    <form method="POST" action="?/wallDecide">
+                      <input type="hidden" name="id" value={w.id} />
+                      <input type="hidden" name="to" value="rejected" />
+                      <button class="border border-line px-3 py-1 text-xs font-light text-accent">
+                        Take down
+                      </button>
+                    </form>
+                  {/if}
+                </div>
+              </div>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
   </main>
 </div>
 

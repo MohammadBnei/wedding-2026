@@ -1,8 +1,22 @@
 import { fail } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { sql, dbUp, dbOr } from '$lib/server/db.js';
 import { history } from '$lib/server/chat.js';
 import { t } from '$lib/content/wedding.js';
 import { MAX_COUNT } from '$lib/rsvp.js';
+import {
+  checkWallLimit, insertPost, tryEnterDecode, leaveDecode
+} from '$lib/server/wall.js';
+import { moderateInBackground } from '$lib/server/moderate.js';
+import { putObject } from '$lib/server/s3.js';
+import {
+  MAX_MESSAGE, MAX_AUTHOR, MAX_UPLOAD_BYTES, MAX_PIXELS, WALL_WIDTH, WALL_HEIGHT
+} from '$lib/wall.js';
+
+/** The kill switch. Flipped in Infisical, which has autoReload: true, so it
+ * takes effect on a pod restart with no rebuild and no deploy. If the wall
+ * misbehaves during the evening this is the one lever that exists. */
+const wallEnabled = () => (env.WALL_ENABLED ?? 'true') !== 'false';
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ locals }) {
@@ -23,7 +37,10 @@ export async function load({ locals }) {
     // Everything above degrades silently — an empty transcript and a blank form
     // look normal. The RSVP does not: the guest must be told BEFORE they fill it
     // in, not after they press send.
-    canRsvp: dbUp()
+    canRsvp: dbUp(),
+    // Same bargain as canRsvp: the guest is told the wall is closed BEFORE they
+    // write a message and pick a photo, not after they press send.
+    canPost: dbUp() && wallEnabled()
   };
 }
 
@@ -95,5 +112,124 @@ export const actions = {
     }
 
     return { saved: true };
+  },
+
+  /**
+   * A post for the wall: a signature, a message, a photo, or a message and a
+   * photo. The signature is required — an unsigned card on the projector is a
+   * message from nobody, and the point of the wall is that the room can see who
+   * said what.
+   */
+  wall: async ({ request, locals }) => {
+    const msg = t(locals.lang);
+
+    // The kill switch first, before reading the body.
+    if (!wallEnabled()) return fail(503, { wallErrors: { form: msg.wallClosed } });
+
+    // Then the database, BEFORE touching Garage or the model. Both of those cost
+    // something and neither is undone by a missing row: skipping this check is
+    // how you get an object in the bucket that nothing points at, and a guest
+    // told their card is on its way when nothing was stored.
+    if (!dbUp()) return fail(503, { wallErrors: { form: msg.wallOffline } });
+
+    const form = await request.formData();
+    /** @param {string} k */
+    const str = (k) => String(form.get(k) ?? '').trim();
+
+    /** @type {Record<string,string>} */
+    const errors = {};
+
+    const author = str('author');
+    if (!author) errors.author = msg.errWallAuthor;
+    else if (author.length > MAX_AUTHOR) errors.author = msg.errWallAuthorLong;
+
+    const message = str('message');
+    if (message.length > MAX_MESSAGE) errors.message = msg.errWallMessageLong;
+
+    const photo = form.get('photo');
+    const hasPhoto = photo instanceof File && photo.size > 0;
+    if (!message && !hasPhoto) errors.message = msg.errWallEmpty;
+    if (hasPhoto && photo.size > MAX_UPLOAD_BYTES) errors.photo = msg.errWallPhotoBig;
+
+    if (Object.keys(errors).length) return fail(400, { wallErrors: errors });
+
+    /** @type {Uint8Array | null} */
+    let wallBytes = null;
+    let origKey = null;
+    let wallKey = null;
+
+    if (hasPhoto) {
+      if (!tryEnterDecode()) return fail(503, { wallErrors: { form: msg.wallBusy } });
+      try {
+        const raw = new Uint8Array(await photo.arrayBuffer());
+
+        // THE TRUST BOUNDARY. Everything downstream is bytes this process
+        // encoded; the uploaded bytes are never decoded again, never re-served,
+        // and never content-type sniffed.
+        //
+        // maxPixels is not belt-and-braces. Bun.Image's own bomb guard only
+        // trips at 268 MP, and 256 MP of RGBA is about a gigabyte — a
+        // 12000x12000 monochrome PNG compresses small enough to pass the upload
+        // cap and then OOMKills a pod that also serves the invitation.
+        //
+        // autoOrient is NOT the default, and without it every portrait photo
+        // from a phone lands sideways, full-bleed, on a three-metre screen.
+        try {
+          wallBytes = await new Bun.Image(raw, { maxPixels: MAX_PIXELS, autoOrient: true })
+            .resize(WALL_WIDTH, WALL_HEIGHT, { fit: 'inside' })
+            .jpeg({ quality: 82 })
+            .bytes();
+        } catch (err) {
+          // Unrecognised format, a decode failure, or too many pixels. A 400
+          // with a message the guest can act on — never a 500.
+          console.error('[wall] decode refused:', err instanceof Error ? err.message : err);
+          return fail(400, { wallErrors: { photo: msg.errWallPhotoBad } });
+        }
+
+        const id = crypto.randomUUID();
+        origKey = `orig/${id}`;
+        wallKey = `wall/${id}.jpg`;
+        // The original is written verbatim and is WRITE-ONLY: nothing in this
+        // app ever serves it, including /admin. It exists to be pulled into ente
+        // by hand after the event, which is what makes storing bytes we did not
+        // validate safe.
+        await putObject(origKey, raw, photo.type || 'application/octet-stream');
+        await putObject(wallKey, /** @type {Uint8Array} */ (wallBytes), 'image/jpeg');
+      } catch (err) {
+        console.error('[wall] store failed:', err instanceof Error ? err.message : err);
+        return fail(503, { wallErrors: { form: msg.wallOffline } });
+      } finally {
+        leaveDecode();
+      }
+    }
+
+    // Counted after the expensive work so a burst of decodes cannot queue up
+    // behind a limit check, but before the insert so the cap actually holds.
+    const limit = await checkWallLimit(locals.visitorId);
+    if (!limit.ok) return fail(429, { wallErrors: { form: msg.wallTooMany } });
+
+    let id;
+    try {
+      id = await insertPost({
+        visitorId: locals.visitorId,
+        author,
+        message: message || null,
+        origKey,
+        wallKey,
+        lang: locals.lang
+      });
+    } catch (err) {
+      console.error('[wall] write failed:', err instanceof Error ? err.message : err);
+      return fail(503, { wallErrors: { form: msg.wallOffline } });
+    }
+
+    // Answer the guest NOW and screen afterwards. A vision call takes seconds,
+    // and holding the upload open for it on venue wifi is how you get impatient
+    // double-taps and duplicate cards. The row starts 'pending', so the worst
+    // case of this never finishing is the honest one: they were told it is
+    // waiting, and it is.
+    void moderateInBackground(id, { message: message || null, imageBytes: wallBytes });
+
+    return { posted: true };
   }
 };

@@ -2,6 +2,7 @@ import { dev } from '$app/environment';
 import { error, fail } from '@sveltejs/kit';
 import { sql, dbUp, dbOr } from '$lib/server/db.js';
 import { summarise } from '$lib/rsvp-summary.js';
+import { reviewQueue } from '$lib/server/wall.js';
 
 /**
  * NOT the security boundary. `default/authentik-forwardauth` on the
@@ -62,7 +63,25 @@ export async function load({ request }) {
     )
   );
 
-  return { ...summarise(rows), canRead: dbUp(), who: who || (dev ? 'dev' : '') };
+  // The wall queue. Photos fail closed — an unreachable model leaves them
+  // pending — so this list is the only way one ever reaches the projector.
+  const wall = await reviewQueue();
+
+  return {
+    ...summarise(rows),
+    canRead: dbUp(),
+    who: who || (dev ? 'dev' : ''),
+    wall: wall.map((r) => ({
+      id: r.id,
+      author: r.author,
+      message: r.message,
+      lang: r.lang,
+      status: r.status,
+      verdict: r.verdict,
+      photo: Boolean(r.photo),
+      at: new Date(r.created_at).toISOString()
+    }))
+  };
 }
 
 /** @type {import('./$types').Actions} */
@@ -113,5 +132,39 @@ export const actions = {
     }
 
     return { restored: String(form.get('name') ?? '') };
+  },
+
+  /**
+   * Publish a wall post, or take one down.
+   *
+   * ONE reject action covers both binning something pending and yanking
+   * something already on the projector: the state machine is flat, and a third
+   * action would be a third thing to get wrong at speed. Approving a rejected
+   * row is the un-reject, so there is no separate restore either.
+   *
+   * Bare `sql`, not dbOr — for the same reason the delete above avoids it, only
+   * louder: an admin shown "removed" for a photo that is still cycling in front
+   * of a hundred and fifty people is the worst version of that failure.
+   */
+  wallDecide: async ({ request }) => {
+    gate(request);
+    const form = await request.formData();
+    const id = String(form.get('id') ?? '').trim();
+    const to = String(form.get('to') ?? '').trim();
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return fail(400, { message: 'No post given.' });
+    if (to !== 'approved' && to !== 'rejected') return fail(400, { message: 'Unknown decision.' });
+
+    try {
+      await sql`
+        UPDATE wall_post
+           SET status = ${to}, decided_at = now(),
+               verdict = ${'by hand at /admin'}
+         WHERE id = ${id}`;
+    } catch (err) {
+      console.error('[admin] wall decision failed:', err instanceof Error ? err.message : err);
+      return fail(503, { message: 'Postgres refused it — nothing changed.' });
+    }
+
+    return { decided: to };
   }
 };

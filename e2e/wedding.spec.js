@@ -647,3 +647,149 @@ test('no quote star can take a press meant for a control', async ({ page }) => {
   // handful the loop above has stopped reaching them and is proving nothing.
   expect(result.checked).toBeGreaterThan(8);
 });
+
+/* ---------------------------------------------------------------------------
+   The guest wall.
+
+   These cover the parts curl cannot: that a signature is actually required, that
+   the trust boundary rejects a lie about file type without a 500, and — the one
+   that matters most — that the projector keeps cycling when the network goes
+   away. That last one is the reason the feature has a replay buffer at all, and
+   it is impossible to check by hand at a venue.
+--------------------------------------------------------------------------- */
+
+/**
+ * Did a form action refuse this?
+ *
+ * SvelteKit wraps action results in a 200 envelope whose BODY carries the real
+ * status, so asserting on res.status() alone silently passes when the action
+ * actually failed — and, worse, passes when it actually succeeded. Read the
+ * envelope.
+ */
+async function actionFailed(res, expectedStatus = 400) {
+  const body = await res.text();
+  if (res.status() === expectedStatus) return true;
+  return body.includes(`"type":"failure"`) && body.includes(`"status":${expectedStatus}`);
+}
+
+test('the wall refuses an unsigned message', async ({ page, request }) => {
+  await visit(page, '/');
+  const form = page.locator('form[action="?/wall"]');
+  await form.scrollIntoViewIfNeeded();
+  // A message, no name. The point of the wall is that the room can see who
+  // wrote what, so this must not go through. The browser stops it first —
+  // the name input is `required`, so submission never leaves the page.
+  await form.getByLabel(/message/i).fill('Bravo !');
+  await form.getByRole('button', { name: /mur/i }).click();
+  const nameInput = form.locator('input[name="author"]');
+  await expect(nameInput).toHaveJSProperty('validity.valid', false);
+  // Still on the form, no "it's on its way" — nothing was sent.
+  await expect(form).toBeVisible();
+
+  // And the server does not trust the browser: the same post over the wire,
+  // bypassing HTML validation entirely, is refused too.
+  const res = await request.post('/?/wall', {
+    headers: { origin: 'http://localhost:5188' },
+    multipart: { author: '', message: 'Bravo !' }
+  });
+  expect(await actionFailed(res)).toBe(true);
+});
+
+test('the wall refuses a signature with nothing attached to it', async ({ page }) => {
+  await visit(page, '/');
+  const form = page.locator('form[action="?/wall"]');
+  await form.scrollIntoViewIfNeeded();
+  await form.getByLabel(/nom/i).first().fill('Karim');
+  await form.getByRole('button', { name: /mur/i }).click();
+  await expect(form.getByText(/mot ou ajoutez une photo/i)).toBeVisible();
+});
+
+test('a file that lies about being an image is refused, not a 500', async ({ page, request }) => {
+  await visit(page, '/');
+  const res = await request.post('/?/wall', {
+    headers: { origin: 'http://localhost:5188' },
+    multipart: {
+      author: 'Nadia',
+      message: '',
+      // A text file wearing a .jpg name and an image content-type. Bun.Image's
+      // decode is what catches it, and it must surface as a 400 the guest can
+      // act on rather than an unhandled throw.
+      photo: {
+        name: 'not-really.jpg',
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from('this is plain text, not an image at all')
+      }
+    }
+  });
+  expect(await actionFailed(res)).toBe(true);
+});
+
+test('moderation degrades asymmetrically: text publishes, photos wait', async ({ request }) => {
+  // THE core design decision, asserted end to end. There is no model key in dev,
+  // which is the same state as "the provider is unreachable" on the night.
+  //
+  //   text  -> publishes. A wall showing nothing all evening is the failure we
+  //            are actually afraid of, and a rude sentence is recoverable.
+  //   photo -> waits. An unscreened photograph on a three-metre screen in front
+  //            of families is not recoverable, so it holds for a human.
+  const before = (await (await request.get('/api/wall')).json()).items.length;
+
+  const textRes = await request.post('/?/wall', {
+    headers: { origin: 'http://localhost:5188' },
+    multipart: { author: 'Yasmine', message: 'Tous nos vœux !' }
+  });
+  expect(textRes.status()).toBe(200);
+  await new Promise((r) => setTimeout(r, 800)); // screening runs after the response
+
+  const afterText = (await (await request.get('/api/wall')).json()).items;
+  expect(afterText.length).toBe(before + 1);
+  expect(afterText.some((i) => i.author === 'Yasmine')).toBe(true);
+
+  // A real, decodable image. Same guest, same everything — only the photo
+  // differs, so the difference in outcome is the asymmetry and nothing else.
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64'
+  );
+  const photoRes = await request.post('/?/wall', {
+    headers: { origin: 'http://localhost:5188' },
+    multipart: {
+      author: 'Karim',
+      message: '',
+      photo: { name: 'p.png', mimeType: 'image/png', buffer: png }
+    }
+  });
+  expect(photoRes.status()).toBe(200);
+  await new Promise((r) => setTimeout(r, 800));
+
+  const afterPhoto = (await (await request.get('/api/wall')).json()).items;
+  expect(afterPhoto.some((i) => i.author === 'Karim')).toBe(false);
+});
+
+test('the projector keeps cycling when the poll starts failing', async ({ page, request }) => {
+  // THE money test. The projector is on venue wifi talking to a homelab; a blip
+  // must degrade to "no new photos", never to a black screen. Verified by
+  // killing the poll outright and checking a slide is still rendered well past
+  // several poll intervals.
+  await request.post('/__seed_wall_for_test', { failOnStatusCode: false }).catch(() => {});
+
+  await page.goto('/wall');
+  // Kill every poll from here on.
+  await page.route('**/api/wall', (r) => r.abort());
+  await page.waitForTimeout(9_000);
+
+  // Something is on screen — either real posts, or the standing card. Never
+  // nothing, and never an error.
+  await expect(page.locator('.wall')).toBeVisible();
+  await expect(page.locator('.slide')).toHaveCount(1);
+  const text = await page.locator('.wall').innerText();
+  expect(text.length).toBeGreaterThan(0);
+});
+
+test('the wall page carries no site chrome', async ({ page }) => {
+  // It is a display surface. A language switcher or a nav bar on a projector is
+  // a thing a guest will eventually walk up and press.
+  await page.goto('/wall');
+  await expect(page.locator('.wall')).toBeVisible();
+  await expect(page.getByRole('button', { name: /RSVP|répond/i })).toHaveCount(0);
+});

@@ -41,3 +41,6 @@ vecteezy_*.svg
 # Claude Code session state — worktrees with their own node_modules, ~200MB.
 # Not "cache we could commit": one `git add -A` would put it in a public repo.
 .claude/
+
+# Local stand-in for Garage when S3_ENDPOINT is unset (src/lib/server/s3.js).
+.s3-dev/

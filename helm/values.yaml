@@ -25,6 +25,32 @@ env:
   - name: ORIGIN
     value: "https://wedding.bnei.dev"
 
+  # REQUIRED for the wall, and silent without it. adapter-node defaults this to
+  # 512K (node_modules/@sveltejs/adapter-node/files/handler.js), so every real
+  # photo is rejected with a 413 that never reaches app code — no log line from
+  # us, nothing in Loki, and it works perfectly in `vite dev`, which uses a
+  # different handler entirely. Same class of production-only break as ORIGIN
+  # above, which is why it lives next to it. Keep in step with MAX_UPLOAD_BYTES
+  # in src/lib/wall.js.
+  - name: BODY_SIZE_LIMIT
+    value: "12M"
+
+  # Garage, over the LAN. The pod is the ONLY thing that talks to object storage
+  # for this app — uploads arrive as a multipart POST and wall images are served
+  # back through /api/wall/img — so the bytes never leave the LAN and storage
+  # has no dependency on Cloudflare or the home uplink.
+  - name: S3_ENDPOINT
+    value: "http://garage.bnei.lan:3900"
+  - name: S3_BUCKET
+    value: "wedding-wall"
+  # LOAD-BEARING. Bun's S3 client signs SigV4 with region "auto" by default;
+  # Garage is configured with s3_region = "garage" (see
+  # ansible/playbooks/garage-configure.yml) and rejects any other scope with
+  # AuthorizationHeaderMalformed — on every put AND every get, with an error
+  # that reads like a bad key rather than a bad region.
+  - name: S3_REGION
+    value: "garage"
+
 # wedding.bnei.dev is one label deep, so the proxied *.bnei.dev record and the
 # le-dns wildcard default cert already cover it. Nothing to do at Cloudflare.
 # Baseline middlewares (Cloudflare origin lock, rate limit, security headers)
@@ -65,13 +91,17 @@ readinessProbe:
   timeoutSeconds: 3
   failureThreshold: 3
 
+# 512Mi was fine for a page and a chatbot. The wall decodes images in-process,
+# and MAX_PIXELS (src/lib/wall.js) allows 60 MP — about 240 MB of RGBA — with up
+# to three decodes in flight. An OOMKill here takes the invitation and the
+# chatbot down with the wall, on the one evening that cannot be repeated.
 resources:
   requests:
     cpu: 100m
     memory: 128Mi
   limits:
     cpu: 500m
-    memory: 512Mi
+    memory: 1Gi
 
 # No PVC: all state lives in Pigsty.
 
@@ -175,6 +205,15 @@ logAlerts:
   enabled: true
   datasourceUid: ds-loki
   rules:
+    # Both of the wall's silent degradations. Moderation failing means photos
+    # pile up pending and the projector shows nothing new; there is no other
+    # signal that this is happening, and nobody will be reading logs.
+    - uid: wedding-wall-moderation
+      title: Wedding wall moderation failing
+      expr: 'sum(count_over_time({namespace="wedding-2026"} |= "[wall] moderation failed" [10m]))'
+      threshold: 3
+      for: 5m
+      severity: warning
     - uid: wedding-provider-errors
       title: Wedding chatbot provider failing
       expr: 'sum(count_over_time({namespace="wedding-2026"} |= "[chat] provider call failed" [10m]))'
