@@ -357,29 +357,21 @@
                     dir={w.lang === 'ar' || w.lang === 'fa' ? 'rtl' : 'ltr'}
                   >{w.message ?? ''}</p>
                 </td>
-                <td class={cell}>
-                  <!-- One <select> for every decision. /admin already needs JS
-                       for the sort and the search above, so submitting on change
-                       is consistent rather than a new assumption. -->
-                  <form method="POST" action="?/wallAction">
-                    <input type="hidden" name="id" value={w.id} />
-                    <select
-                      name="do"
-                      class="{INPUT_BASE} border border-line bg-surface-raise cursor-pointer"
-                      onchange={(e) => {
-                        const el = e.currentTarget;
-                        if (el.value) el.form?.requestSubmit();
-                      }}
-                    >
-                      <option value="">…</option>
-                      {#if w.status !== 'approved'}<option value="approved">Publish</option>{/if}
-                      {#if w.status !== 'rejected'}<option value="rejected">Take down</option>{/if}
-                      {#if w.status === 'approved' && w.id !== data.pinned}
-                        <option value="show">Show on screen</option>
-                      {/if}
-                      {#if w.id === data.pinned}<option value="auto">Resume auto</option>{/if}
-                    </select>
-                  </form>
+                <td class="{cell} whitespace-nowrap">
+                  <!-- Buttons, not a select: this is used standing up, at a
+                       party, one-handed. A dropdown is two interactions and a
+                       chance to pick the wrong row's menu; a button is one. -->
+                  <div class="flex gap-1.5">
+                    {#if w.status !== 'approved'}
+                      {@render act(w.id, 'approved', 'Publish', 'text-ink')}
+                    {/if}
+                    {#if w.status === 'approved' && w.id !== data.pinned}
+                      {@render act(w.id, 'show', 'Show', 'text-primary')}
+                    {/if}
+                    {#if w.status !== 'rejected'}
+                      {@render act(w.id, 'rejected', 'Take down', 'text-accent')}
+                    {/if}
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -394,4 +386,22 @@
      in the email column for wide ones — so the two cannot drift apart. -->
 {#snippet mailto(/** @type {string} */ email)}
   <a class="underline" href="mailto:{email}">{email}</a>
+{/snippet}
+
+<!-- One wall action. Rendered three times per row rather than written out three
+     times, so the padding and the border cannot drift the way the artifact's two
+     CTAs did. -->
+{#snippet act(
+  /** @type {string} */ id,
+  /** @type {string} */ value,
+  /** @type {string} */ label,
+  /** @type {string} */ tone
+)}
+  <form method="POST" action="?/wallAction">
+    <input type="hidden" name="id" value={id} />
+    <input type="hidden" name="do" value={value} />
+    <button class="cursor-pointer border border-line px-2 py-1 text-xs {tone} hover:bg-primary-faint/40">
+      {label}
+    </button>
+  </form>
 {/snippet}
