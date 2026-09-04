@@ -776,6 +776,24 @@ test('the projector keeps cycling when the poll starts failing', async ({ page, 
   expect(text.length).toBeGreaterThan(0);
 });
 
+test('wall images set no cookie, so they can actually be cached', async ({ request }) => {
+  // A response carrying Set-Cookie is never cached by Cloudflare — confirmed
+  // live, cf-cache-status: BYPASS — and SvelteKit drops the Cache-Control we set
+  // alongside it. That mattered more than a missed CDN hit: the projector's
+  // offline replay leans on the browser cache, and an uncacheable image means a
+  // blank frame the moment the network wobbles.
+  //
+  // Asserted against a nonexistent id on purpose: a 404 still goes through
+  // hooks.server.js, so this tests the hook rather than needing a seeded photo.
+  const res = await request.get('/api/wall/img/00000000-0000-0000-0000-000000000000.jpg');
+  expect(res.headers()['set-cookie']).toBeUndefined();
+
+  // And any other route still mints it — this is one narrow exemption, not a
+  // hole in how every other page identifies a visitor.
+  const page = await request.get('/');
+  expect(page.headers()['set-cookie']).toBeDefined();
+});
+
 test('the wall page carries no site chrome', async ({ page }) => {
   // It is a display surface. A language switcher or a nav bar on a projector is
   // a thing a guest will eventually walk up and press.
