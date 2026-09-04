@@ -2,7 +2,7 @@ import { dev } from '$app/environment';
 import { error, fail } from '@sveltejs/kit';
 import { sql, dbUp, dbOr } from '$lib/server/db.js';
 import { summarise } from '$lib/rsvp-summary.js';
-import { reviewQueue } from '$lib/server/wall.js';
+import { reviewQueue, pinnedId, setPinned } from '$lib/server/wall.js';
 
 /**
  * NOT the security boundary. `default/authentik-forwardauth` on the
@@ -65,12 +65,13 @@ export async function load({ request }) {
 
   // The wall queue. Photos fail closed — an unreachable model leaves them
   // pending — so this list is the only way one ever reaches the projector.
-  const wall = await reviewQueue();
+  const [wall, pinned] = await Promise.all([reviewQueue(), pinnedId()]);
 
   return {
     ...summarise(rows),
     canRead: dbUp(),
     who: who || (dev ? 'dev' : ''),
+    pinned,
     wall: wall.map((r) => ({
       id: r.id,
       author: r.author,
@@ -135,36 +136,53 @@ export const actions = {
   },
 
   /**
-   * Publish a wall post, or take one down.
+   * Everything you can do to one wall post, from one <select>.
    *
-   * ONE reject action covers both binning something pending and yanking
-   * something already on the projector: the state machine is flat, and a third
-   * action would be a third thing to get wrong at speed. Approving a rejected
-   * row is the un-reject, so there is no separate restore either.
+   * One action rather than a decide-action and a pin-action, because the UI is
+   * one dropdown: splitting it server-side would only mean the markup has to
+   * decide which endpoint each option belongs to, which is a branch that exists
+   * purely to undo this merge.
    *
-   * Bare `sql`, not dbOr — for the same reason the delete above avoids it, only
-   * louder: an admin shown "removed" for a photo that is still cycling in front
-   * of a hundred and fifty people is the worst version of that failure.
+   * Publishing and taking down are the same flat state machine — approving a
+   * rejected row IS the un-reject, so there is no separate restore. Bare `sql`
+   * and setPinned, never dbOr: an admin shown "removed" for a photo still
+   * cycling in front of a hundred and fifty people is the worst version of the
+   * failure the delete action above already warns about.
    */
-  wallDecide: async ({ request }) => {
+  wallAction: async ({ request }) => {
     gate(request);
     const form = await request.formData();
     const id = String(form.get('id') ?? '').trim();
-    const to = String(form.get('to') ?? '').trim();
+    const act = String(form.get('do') ?? '').trim();
+
+    if (act === 'auto') {
+      try {
+        await setPinned(null);
+      } catch (err) {
+        console.error('[admin] wall unpin failed:', err instanceof Error ? err.message : err);
+        return fail(503, { message: 'Postgres refused it — the wall did not change.' });
+      }
+      return { wall: 'auto' };
+    }
+
     if (!/^[0-9a-f-]{36}$/i.test(id)) return fail(400, { message: 'No post given.' });
-    if (to !== 'approved' && to !== 'rejected') return fail(400, { message: 'Unknown decision.' });
 
     try {
-      await sql`
-        UPDATE wall_post
-           SET status = ${to}, decided_at = now(),
-               verdict = ${'by hand at /admin'}
-         WHERE id = ${id}`;
+      if (act === 'show') {
+        await setPinned(id);
+      } else if (act === 'approved' || act === 'rejected') {
+        await sql`
+          UPDATE wall_post
+             SET status = ${act}, decided_at = now(), verdict = ${'by hand at /admin'}
+           WHERE id = ${id}`;
+      } else {
+        return fail(400, { message: 'Unknown action.' });
+      }
     } catch (err) {
-      console.error('[admin] wall decision failed:', err instanceof Error ? err.message : err);
+      console.error('[admin] wall action failed:', err instanceof Error ? err.message : err);
       return fail(503, { message: 'Postgres refused it — nothing changed.' });
     }
 
-    return { decided: to };
+    return { wall: act };
   }
 };

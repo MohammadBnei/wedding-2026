@@ -147,22 +147,27 @@ export function mergeWindow(current, incoming) {
  */
 export function moderationPrompt({ hasImage }) {
   return [
-    'You screen what guests write on a card at a wedding.',
-    'It will be projected on a wall, in front of families, grandparents and children.',
+    'You screen posts guests send to a wedding wall.',
+    'They are projected on a wall, in front of families, grandparents and children.',
+    '',
+    'A post may be a photograph with no message, a message with no photograph, or',
+    'both. You are judging ONLY whether the content is appropriate to project.',
+    'A missing message, an empty message, a photograph containing no text, a very',
+    'short message, or a message you find hard to read are NONE of them reasons to',
+    'answer false.',
     '',
     'Reply with EXACTLY one JSON object and nothing else:',
     '{"ok": true, "why": ""}   or   {"ok": false, "why": "<six words>"}',
     '',
-    'Answer false for: sexual content, nudity, slurs, insults aimed at anyone,',
+    'Answer false ONLY for: sexual content, nudity, slurs, insults aimed at anyone,',
     'threats, spam, advertising, links, or personal contact details.',
     hasImage
-      ? 'For the image also answer false for: nudity, sexual content, violence, gore, drugs.'
+      ? 'For the photograph, also answer false for: nudity, sexual content, violence, gore, drugs.'
       : '',
     '',
     'Warmth, jokes, teasing the couple, religion, emoji, and any language are all fine.',
     'Guests write in French, English, Arabic and Persian — a language you find hard',
-    'to read is NOT a reason to answer false.',
-    'If you genuinely cannot tell, answer false.'
+    'to read is NOT a reason to answer false.'
   ]
     .filter(Boolean)
     .join('\n');

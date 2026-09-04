@@ -583,6 +583,10 @@ const EXTRA = {
     // The guest wall. `wallSign` is the label on the one required field: an
     // unsigned card on the projector is a message from nobody.
     wallTitle: 'Le mur des invités',
+    // Replaces rsvpCta as the rail's main call to action — there is no
+    // answering the night before. The RSVP form stays on the page below.
+    wallCta: 'Écrire sur le mur',
+    wallClose: 'Fermer',
     wallIntro: 'Un mot, une photo — et cela s’affiche sur le grand écran.',
     wallSign: 'Votre nom',
     wallMessageLabel: 'Votre message',
@@ -676,6 +680,8 @@ const EXTRA = {
     errName: 'Please tell us your name.',
     errNameLong: 'That name is too long.',
     wallTitle: 'The guest wall',
+    wallCta: 'Write on the wall',
+    wallClose: 'Close',
     wallIntro: 'A word, a photo — and it goes up on the big screen.',
     wallSign: 'Your name',
     wallMessageLabel: 'Your message',
@@ -770,6 +776,8 @@ const EXTRA = {
     errName: 'نرجو كتابة اسمكم.',
     errNameLong: 'هذا الاسم طويل أكثر من اللازم.',
     wallTitle: 'جدار المدعوّين',
+    wallCta: 'اكتبوا على الجدار',
+    wallClose: 'إغلاق',
     wallIntro: 'كلمة أو صورة — وتظهر على الشاشة الكبيرة.',
     wallSign: 'اسمكم',
     wallMessageLabel: 'رسالتكم',
@@ -851,6 +859,8 @@ const EXTRA = {
     errName: 'لطفاً نامتان را بنویسید.',
     errNameLong: 'این نام بیش از اندازه بلند است.',
     wallTitle: 'دیوار مهمان‌ها',
+    wallCta: 'روی دیوار بنویسید',
+    wallClose: 'بستن',
     wallIntro: 'یک کلمه، یک عکس — و روی پردهٔ بزرگ می‌آید.',
     wallSign: 'نامتان',
     wallMessageLabel: 'پیامتان',

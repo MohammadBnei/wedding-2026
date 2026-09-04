@@ -6,21 +6,37 @@
   let { data } = $props();
 
   let items = $state(data.items);
+  let pinned = $state(data.pinned ?? null);
   let i = $state(0);
   let online = $state(true);
 
-  const current = $derived(items[i % Math.max(items.length, 1)] ?? null);
-  const nextItem = $derived(items.length > 1 ? items[(i + 1) % items.length] : null);
+  // When /admin has pinned a post, that IS the stage and the timer stands down.
+  // Otherwise the index cycles. Falling back to the index when the pinned id is
+  // not in the window matters: a pinned post that gets taken down must release
+  // the wall rather than freeze it on something that no longer exists.
+  const pinnedIndex = $derived(pinned ? items.findIndex((x) => x.id === pinned) : -1);
+  const at = $derived(pinnedIndex >= 0 ? pinnedIndex : i % Math.max(items.length, 1));
+  const current = $derived(items[at] ?? null);
+  const nextItem = $derived(items.length > 1 ? items[(at + 1) % items.length] : null);
 
   /** @param {{id: string}} it */
   const src = (it) => `/api/wall/img/${it.id}.jpg`;
 
-  /**
-   * Preload with `new Image()`, NOT fetch(). An <img src> is not a CORS request
-   * and needs no rule on the bucket; a fetch() is, and would.
-   */
+  /** @param {string | null} lang */
+  const dirOfPost = (lang) => dirOf(/** @type {any} */ (lang) || 'fr');
+
+  // Preload with `new Image()`, NOT fetch(). An <img src> is not a CORS request
+  // and needs no rule on the bucket; a fetch() is, and would.
   $effect(() => {
     if (nextItem?.photo) new Image().src = src(nextItem);
+  });
+
+  /** @type {HTMLElement | undefined} */
+  let railEl = $state();
+  // Keep the rail pinned to the newest message, the way a chat window behaves.
+  $effect(() => {
+    void items.length;
+    if (railEl) railEl.scrollTop = railEl.scrollHeight;
   });
 
   onMount(() => {
@@ -35,15 +51,17 @@
       try {
         const res = await fetch('/api/wall');
         if (!res.ok) throw new Error(String(res.status));
-        const { items: incoming } = await res.json();
-        const merged = mergeWindow(items, incoming);
-        // Jump to a genuinely new post: a guest who just uploaded gets to see it
-        // go up, which is the moment this whole feature exists for.
-        if (merged.fresh.length) {
-          const at = merged.items.findIndex((x) => x.id === merged.fresh[0]);
-          if (at >= 0) i = at;
+        const body = await res.json();
+        const merged = mergeWindow(items, body.items);
+        if (merged.fresh.length && !body.pinned) {
+          // Jump to a genuinely new post: a guest who just uploaded gets to see
+          // it go up, which is the moment this whole feature exists for. Not
+          // while pinned — a human has taken the wheel.
+          const idx = merged.items.findIndex((x) => x.id === merged.fresh[0]);
+          if (idx >= 0) i = idx;
         }
         items = merged.items;
+        pinned = body.pinned ?? null;
         online = true;
       } catch {
         // Change NOTHING. The buffer keeps cycling what it already has, so a
@@ -55,7 +73,7 @@
 
     const advance = setInterval(() => {
       try {
-        if (items.length) i = (i + 1) % items.length;
+        if (!pinned && items.length) i = (i + 1) % items.length;
       } catch {
         /* never let the cycle die */
       }
@@ -70,13 +88,16 @@
   /**
    * The emergency control. Someone standing beside the laptop gets a bad photo
    * off the screen with one keypress — no phone, no authentik, no queue. Taking
-   * it down permanently is /admin's job; this is the ten-second version.
+   * it down permanently, or pinning the stage, is /admin's job.
+   * @param {KeyboardEvent} e
    */
-  /** @param {KeyboardEvent} e */
   function onKey(e) {
     if (e.key === 'ArrowRight' || e.key === ' ') {
       e.preventDefault();
-      if (items.length) i = (i + 1) % items.length;
+      if (items.length) i = (at + 1) % items.length;
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (items.length) i = (at - 1 + items.length) % items.length;
     }
   }
 </script>
@@ -84,32 +105,43 @@
 <svelte:window onkeydown={onKey} />
 
 <div class="wall">
-  {#if current}
-      <!-- No {#key} wrapper: it re-creates the subtree and breaks hydration on
-           this page (HierarchyRequestError). The cross-fade is driven off the id
-           via a CSS animation-name change instead, which is both cheaper and
-           one less thing that can fail on the projector. -->
-      <article class="slide" class:has-photo={current.photo} data-id={current.id}>
+  <section class="stage">
+    {#if current}
+      <article class="slide" class:with-photo={current.photo}>
         {#if current.photo}
           <img class="photo" src={src(current)} alt="" />
         {/if}
-        {#if current.message}
-          <div class="caption" dir={dirOf(current.lang ?? 'fr')} lang={current.lang ?? 'fr'}>
-            <p class="message">{current.message}</p>
+        {#if current.message || current.author}
+          <!-- Below the photo, not over it. An overlay is unreadable on a light
+               photograph and it hides the part of the picture people are
+               looking at. -->
+          <div class="caption" dir={dirOfPost(current.lang)} lang={current.lang ?? 'fr'}>
+            {#if current.message}<p class="message">{current.message}</p>{/if}
             {#if current.author}<p class="author">— {current.author}</p>{/if}
           </div>
-        {:else if current.author}
-          <div class="caption"><p class="author">— {current.author}</p></div>
         {/if}
       </article>
-  {:else}
-    <!-- Nothing approved yet. A standing card, never a spinner and never black:
-         this is what is on the screen before the first guest posts. -->
-    <article class="slide standing">
-      <p class="names">{SHARED.names.latin.join(' & ')}</p>
-      <p class="author">{SHARED.motto ?? ''}</p>
-    </article>
-  {/if}
+    {:else}
+      <!-- Nothing approved yet. A standing card, never a spinner and never
+           black: this is what is on screen before the first guest posts. -->
+      <article class="slide standing">
+        <p class="names">{SHARED.names.latin.join(' & ')}</p>
+      </article>
+    {/if}
+  </section>
+
+  <!-- The rail. Everything that has been up, oldest at the top, so it reads the
+       way a chat window does and the newest line is always at the bottom edge
+       where the eye already is. -->
+  <aside class="rail" bind:this={railEl}>
+    {#each [...items].reverse() as it (it.id)}
+      <article class="line" class:live={it.id === current?.id} dir={dirOfPost(it.lang)}>
+        <span class="who">{it.author}</span>
+        {#if it.message}<span class="what">{it.message}</span>{/if}
+        {#if it.photo}<span class="badge" aria-label="photo">◼</span>{/if}
+      </article>
+    {/each}
+  </aside>
 
   {#if !online}
     <!-- Deliberately tiny and dim. It is for whoever walks past the laptop, not
@@ -128,60 +160,65 @@
     position: fixed;
     inset: 0;
     display: grid;
-    place-items: center;
+    grid-template-columns: 1fr min(22rem, 26vw);
     background: #000;
     cursor: none;
   }
 
-  .slide {
-    position: absolute;
-    inset: 0;
+  .stage {
+    position: relative;
     display: grid;
     place-items: center;
-    animation: fade 900ms ease-out;
+    min-width: 0;
+    padding: 2.5vh 2vw;
+  }
+
+  .slide {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1rem, 2.5vh, 2rem);
+    width: 100%;
+    height: 100%;
+    animation: fade 700ms ease-out;
   }
 
   .photo {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    /* Bounded so the caption below always has room — object-fit alone would let
+       a tall portrait photo push the text off the bottom of the screen. */
+    max-width: 100%;
+    max-height: 72%;
     object-fit: contain;
+    flex: 0 1 auto;
   }
 
   .caption {
-    position: relative;
-    max-width: min(80ch, 82vw);
-    margin: 0 auto;
-    padding: clamp(1rem, 3vh, 2.5rem) clamp(1.5rem, 4vw, 3rem);
+    max-width: min(40ch, 90%);
     text-align: center;
-  }
-
-  .has-photo .caption {
-    position: absolute;
-    inset-inline: 0;
-    bottom: clamp(2rem, 8vh, 6rem);
-    background: color-mix(in oklab, black 62%, transparent);
-    backdrop-filter: blur(6px);
-    border-radius: 1rem;
-    width: fit-content;
+    flex: 0 0 auto;
   }
 
   .message {
     font-family: var(--font-display), serif;
-    font-size: clamp(1.75rem, 4.2vw, 4rem);
+    font-size: clamp(1.5rem, 3.4vw, 3.4rem);
     line-height: 1.25;
     color: white;
     margin: 0;
     text-wrap: balance;
   }
 
+  /* A text-only card gets the room the photo would have had. */
+  .slide:not(.with-photo) .message {
+    font-size: clamp(2rem, 5vw, 5rem);
+  }
+
   .author,
   .names {
     font-family: var(--font-script), cursive;
-    font-size: clamp(1.1rem, 2.2vw, 2rem);
+    font-size: clamp(1.1rem, 2vw, 2.2rem);
     color: color-mix(in oklab, white 78%, transparent);
-    margin: 0.6em 0 0;
+    margin: 0.5em 0 0;
   }
 
   .names {
@@ -189,9 +226,46 @@
     color: white;
   }
 
-  .standing {
+  .rail {
+    display: flex;
     flex-direction: column;
-    text-align: center;
+    gap: 0.6rem;
+    overflow-y: auto;
+    padding: 1.2rem 1rem;
+    border-inline-start: 1px solid color-mix(in oklab, white 12%, transparent);
+    background: color-mix(in oklab, white 4%, transparent);
+    scrollbar-width: none;
+  }
+  .rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .line {
+    font-size: clamp(0.8rem, 1.05vw, 1.1rem);
+    line-height: 1.45;
+    color: color-mix(in oklab, white 72%, transparent);
+  }
+
+  /* The one currently on the stage, so the rail doubles as a position marker. */
+  .line.live {
+    color: white;
+  }
+  .line.live .who {
+    color: var(--color-gold-soft, #e8c98a);
+  }
+
+  .who {
+    font-weight: 600;
+    color: color-mix(in oklab, white 92%, transparent);
+  }
+  .who::after {
+    content: ' ';
+  }
+
+  .badge {
+    margin-inline-start: 0.4em;
+    font-size: 0.7em;
+    opacity: 0.5;
   }
 
   .offline {
@@ -211,5 +285,12 @@
 
   @media (prefers-reduced-motion: reduce) {
     .slide { animation: none; }
+  }
+
+  /* A narrow window (someone checking it on a phone) drops the rail — at that
+     width it would take half the screen and the stage is the point. */
+  @media (max-width: 48rem) {
+    .wall { grid-template-columns: 1fr; }
+    .rail { display: none; }
   }
 </style>

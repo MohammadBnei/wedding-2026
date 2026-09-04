@@ -16,13 +16,16 @@
   import GardenPlan from '$lib/components/GardenPlan.svelte';
   import Chat from '$lib/components/Chat.svelte';
   import RsvpForm from '$lib/components/RsvpForm.svelte';
-  import WallForm from '$lib/components/WallForm.svelte';
+  import WallModal from '$lib/components/WallModal.svelte';
   import LangSwitcher from '$lib/components/LangSwitcher.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import Chip from '$lib/components/Chip.svelte';
 
   let { data, form } = $props();
 
+
+  /** @type {ReturnType<typeof WallModal> | undefined} */
+  let wallModal = $state();
   const t = $derived(data.t);
 
 </script>
@@ -148,7 +151,11 @@
           </p>
 
           <div class="mb-4 lg:mb-6">
-            <Button href="#rsvp">{t.rsvpCta}</Button>
+            <!-- Was `href="#rsvp"`. Replaced the night before the wedding:
+                 nobody is answering an invitation at that point, and the wall is
+                 the thing we actually want a guest's thumb to land on. The RSVP
+                 form is still on the page for anyone who scrolls to it. -->
+            <Button onclick={() => wallModal?.open()}>{t.wallCta}</Button>
           </div>
         </div>
       </div>
@@ -300,22 +307,6 @@
         {/if}
       </Section>
 
-      <Zigzag reverse={true} />
-
-      <!--
-        The wall. Deliberately its own section rather than a control tucked under
-        the photo-drop button: this is the thing that will be projected, and it
-        earns the same weight as the chat and the RSVP.
-
-        The ente drop link above stays exactly where it is. It is the zero-code
-        path that already works, it is the only one that survives every failure
-        this feature can have, and it is where full-resolution sets belong.
-      -->
-      <Section title={t.wallTitle} tone="alt" fill seed="wall">
-        <p class="text-note leading-relaxed font-light text-ink-muted">{t.wallIntro}</p>
-        <WallForm {t} {form} canPost={data.canPost} />
-      </Section>
-
       <Zigzag reverse={false} />
 
       <Section
@@ -403,3 +394,9 @@
     </footer>
   </main>
 </div>
+
+<!-- Outside the layout grid on purpose: a modal <dialog> is promoted to the top
+     layer by the browser, so where it sits in the DOM does not affect painting,
+     and keeping it out here means no stacking-context surprises from the sticky
+     rail or the door scrim. -->
+<WallModal bind:this={wallModal} {t} lang={data.lang} {form} canPost={data.canPost} />

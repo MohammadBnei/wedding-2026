@@ -103,14 +103,50 @@ export async function wallKeyFor(id, { approvedOnly = true } = {}) {
   return rows[0]?.wall_key ?? null;
 }
 
-/** Everything awaiting a decision, plus what was decided recently, for /admin. */
+/**
+ * Which post a human has pinned the projector to, or null for auto.
+ *
+ * Joined against wall_post so a pinned post that is later taken down releases
+ * the wall automatically — otherwise binning the thing on screen would leave the
+ * projector frozen on it, which is the exact opposite of what "take down" means.
+ */
+export async function pinnedId() {
+  const rows = await dbOr([], () => sql`
+    SELECT c.current_id
+      FROM wall_control c
+      JOIN wall_post p ON p.id = c.current_id AND p.status = 'approved'
+     WHERE c.id = 1`);
+  return rows[0]?.current_id ?? null;
+}
+
+/**
+ * Pin the projector to a post, or pass null to hand it back to auto-advance.
+ *
+ * Bare `sql`, not dbOr: an admin who pressed "show this" and was told it worked
+ * while the projector kept cycling is being lied to in front of a room.
+ *
+ * @param {string | null} id
+ */
+export async function setPinned(id) {
+  await sql`UPDATE wall_control SET current_id = ${id}, updated_at = now() WHERE id = 1`;
+}
+
+/**
+ * Every post, for /admin — pending first, then newest.
+ *
+ * Deliberately NOT filtered to "decided recently". It was, on a six-hour window,
+ * and that quietly took posts out of this list while they were still cycling on
+ * the projector: six hours into a reception you could see a photo on the wall and
+ * have no row to take it down from. The wall keeps WALL_WINDOW items; this has to
+ * be a superset of that or the control does not cover what it is controlling.
+ *
+ * One evening will not approach the limit.
+ */
 export async function reviewQueue() {
   return await dbOr([], () => sql`
     SELECT id, author, message, lang, status, verdict, created_at,
            (wall_key IS NOT NULL) AS photo
       FROM wall_post
-     WHERE status = 'pending'
-        OR decided_at > now() - interval '6 hours'
      ORDER BY (status = 'pending') DESC, created_at DESC
      LIMIT 200`);
 }

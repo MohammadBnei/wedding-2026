@@ -211,6 +211,24 @@ export function migrate() {
     await sql`
       CREATE INDEX IF NOT EXISTS wall_post_visitor_idx
         ON wall_post (visitor_id, created_at)`;
+    // What the projector is showing right now, when a human has taken over.
+    //
+    // A one-row table, not a column on wall_post: this is global state ("the
+    // wall is currently pinned to X"), not a property of any post. The CHECK
+    // pins it to a single row so there is no way to end up with two opinions
+    // about what the projector is doing.
+    //
+    // NULL current_id means auto — the wall cycles on its own. Setting it is
+    // the carousel control on /admin; the projector picks it up on its next
+    // poll, so there is no push channel and nothing to keep alive.
+    await sql`
+      CREATE TABLE IF NOT EXISTS wall_control (
+        id         int PRIMARY KEY
+                   CONSTRAINT wall_control_singleton CHECK (id = 1),
+        current_id uuid,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`;
+    await sql`INSERT INTO wall_control (id) VALUES (1) ON CONFLICT (id) DO NOTHING`;
     up = true;
   })()
     .catch((err) => {

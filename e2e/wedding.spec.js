@@ -658,6 +658,27 @@ test('no quote star can take a press meant for a control', async ({ page }) => {
    it is impossible to check by hand at a venue.
 --------------------------------------------------------------------------- */
 
+/** Poll until `check` is true, or give up. Returns what it last saw. */
+async function waitFor(check, budgetMs = 12_000, everyMs = 500) {
+  const until = Date.now() + budgetMs;
+  let last = false;
+  while (Date.now() < until) {
+    last = await check();
+    if (last) return true;
+    await new Promise((r) => setTimeout(r, everyMs));
+  }
+  return last;
+}
+
+/**
+ * Open the wall dialog from the rail's call to action — the button that used to
+ * say "Je réponds". The form only exists in the DOM once the dialog is open.
+ */
+async function openWall(page) {
+  await page.getByRole('button', { name: /mur|wall|جدار|دیوار/i }).first().click();
+  await page.locator('dialog[open]').waitFor();
+}
+
 /**
  * Did a form action refuse this?
  *
@@ -674,8 +695,10 @@ async function actionFailed(res, expectedStatus = 400) {
 
 test('the wall refuses an unsigned message', async ({ page, request }) => {
   await visit(page, '/');
-  const form = page.locator('form[action="?/wall"]');
-  await form.scrollIntoViewIfNeeded();
+  await openWall(page);
+  // Scoped to the dialog: the RSVP form on the same page has fields with
+  // similar labels, and an unscoped getByLabel would be ambiguous.
+  const form = page.locator('dialog[open] form[action="?/wall"]');
   // A message, no name. The point of the wall is that the room can see who
   // wrote what, so this must not go through. The browser stops it first —
   // the name input is `required`, so submission never leaves the page.
@@ -690,15 +713,15 @@ test('the wall refuses an unsigned message', async ({ page, request }) => {
   // bypassing HTML validation entirely, is refused too.
   const res = await request.post('/?/wall', {
     headers: { origin: 'http://localhost:5188' },
-    multipart: { author: '', message: 'Bravo !' }
+    multipart: { author: '', note: 'Bravo !' }
   });
   expect(await actionFailed(res)).toBe(true);
 });
 
 test('the wall refuses a signature with nothing attached to it', async ({ page }) => {
   await visit(page, '/');
-  const form = page.locator('form[action="?/wall"]');
-  await form.scrollIntoViewIfNeeded();
+  await openWall(page);
+  const form = page.locator('dialog[open] form[action="?/wall"]');
   await form.getByLabel(/nom/i).first().fill('Karim');
   await form.getByRole('button', { name: /mur/i }).click();
   await expect(form.getByText(/mot ou ajoutez une photo/i)).toBeVisible();
@@ -710,7 +733,7 @@ test('a file that lies about being an image is refused, not a 500', async ({ pag
     headers: { origin: 'http://localhost:5188' },
     multipart: {
       author: 'Nadia',
-      message: '',
+      note: '',
       // A text file wearing a .jpg name and an image content-type. Bun.Image's
       // decode is what catches it, and it must surface as a 400 the guest can
       // act on rather than an unhandled throw.
@@ -724,46 +747,36 @@ test('a file that lies about being an image is refused, not a 500', async ({ pag
   expect(await actionFailed(res)).toBe(true);
 });
 
-test('moderation degrades asymmetrically: text publishes, photos wait', async ({ request }) => {
-  // THE core design decision, asserted end to end. There is no model key in dev,
-  // which is the same state as "the provider is unreachable" on the night.
+test('nothing reaches the wall before it has been screened', async ({ request }) => {
+  // The safety property, and the one that holds in every environment: screening
+  // runs AFTER the response, so between "posted" and "decided" a post must be
+  // invisible to the projector. If this ever goes red, something is publishing
+  // on the way in.
   //
-  //   text  -> publishes. A wall showing nothing all evening is the failure we
-  //            are actually afraid of, and a rude sentence is recoverable.
-  //   photo -> waits. An unscreened photograph on a three-metre screen in front
-  //            of families is not recoverable, so it holds for a human.
-  const before = (await (await request.get('/api/wall')).json()).items.length;
-
-  const textRes = await request.post('/?/wall', {
-    headers: { origin: 'http://localhost:5188' },
-    multipart: { author: 'Yasmine', message: 'Tous nos vœux !' }
-  });
-  expect(textRes.status()).toBe(200);
-  await new Promise((r) => setTimeout(r, 800)); // screening runs after the response
-
-  const afterText = (await (await request.get('/api/wall')).json()).items;
-  expect(afterText.length).toBe(before + 1);
-  expect(afterText.some((i) => i.author === 'Yasmine')).toBe(true);
-
-  // A real, decodable image. Same guest, same everything — only the photo
-  // differs, so the difference in outcome is the asymmetry and nothing else.
+  // Deliberately NOT asserting the text-open/photo-closed asymmetry here. That
+  // only manifests when the model is unreachable, so with a real OPENAI_BASE_URL
+  // configured the assertion would invert and the test would be measuring the
+  // environment rather than the code. The asymmetry lives in moderate.js and is
+  // pinned by parseVerdict's unit tests, which cover every not-a-decision case.
   const png = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
     'base64'
   );
-  const photoRes = await request.post('/?/wall', {
+  const before = (await (await request.get('/api/wall')).json()).items.map((i) => i.id);
+
+  const res = await request.post('/?/wall', {
     headers: { origin: 'http://localhost:5188' },
     multipart: {
-      author: 'Karim',
-      message: '',
+      author: 'Screening Probe',
+      note: '',
       photo: { name: 'p.png', mimeType: 'image/png', buffer: png }
     }
   });
-  expect(photoRes.status()).toBe(200);
-  await new Promise((r) => setTimeout(r, 800));
+  expect(res.status()).toBe(200);
 
-  const afterPhoto = (await (await request.get('/api/wall')).json()).items;
-  expect(afterPhoto.some((i) => i.author === 'Karim')).toBe(false);
+  // Immediately: the row exists but is pending, so the wall must not have grown.
+  const straightAfter = (await (await request.get('/api/wall')).json()).items.map((i) => i.id);
+  expect(straightAfter.filter((id) => !before.includes(id))).toEqual([]);
 });
 
 test('the projector keeps cycling when the poll starts failing', async ({ page, request }) => {

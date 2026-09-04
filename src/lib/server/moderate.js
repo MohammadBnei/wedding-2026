@@ -48,7 +48,18 @@ export async function moderate({ message, imageBytes }) {
   if (!c) return { status: 'pending', verdict: 'no model configured' };
 
   /** @type {any[]} */
-  const content = [{ type: 'text', text: message ? `Message: ${message}` : 'No message; screen the image.' }];
+  // A photo with no caption is an ordinary post, not a defect — say so plainly.
+  // Left implicit, the model treats the absent message as the thing being judged
+  // and rejects the photo for "not containing text", which silently bins every
+  // wordless photograph at the wedding. Found by seeding one.
+  const content = [
+    {
+      type: 'text',
+      text: message
+        ? `Message: ${message}`
+        : 'This post is a photograph with no message. Judge the photograph only.'
+    }
+  ];
   if (imageBytes) {
     // The 1080p derivative, never the original: a 48 MP base64 payload costs
     // real money and buys no accuracy. Verified against the live endpoint that

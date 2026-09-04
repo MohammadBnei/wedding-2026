@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { liveWindow, toItem } from '$lib/server/wall.js';
+import { liveWindow, toItem, pinnedId } from '$lib/server/wall.js';
 
 /**
  * What the projector polls, every POLL_MS.
@@ -17,9 +17,14 @@ import { liveWindow, toItem } from '$lib/server/wall.js';
  * walked.
  */
 export async function GET() {
-  const items = (await liveWindow()).map(toItem);
+  const [rows, pinned] = await Promise.all([liveWindow(), pinnedId()]);
+  const items = rows.map(toItem);
   return json(
-    { items },
+    // `pinned` is the carousel control on /admin. When it is set the projector
+    // holds on that post instead of advancing; when it is null the wall cycles
+    // on its own. Sent on every poll so releasing it takes effect within one
+    // interval, with no push channel to keep alive.
+    { items, pinned },
     {
       headers: {
         // Never cache the index itself — it is the freshness signal. The IMAGES

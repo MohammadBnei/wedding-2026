@@ -128,6 +128,16 @@ describe('moderationPrompt', () => {
     expect(moderationPrompt({ hasImage: false })).not.toContain('gore');
   });
 
+  test('a photo with no caption is not a reason to refuse', () => {
+    // Regression: the first prompt said "you screen what guests WRITE", and the
+    // model rejected a wordless photograph with "Image does not contain text."
+    // At a wedding most photos arrive with no caption, so that silently binned
+    // them. The prompt must say a missing message is fine.
+    const p = moderationPrompt({ hasImage: true });
+    expect(p).toContain('photograph with no message');
+    expect(p).toMatch(/missing message[\s\S]*NONE of them reasons/);
+  });
+
   test('tells the model that a language it struggles with is not a refusal', () => {
     // Guests write in four languages, two of them RTL. A model answering "false"
     // because it cannot read Persian would silently bin a whole family.

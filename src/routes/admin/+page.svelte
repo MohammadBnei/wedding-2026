@@ -38,6 +38,21 @@
   const wide = `${cell} hidden lg:table-cell`;
   const sortButton = 'cursor-pointer caps hover:text-ink';
 
+  /**
+   * Three states, one glyph each. A word here costs a whole column and the
+   * message is what the column is for. The label is what a screen reader gets,
+   * and the model's own verdict is on the cell's title.
+   */
+  /** @type {Record<string, {icon: string, label: string, cls: string}>} */
+  const STATE = {
+    pending: { icon: '◌', label: 'Waiting to be screened', cls: 'text-ink-muted' },
+    approved: { icon: '●', label: 'On the wall', cls: 'text-primary' },
+    rejected: { icon: '✕', label: 'Taken down', cls: 'text-accent' }
+  };
+  /** Unknown status renders as a visible question mark rather than crashing. */
+  const stateOf = (/** @type {string} */ st) =>
+    STATE[st] ?? { icon: '?', label: st, cls: 'text-ink-muted' };
+
   let q = $state('');
   /** @type {import('$lib/rsvp-view.js').SortKey} */
   let key = $state('updated_at');
@@ -274,67 +289,102 @@
     {/if}
 
     <!--
-      The wall queue. Photos fail closed: when the model is unreachable, or says
-      nothing useful, a photo stays pending and this is the ONLY way it reaches
-      the projector. Text is not like that — it publishes itself — so most of
-      what lands here is images.
+      The wall, in the same table as the RSVP list above — same `cell` and `head`
+      classes, same one-<tbody>-per-row shape, so /admin reads as one page rather
+      than a table and a pile of cards.
 
-      Newest first, pending first. No pagination and no filters: for one evening
-      the list fits on a screen, and anything cleverer is a thing to debug at a
-      wedding.
+      The message is the column that matters and gets the width. State is an
+      icon, because there are three of them and a word costs a column. The
+      verdict is the model's own wording and is only ever interesting when
+      something looks wrong, so it rides in the row's title attribute rather
+      than taking space from the text.
     -->
     <section class="mt-12">
-      <h2 class="text-body font-light text-ink">Wall queue</h2>
+      <div class="flex items-baseline justify-between gap-4">
+        <h2 class="text-body font-light text-ink">Wall</h2>
+        {#if data.pinned}
+          <form method="POST" action="?/wallAction">
+            <input type="hidden" name="do" value="auto" />
+            <button class="cursor-pointer caps text-micro text-primary underline underline-offset-4">
+              Resume auto-advance
+            </button>
+          </form>
+        {:else}
+          <span class="caps text-micro text-ink-muted">Auto-advancing</span>
+        {/if}
+      </div>
+
       {#if !data.wall?.length}
-        <p class="mt-2 text-caption font-light text-ink-muted">Nothing waiting.</p>
+        <p class="mt-2 text-caption font-light text-ink-muted">Nothing yet.</p>
       {:else}
-        <ul class="mt-3 flex flex-col gap-3">
+        <table class="mt-3 w-full border-collapse text-note font-light">
+          <thead>
+            <tr>
+              <th class="{head} w-px"><span class="sr-only">State</span></th>
+              <th class="{head} w-px"><span class="sr-only">Photo</span></th>
+              <th class={head}>From</th>
+              <th class={head}>Message</th>
+              <th class="{head} w-px">Action</th>
+            </tr>
+          </thead>
           {#each data.wall as w (w.id)}
-            <li class="flex items-start gap-3 border border-line bg-surface-raise p-3">
-              {#if w.photo}
-                <!-- The derivative, from /admin/img — inside the forwardAuth
-                     PathPrefix, so it needs no route of its own. -->
-                <img
-                  src="/admin/img/{w.id}.jpg"
-                  alt=""
-                  class="h-24 w-24 shrink-0 object-cover"
-                  loading="lazy"
-                />
-              {/if}
-              <div class="min-w-0 flex-1">
-                <p class="text-caption text-ink-muted">
-                  {w.author ?? '—'} · {w.status}{w.verdict ? ` · ${w.verdict}` : ''}
-                </p>
-                {#if w.message}
+            <tbody
+              class="border-b border-line-soft hover:bg-primary-faint/25
+                     {w.id === data.pinned ? 'bg-primary-faint/40' : ''}"
+            >
+              <tr>
+                <!-- The verdict lives here: available on hover when something
+                     looks wrong, invisible the rest of the time. -->
+                <td class={cell} title={w.verdict ?? ''}>
+                  <span class={stateOf(w.status).cls} aria-label={stateOf(w.status).label}>
+                    {stateOf(w.status).icon}
+                  </span>
+                </td>
+                <td class={cell}>
+                  {#if w.photo}
+                    <img
+                      src="/admin/img/{w.id}.jpg"
+                      alt=""
+                      class="h-11 w-11 object-cover"
+                      loading="lazy"
+                    />
+                  {/if}
+                </td>
+                <td class="{cell} whitespace-nowrap text-ink">{w.author ?? '—'}</td>
+                <td class={cell}>
                   <p
-                    class="text-body font-light whitespace-pre-wrap text-ink-body"
+                    class="text-body leading-relaxed whitespace-pre-wrap text-ink-body"
                     dir={w.lang === 'ar' || w.lang === 'fa' ? 'rtl' : 'ltr'}
-                  >{w.message}</p>
-                {/if}
-                <div class="mt-2 flex gap-2">
-                  {#if w.status !== 'approved'}
-                    <form method="POST" action="?/wallDecide">
-                      <input type="hidden" name="id" value={w.id} />
-                      <input type="hidden" name="to" value="approved" />
-                      <button class="border border-line px-3 py-1 text-xs font-light text-ink">
-                        Publish
-                      </button>
-                    </form>
-                  {/if}
-                  {#if w.status !== 'rejected'}
-                    <form method="POST" action="?/wallDecide">
-                      <input type="hidden" name="id" value={w.id} />
-                      <input type="hidden" name="to" value="rejected" />
-                      <button class="border border-line px-3 py-1 text-xs font-light text-accent">
-                        Take down
-                      </button>
-                    </form>
-                  {/if}
-                </div>
-              </div>
-            </li>
+                  >{w.message ?? ''}</p>
+                </td>
+                <td class={cell}>
+                  <!-- One <select> for every decision. /admin already needs JS
+                       for the sort and the search above, so submitting on change
+                       is consistent rather than a new assumption. -->
+                  <form method="POST" action="?/wallAction">
+                    <input type="hidden" name="id" value={w.id} />
+                    <select
+                      name="do"
+                      class="{INPUT_BASE} border border-line bg-surface-raise cursor-pointer"
+                      onchange={(e) => {
+                        const el = e.currentTarget;
+                        if (el.value) el.form?.requestSubmit();
+                      }}
+                    >
+                      <option value="">…</option>
+                      {#if w.status !== 'approved'}<option value="approved">Publish</option>{/if}
+                      {#if w.status !== 'rejected'}<option value="rejected">Take down</option>{/if}
+                      {#if w.status === 'approved' && w.id !== data.pinned}
+                        <option value="show">Show on screen</option>
+                      {/if}
+                      {#if w.id === data.pinned}<option value="auto">Resume auto</option>{/if}
+                    </select>
+                  </form>
+                </td>
+              </tr>
+            </tbody>
           {/each}
-        </ul>
+        </table>
       {/if}
     </section>
   </main>

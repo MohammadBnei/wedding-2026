@@ -80,13 +80,18 @@
         suggest="/api/guests"
       />
 
+      <!-- name="note", not "message": Field derives its id from the name, and
+           the RSVP form on the same page already has a `message` field. Two
+           elements with id="f-message" makes the <label for> association
+           ambiguous — clicking one label can focus the other input, and a
+           screen reader reads the wrong field. -->
       <Field
         label={t.wallMessageLabel}
-        name="message"
+        name="note"
         bind:value={message}
         rows={3}
         maxlength={MAX_MESSAGE}
-        error={errors.message ?? ''}
+        error={errors.note ?? ''}
       />
 
       <label class="flex flex-col gap-1.5">

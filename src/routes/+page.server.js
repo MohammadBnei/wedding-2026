@@ -143,12 +143,13 @@ export const actions = {
     if (!author) errors.author = msg.errWallAuthor;
     else if (author.length > MAX_AUTHOR) errors.author = msg.errWallAuthorLong;
 
-    const message = str('message');
-    if (message.length > MAX_MESSAGE) errors.message = msg.errWallMessageLong;
+    // 'note' rather than 'message' — see WallForm.svelte for why.
+    const message = str('note');
+    if (message.length > MAX_MESSAGE) errors.note = msg.errWallMessageLong;
 
     const photo = form.get('photo');
     const hasPhoto = photo instanceof File && photo.size > 0;
-    if (!message && !hasPhoto) errors.message = msg.errWallEmpty;
+    if (!message && !hasPhoto) errors.note = msg.errWallEmpty;
     if (hasPhoto && photo.size > MAX_UPLOAD_BYTES) errors.photo = msg.errWallPhotoBig;
 
     if (Object.keys(errors).length) return fail(400, { wallErrors: errors });
