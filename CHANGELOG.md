@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.14.0](https://github.com/MohammadBnei/wedding-2026/compare/0.13.0...0.14.0) (2026-09-04)
+
+
+### Features
+
+* **wall:** a live guest wall for the projector ([#31](https://github.com/MohammadBnei/wedding-2026/issues/31)) ([bdc4ad9](https://github.com/MohammadBnei/wedding-2026/commit/bdc4ad9502efcbfc25eae9b05324956a5ac11728))
+
 # [0.13.0](https://github.com/MohammadBnei/wedding-2026/compare/0.12.0...0.13.0) (2026-08-24)
 
 
