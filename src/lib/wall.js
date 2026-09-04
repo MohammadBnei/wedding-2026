@@ -140,6 +140,37 @@ export function mergeWindow(current, incoming) {
 }
 
 /**
+ * Which post the stage should show next.
+ *
+ * Unseen always wins, oldest first — every post gets its own moment, so a guest
+ * who posts during the meal is not queued behind twenty replays of things the
+ * room has already read. Only when nothing is unseen does it move on round the
+ * window, which is what stops a quiet forty minutes between the meal and the
+ * dancing leaving a dead screen.
+ *
+ * `items` is newest-first (see mergeWindow), so the OLDEST unseen is the last
+ * match, not the first. Getting that backwards shows the newest post first and
+ * then walks backwards through history, which looks like the wall is running in
+ * reverse.
+ *
+ * Lives here rather than inline in routes/wall/+page.svelte because `bun test`
+ * cannot import a .svelte file, and this is the one piece of projector logic
+ * that cannot be checked by looking at it.
+ *
+ * @param {{id: string}[]} items  the window, newest first
+ * @param {string[]} seen         ids this projector has already staged
+ * @param {number} at             where the stage is now
+ * @returns {number} index into `items`
+ */
+export function pickNext(items, seen, at) {
+  if (!items.length) return 0;
+  for (let k = items.length - 1; k >= 0; k--) {
+    if (!seen.includes(items[k].id)) return k;
+  }
+  return (at + 1) % items.length;
+}
+
+/**
  * The screening prompt. One shape for both text and images so there is one set
  * of words to get right.
  *

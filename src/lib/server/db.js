@@ -229,6 +229,12 @@ export function migrate() {
         updated_at timestamptz NOT NULL DEFAULT now()
       )`;
     await sql`INSERT INTO wall_control (id) VALUES (1) ON CONFLICT (id) DO NOTHING`;
+    // How long the pin holds. NULL means "until a human unpins it"; a timestamp
+    // means it expires on its own, which is what you want when you pin a photo
+    // during a speech and then stop thinking about it. Added after the table
+    // shipped, so it needs its own ALTER — CREATE TABLE IF NOT EXISTS is a no-op
+    // on a table that already exists, exactly as the rsvp columns above.
+    await sql`ALTER TABLE wall_control ADD COLUMN IF NOT EXISTS pinned_until timestamptz`;
     up = true;
   })()
     .catch((err) => {

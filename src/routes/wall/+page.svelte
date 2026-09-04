@@ -1,14 +1,39 @@
 <script>
   import { onMount } from 'svelte';
-  import { mergeWindow, SLIDE_MS, POLL_MS } from '$lib/wall.js';
+  import { mergeWindow, pickNext, SLIDE_MS, POLL_MS } from '$lib/wall.js';
   import { dirOf, SHARED } from '$lib/content/wedding.js';
 
   let { data } = $props();
 
-  let items = $state(data.items);
+  // Defensive defaults, not decoration. This is the one screen in the project
+  // that must never go blank, and `data` arriving without `items` — a load that
+  // failed, or a client router handing this component the wrong route's payload —
+  // would otherwise throw on `.length` and wipe the page to nothing.
+  let items = $state(data.items ?? []);
   let pinned = $state(data.pinned ?? null);
   let i = $state(0);
   let online = $state(true);
+
+  /**
+   * Ids this projector has already put on the stage.
+   *
+   * Every post gets its own moment: the stage always prefers something nobody
+   * has seen yet, oldest first, so a guest who posts during the meal does not
+   * wait behind twenty replays. Once nothing is unseen it recycles the window
+   * rather than freezing or going dark — a quiet forty minutes between the meal
+   * and the dancing must not leave a dead screen.
+   *
+   * Deliberately client-side and per-session: "seen" is a fact about THIS
+   * projector, not about the post. A second browser, or a reload after a crash,
+   * starts fresh and shows everything again, which is the right behaviour for a
+   * screen that was not being watched anyway. It also needs no schema and no
+   * write path from a machine nobody is logged into.
+   *
+   * A plain array, not a Set: it is bounded by WALL_WINDOW, `includes` on forty
+   * strings is free, and reassignment is what makes it reactive.
+   * @type {string[]}
+   */
+  let seen = $state([]);
 
   // When /admin has pinned a post, that IS the stage and the timer stands down.
   // Otherwise the index cycles. Falling back to the index when the pinned id is
@@ -16,6 +41,8 @@
   // the wall rather than freeze it on something that no longer exists.
   const pinnedIndex = $derived(pinned ? items.findIndex((x) => x.id === pinned) : -1);
   const at = $derived(pinnedIndex >= 0 ? pinnedIndex : i % Math.max(items.length, 1));
+
+  const nextIndex = () => pickNext(items, seen, at);
   const current = $derived(items[at] ?? null);
   const nextItem = $derived(items.length > 1 ? items[(at + 1) % items.length] : null);
 
@@ -24,6 +51,13 @@
 
   /** @param {string | null} lang */
   const dirOfPost = (lang) => dirOf(/** @type {any} */ (lang) || 'fr');
+
+  // Anything that reaches the stage counts as seen — including the one the
+  // server pinned, so releasing a pin does not immediately replay it.
+  $effect(() => {
+    const id = current?.id;
+    if (id && !seen.includes(id)) seen = [...seen, id];
+  });
 
   // Preload with `new Image()`, NOT fetch(). An <img src> is not a CORS request
   // and needs no rule on the bucket; a fetch() is, and would.
@@ -53,14 +87,17 @@
         if (!res.ok) throw new Error(String(res.status));
         const body = await res.json();
         const merged = mergeWindow(items, body.items);
-        if (merged.fresh.length && !body.pinned) {
-          // Jump to a genuinely new post: a guest who just uploaded gets to see
-          // it go up, which is the moment this whole feature exists for. Not
-          // while pinned — a human has taken the wheel.
-          const idx = merged.items.findIndex((x) => x.id === merged.fresh[0]);
-          if (idx >= 0) i = idx;
-        }
         items = merged.items;
+        // Forget ids that have aged out of the window, so `seen` cannot grow
+        // without bound over an eight-hour evening.
+        seen = seen.filter((id) => merged.items.some((x) => x.id === id));
+        if (merged.fresh.length && !body.pinned) {
+          // Something new arrived: show it now rather than at the end of the
+          // current cycle. A guest who just posted gets to watch it go up, which
+          // is the moment this whole feature exists for. Not while pinned — a
+          // human has taken the wheel.
+          i = nextIndex();
+        }
         pinned = body.pinned ?? null;
         online = true;
       } catch {
@@ -73,7 +110,7 @@
 
     const advance = setInterval(() => {
       try {
-        if (!pinned && items.length) i = (i + 1) % items.length;
+        if (!pinned && items.length) i = nextIndex();
       } catch {
         /* never let the cycle die */
       }
@@ -94,7 +131,7 @@
   function onKey(e) {
     if (e.key === 'ArrowRight' || e.key === ' ') {
       e.preventDefault();
-      if (items.length) i = (at + 1) % items.length;
+      if (items.length) i = nextIndex();
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       if (items.length) i = (at - 1 + items.length) % items.length;

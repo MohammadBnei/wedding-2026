@@ -2,7 +2,7 @@ import { dev } from '$app/environment';
 import { error, fail } from '@sveltejs/kit';
 import { sql, dbUp, dbOr } from '$lib/server/db.js';
 import { summarise } from '$lib/rsvp-summary.js';
-import { reviewQueue, pinnedId, setPinned } from '$lib/server/wall.js';
+import { reviewQueue, pinnedId, pinnedUntil, setPinned } from '$lib/server/wall.js';
 
 /**
  * NOT the security boundary. `default/authentik-forwardauth` on the
@@ -65,13 +65,16 @@ export async function load({ request }) {
 
   // The wall queue. Photos fail closed — an unreachable model leaves them
   // pending — so this list is the only way one ever reaches the projector.
-  const [wall, pinned] = await Promise.all([reviewQueue(), pinnedId()]);
+  const [wall, pinned, until] = await Promise.all([reviewQueue(), pinnedId(), pinnedUntil()]);
 
   return {
     ...summarise(rows),
     canRead: dbUp(),
     who: who || (dev ? 'dev' : ''),
     pinned,
+    // null while pinned means "until someone unpins it", which is a different
+    // thing from not being pinned at all — the page needs to tell them apart.
+    pinnedUntil: until ? new Date(until).toISOString() : null,
     wall: wall.map((r) => ({
       id: r.id,
       author: r.author,
@@ -169,7 +172,12 @@ export const actions = {
 
     try {
       if (act === 'show') {
-        await setPinned(id);
+        // Blank, zero or nonsense means "until I unpin". Anything else is
+        // clamped: a typo'd 600 would hold the projector for ten hours, which
+        // is longer than the party.
+        const raw = Number(String(form.get('minutes') ?? '').trim());
+        const minutes = Number.isFinite(raw) && raw > 0 ? Math.min(Math.round(raw), 120) : null;
+        await setPinned(id, minutes);
       } else if (act === 'approved' || act === 'rejected') {
         await sql`
           UPDATE wall_post

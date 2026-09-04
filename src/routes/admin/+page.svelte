@@ -303,7 +303,12 @@
       <div class="flex items-baseline justify-between gap-4">
         <h2 class="text-body font-light text-ink">Wall</h2>
         {#if data.pinned}
-          <form method="POST" action="?/wallAction">
+          <form method="POST" action="?/wallAction" class="flex items-baseline gap-2">
+            <span class="caps text-micro text-ink-muted">
+              {data.pinnedUntil
+                ? `Held until ${new Date(data.pinnedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : 'Held until you unpin'}
+            </span>
             <input type="hidden" name="do" value="auto" />
             <button class="cursor-pointer caps text-micro text-primary underline underline-offset-4">
               Resume auto-advance
@@ -366,7 +371,27 @@
                       {@render act(w.id, 'approved', 'Publish', 'text-ink')}
                     {/if}
                     {#if w.status === 'approved' && w.id !== data.pinned}
-                      {@render act(w.id, 'show', 'Show', 'text-primary')}
+                      <!-- Minutes is optional: blank holds it until someone
+                           presses "Resume auto-advance". A number is safer when
+                           the person pressing it is about to be dancing. -->
+                      <form method="POST" action="?/wallAction" class="flex items-center gap-1">
+                        <input type="hidden" name="id" value={w.id} />
+                        <input type="hidden" name="do" value="show" />
+                        <input
+                          type="number"
+                          name="minutes"
+                          min="1"
+                          max="120"
+                          placeholder="∞"
+                          aria-label="Minutes to hold this on screen; blank holds until you unpin"
+                          class="w-12 border border-line bg-surface-raise px-1.5 py-1 text-xs text-ink"
+                        />
+                        <button
+                          class="cursor-pointer border border-line px-2 py-1 text-xs text-primary hover:bg-primary-faint/40"
+                        >
+                          Show
+                        </button>
+                      </form>
                     {/if}
                     {#if w.status !== 'rejected'}
                       {@render act(w.id, 'rejected', 'Take down', 'text-accent')}

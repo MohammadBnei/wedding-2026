@@ -1,5 +1,13 @@
 import { test, expect, describe } from 'bun:test';
-import { parseVerdict, mergeWindow, moderationPrompt, SLIDE_MS, POLL_MS, WALL_WINDOW } from './wall.js';
+import {
+  parseVerdict,
+  mergeWindow,
+  pickNext,
+  moderationPrompt,
+  SLIDE_MS,
+  POLL_MS,
+  WALL_WINDOW
+} from './wall.js';
 
 describe('parseVerdict', () => {
   test('publishes only on a literal ok:true', () => {
@@ -109,6 +117,49 @@ describe('mergeWindow', () => {
   test('an empty incoming window empties the screen', () => {
     // Only ever called on SUCCESS, so this really does mean "nothing approved".
     expect(mergeWindow([item('a', '2026-09-05T18:00:00.000Z')], []).items).toEqual([]);
+  });
+});
+
+describe('pickNext', () => {
+  // Newest first, as mergeWindow leaves them.
+  const win = [{ id: 'c' }, { id: 'b' }, { id: 'a' }];
+
+  test('shows the OLDEST unseen first, not the newest', () => {
+    // Backwards here means the wall appears to run in reverse.
+    expect(pickNext(win, [], 0)).toBe(2); // 'a'
+    expect(pickNext(win, ['a'], 2)).toBe(1); // 'b'
+    expect(pickNext(win, ['a', 'b'], 1)).toBe(0); // 'c'
+  });
+
+  test('every post gets its own moment before anything repeats', () => {
+    const seen = [];
+    const order = [];
+    let at = 0;
+    for (let n = 0; n < win.length; n++) {
+      at = pickNext(win, seen, at);
+      order.push(win[at].id);
+      seen.push(win[at].id);
+    }
+    expect(order).toEqual(['a', 'b', 'c']);
+    expect(new Set(order).size).toBe(win.length);
+  });
+
+  test('recycles once everything has been seen, rather than freezing', () => {
+    // The quiet-forty-minutes case: nothing new, and the screen must not stall.
+    const all = ['a', 'b', 'c'];
+    expect(pickNext(win, all, 0)).toBe(1);
+    expect(pickNext(win, all, 1)).toBe(2);
+    expect(pickNext(win, all, 2)).toBe(0);
+  });
+
+  test('an empty window does not throw or return nonsense', () => {
+    expect(pickNext([], [], 0)).toBe(0);
+  });
+
+  test('a newly arrived post jumps ahead of already-seen ones', () => {
+    const withNew = [{ id: 'd' }, ...win];
+    // 'd' is newest, but a,b,c are all seen — so 'd' is the only unseen.
+    expect(withNew[pickNext(withNew, ['a', 'b', 'c'], 0)].id).toBe('d');
   });
 });
 

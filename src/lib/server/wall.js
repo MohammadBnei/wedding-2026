@@ -115,20 +115,42 @@ export async function pinnedId() {
     SELECT c.current_id
       FROM wall_control c
       JOIN wall_post p ON p.id = c.current_id AND p.status = 'approved'
-     WHERE c.id = 1`);
+     WHERE c.id = 1
+       AND (c.pinned_until IS NULL OR c.pinned_until > now())`);
   return rows[0]?.current_id ?? null;
 }
 
 /**
  * Pin the projector to a post, or pass null to hand it back to auto-advance.
  *
+ * `minutes` null means hold until a human unpins — the right default when you
+ * are pinning something for a speech and do not know how long it will run.
+ * A number expires on its own, which is the safer choice when the person who
+ * pressed the button is about to be dancing.
+ *
+ * Expiry is enforced in pinnedId()'s WHERE, not by a timer: there is nothing to
+ * schedule, nothing to survive a pod restart, and the projector picks up the
+ * release on its next poll like any other change.
+ *
  * Bare `sql`, not dbOr: an admin who pressed "show this" and was told it worked
  * while the projector kept cycling is being lied to in front of a room.
  *
  * @param {string | null} id
+ * @param {number | null} [minutes] null = until unpinned
  */
-export async function setPinned(id) {
-  await sql`UPDATE wall_control SET current_id = ${id}, updated_at = now() WHERE id = 1`;
+export async function setPinned(id, minutes = null) {
+  const until = id && minutes ? new Date(Date.now() + minutes * 60_000) : null;
+  await sql`
+    UPDATE wall_control
+       SET current_id = ${id}, pinned_until = ${until}, updated_at = now()
+     WHERE id = 1`;
+}
+
+/** When the current pin lapses, or null for "until unpinned"/not pinned. */
+export async function pinnedUntil() {
+  const rows = await dbOr([], () => sql`
+    SELECT pinned_until FROM wall_control WHERE id = 1 AND current_id IS NOT NULL`);
+  return rows[0]?.pinned_until ?? null;
 }
 
 /**

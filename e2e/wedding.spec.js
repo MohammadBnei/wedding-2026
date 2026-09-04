@@ -31,10 +31,23 @@ test('renders the invitation in French by default', async ({ page }) => {
   await expect(page.getByText('15h')).toBeVisible();
 });
 
-test('the RSVP call to action jumps to the form', async ({ page }) => {
+test('the rail call to action opens the wall, and the RSVP form is still reachable', async ({
+  page
+}) => {
   await visit(page, '/');
-  await page.getByRole('link', { name: 'Je réponds' }).click();
-  await expect(page).toHaveURL(/#rsvp/);
+  // The rail's CTA was `href="#rsvp"` reading "Je réponds" until the night
+  // before the wedding, when answering an invitation stopped being the thing a
+  // guest's thumb should land on. It now opens the wall composer.
+  await page.getByRole('button', { name: /mur/i }).first().click();
+  await expect(page.locator('dialog[open]')).toBeVisible();
+  await expect(page.locator('dialog[open] form[action="?/wall"]')).toBeVisible();
+
+  // Escape closes it — the native <dialog> behaviour we chose it for.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+
+  // And the RSVP form is still on the page for anyone who scrolls to it.
+  await page.locator('#rsvp').scrollIntoViewIfNeeded();
   await expect(page.locator('#rsvp')).toBeInViewport();
 });
 
@@ -495,7 +508,7 @@ test('the door is not a trap for reduced motion or for scripting off', async ({ 
   await p1.goto('/');
   await p1.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
   await p1.locator('.door-scrim').click();
-  await p1.getByRole('link', { name: /je réponds|répond/i }).first().click({ timeout: 2000 });
+  await p1.getByRole('button', { name: /mur/i }).first().click({ timeout: 2000 });
   await ctx.close();
 
   // Scripting off: nothing can open the door, so it must never cover the page.

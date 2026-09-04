@@ -40,7 +40,31 @@ const DEV_DIR = '.s3-dev';
 
 /** @type {Bun.S3Client | null} */
 let client = null;
-if (ENDPOINT) {
+
+/**
+ * Endpoint set but no credentials is the ONE misconfiguration this feature is
+ * most likely to ship with, and the one that fails most quietly.
+ *
+ * ansible/playbooks/garage-configure.yml writes WEDDING_WALL_S3_ACCESS_KEY and
+ * _SECRET into the ROOT Infisical project; this pod reads from the per-app
+ * project (wedding-2026-ih1x, see helm/values.yaml). They are different
+ * projects, so the keys have to be copied across by hand — exactly as
+ * AGENTFLEET_FILES_S3 does, which docs/secrets.md records. Miss that step and
+ * Bun builds a client with accessKeyId: undefined, every put and every get
+ * fails deep inside the SDK, and the first symptom is a guest's upload not
+ * appearing at a wedding.
+ *
+ * So: say so once, loudly, at boot, and then behave as if storage is absent —
+ * which makes the wall refuse posts with an honest 503 instead of accepting
+ * them into a void.
+ */
+if (ENDPOINT && !(env.WEDDING_WALL_S3_ACCESS_KEY && env.WEDDING_WALL_S3_SECRET)) {
+  console.error(
+    '[wall] S3_ENDPOINT is set but WEDDING_WALL_S3_ACCESS_KEY/_SECRET are missing — ' +
+      'copy them from the root Infisical project into wedding-2026-ih1x. ' +
+      'Photo posts are disabled until then.'
+  );
+} else if (ENDPOINT) {
   client = new Bun.S3Client({
     accessKeyId: env.WEDDING_WALL_S3_ACCESS_KEY,
     secretAccessKey: env.WEDDING_WALL_S3_SECRET,
@@ -48,6 +72,15 @@ if (ENDPOINT) {
     endpoint: ENDPOINT,
     region: REGION
   });
+}
+
+/**
+ * True when object storage is genuinely usable. Distinct from s3Configured():
+ * in dev, with no endpoint, the disk fallback IS usable. In the cluster, with
+ * an endpoint and no keys, nothing is.
+ */
+export function storageBroken() {
+  return Boolean(ENDPOINT) && client === null;
 }
 
 /** Is real object storage configured, or are we on the disk fallback? */

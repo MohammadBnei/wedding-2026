@@ -8,7 +8,7 @@ import {
   checkWallLimit, insertPost, tryEnterDecode, leaveDecode
 } from '$lib/server/wall.js';
 import { moderateInBackground } from '$lib/server/moderate.js';
-import { putObject } from '$lib/server/s3.js';
+import { putObject, storageBroken } from '$lib/server/s3.js';
 import {
   MAX_MESSAGE, MAX_AUTHOR, MAX_UPLOAD_BYTES, MAX_PIXELS, WALL_WIDTH, WALL_HEIGHT
 } from '$lib/wall.js';
@@ -160,6 +160,9 @@ export const actions = {
     let wallKey = null;
 
     if (hasPhoto) {
+      // Misconfigured object storage (endpoint without credentials) refuses the
+      // photo up front rather than accepting the post and losing the image.
+      if (storageBroken()) return fail(503, { wallErrors: { form: msg.wallOffline } });
       if (!tryEnterDecode()) return fail(503, { wallErrors: { form: msg.wallBusy } });
       try {
         const raw = new Uint8Array(await photo.arrayBuffer());
