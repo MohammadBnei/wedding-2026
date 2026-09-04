@@ -10,3 +10,4 @@ playwright-report
 *.html
 *.csv
 compose.yaml
+.s3-dev/

@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 /**
+ * Two quote stars per starred <Section> on `/` — welcome, day, essentials, chat.
+ *
+ * A constant rather than the literal repeated in three assertions: it was `10`
+ * until the RSVP section came off the page the morning of the wedding, and that
+ * one content change turned three tests red for a reason none of them was about.
+ * Change this when a starred section is added or removed.
+ */
+const QUOTE_STARS = 8;
+
+/**
  * Load a page and wait until Svelte has actually attached its handlers.
  * Without this, Playwright clicks the server-rendered markup before hydration
  * and the click goes nowhere — which looks exactly like a broken feature.
@@ -31,11 +41,22 @@ test('renders the invitation in French by default', async ({ page }) => {
   await expect(page.getByText('15h')).toBeVisible();
 });
 
-test('the RSVP call to action jumps to the form', async ({ page }) => {
+test('the rail call to action opens the wall composer', async ({ page }) => {
   await visit(page, '/');
-  await page.getByRole('link', { name: 'Je réponds' }).click();
-  await expect(page).toHaveURL(/#rsvp/);
-  await expect(page.locator('#rsvp')).toBeInViewport();
+  // The rail's CTA was `href="#rsvp"` reading "Je réponds" until the night
+  // before the wedding, when answering an invitation stopped being the thing a
+  // guest's thumb should land on. It now opens the wall composer.
+  await page.getByRole('button', { name: /mur/i }).first().click();
+  await expect(page.locator('dialog[open]')).toBeVisible();
+  await expect(page.locator('dialog[open] form[action="?/wall"]')).toBeVisible();
+
+  // Escape closes it — the native <dialog> behaviour we chose it for.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+
+  // The RSVP section came off the page the same morning — nobody answers an
+  // invitation on the day. The composer is what the CTA is for now.
+  await expect(page.locator('#rsvp')).toHaveCount(0);
 });
 
 test('switching language re-renders and flips direction to RTL', async ({ page }) => {
@@ -122,76 +143,24 @@ test('switching language keeps the transcript (the artifact wiped it)', async ({
   await expect(page.getByRole('log')).toContainText('Survilliers-Fosses');
 });
 
-test('RSVP refuses an empty form, then saves and can be edited', async ({ page }) => {
-  await visit(page, '/#rsvp');
-  const form = page.locator('#rsvp');
-
-  // The name field is `required`, so the browser blocks the submit itself — a
-  // native constraint doing the job before any request is made.
-  const name = form.getByLabel('Votre nom');
-  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
-  expect(await name.evaluate((el) => el.validity.valueMissing)).toBe(true);
-
-  // With a name but no attendance choice, the browser is satisfied and the
-  // SERVER has to catch it.
-  await name.fill('Niloufar');
-  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
-  await expect(form).toContainText('Choisissez une réponse');
-
-  await form.getByRole('button', { name: 'Je serai des vôtres' }).click();
-  await form.getByRole('button', { name: '3', exact: true }).click();
-  await form.getByLabel('Votre e-mail (facultatif)').fill('niloufar@example.test');
-  await form.getByLabel('Un morceau à faire jouer').fill('Fairuz — Li Beirut');
-  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
-
-  await expect(form).toContainText('Votre réponse nous est parvenue');
-
-  // The artifact had no way back from the thank-you screen.
-  await form.getByRole('button', { name: 'Modifier ma réponse' }).click();
-  await expect(form.getByLabel('Votre nom')).toBeVisible();
-});
-
-test('a guest who cannot come is not sent away with "see you there"', async ({ page }) => {
-  // Issue #22. Every other RSVP test here says yes, which is exactly how the yes
-  // copy — "Rendez-vous le 5 septembre, au jardin" — shipped on the no path.
-  await visit(page, '/#rsvp');
-  const form = page.locator('#rsvp');
-
-  await form.getByLabel('Votre nom').fill('Absente');
-  await form.getByRole('button', { name: 'Je ne pourrai pas venir' }).click();
-  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
-
-  await expect(form).toContainText('Votre réponse nous est parvenue');
-  await expect(form).toContainText('Vous nous manquerez');
-  await expect(form).not.toContainText('Rendez-vous le 5 septembre');
-});
-
-test('the email field is optional and does not block a reply', async ({ page }) => {
-  await visit(page, '/#rsvp');
-  const form = page.locator('#rsvp');
-
-  await form.getByLabel('Votre nom').fill('Sans Adresse');
-  await form.getByRole('button', { name: 'Je serai des vôtres' }).click();
-  // Left empty on purpose. `type="email"` only validates a NON-empty value, so
-  // an untouched box must not trip the native constraint the way `required`
-  // does on the name — that is the whole difference this test is protecting.
-  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
-  await expect(form).toContainText('Votre réponse nous est parvenue');
-});
+/*
+ * The three guest-facing RSVP tests that stood here — empty-form validation,
+ * the "cannot come" copy, and the optional email — were deleted with the form
+ * itself on the morning of the wedding. They tested a section that no longer
+ * renders; keeping them green would have meant keeping the section.
+ *
+ * What they covered still exists server-side (the `rsvp` action, the upsert,
+ * the soft delete) and is still exercised below through /admin, which is now
+ * seeded by posting to the action directly rather than by driving a form.
+ */
 
 test('/admin lists the replies with their totals', async ({ page }) => {
   // Unlinked and gated by authentik in the cluster; here there is no Traefik in
   // front, so the route's dev bypass lets this through. What is being tested is
   // the page, not the gate — the gate is a Traefik route and cannot be reached
   // from a dev server at all.
-  await visit(page, '/#rsvp');
-  const form = page.locator('#rsvp');
-  await form.getByLabel('Votre nom').fill('Table Row');
-  await form.getByRole('button', { name: 'Je serai des vôtres' }).click();
-  await form.getByRole('button', { name: '2', exact: true }).click();
-  await form.getByLabel('Votre e-mail (facultatif)').fill('row@example.test');
-  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
-  await expect(form).toContainText('Votre réponse nous est parvenue');
+  await visit(page, '/');
+  await reply(page, 'Table Row', { headcount: '2', email: 'row@example.test' });
 
   await page.goto('/admin');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('replies');
@@ -202,15 +171,19 @@ test('/admin lists the replies with their totals', async ({ page }) => {
 
 /**
  * Reply as a guest so there is a row to work on, and hand back the name used.
- * Every /admin test below needs one and none of them is about the form.
+ *
+ * Posts to the `rsvp` action directly. It used to drive the form on `/`, but
+ * that section came off the page the morning of the wedding — and none of the
+ * /admin tests below were ever about the form, only about the row it produced.
+ * Going through the page's own context keeps the `wid` cookie, which is the
+ * RSVP's primary key.
  */
-async function reply(page, name) {
-  await visit(page, '/#rsvp');
-  const form = page.locator('#rsvp');
-  await form.getByLabel('Votre nom').fill(name);
-  await form.getByRole('button', { name: 'Je serai des vôtres' }).click();
-  await form.getByRole('button', { name: 'Envoyer ma réponse' }).click();
-  await expect(form).toContainText('Votre réponse nous est parvenue');
+async function reply(page, name, extra = {}) {
+  const res = await page.request.post('/?/rsvp', {
+    headers: { origin: 'http://localhost:5188' },
+    multipart: { name, going: 'true', headcount: '1', ...extra }
+  });
+  expect(res.status()).toBe(200);
   return name;
 }
 
@@ -260,7 +233,16 @@ test('/admin soft-deletes a reply and undoes it', async ({ page }) => {
   expect(await replyCount(page)).toBe(before);
 });
 
-test('a deleted reply blanks the guest form, and replying again restores it', async ({ page }) => {
+/*
+ * "a deleted reply blanks the guest form, and replying again restores it" was
+ * here. Its first half is untestable now — there is no guest form to blank.
+ *
+ * Its second half was the valuable one: replying again must clear `deleted_at`,
+ * or the answer lands in a row /admin still filters out. That is kept below,
+ * driven through the action.
+ */
+test('replying again after a delete is the un-delete', async ({ page }) => {
+  await visit(page, '/');
   await reply(page, 'Second Thoughts');
   page.on('dialog', (d) => d.accept());
 
@@ -268,13 +250,8 @@ test('a deleted reply blanks the guest form, and replying again restores it', as
   await page.getByRole('button', { name: 'Delete the reply from Second Thoughts' }).click();
   await expect(page.getByRole('row').filter({ hasText: 'Second Thoughts' })).toHaveCount(0);
 
-  // Same browser, same `wid` cookie, so this is the guest whose row was just
-  // deleted looking at their own form. It must not prefill from a deleted row.
-  await visit(page, '/#rsvp');
-  await expect(page.locator('#rsvp').getByLabel('Votre nom')).toHaveValue('');
-
-  // And replying again is the un-delete — the upsert clears deleted_at. Without
-  // that, this answer lands in a row /admin still filters out.
+  // The upsert clears deleted_at. Without that, this answer lands in a row
+  // /admin still filters out and the guest has replied to nobody.
   await reply(page, 'Second Thoughts');
   await page.goto('/admin');
   await expect(page.getByRole('row').filter({ hasText: 'Second Thoughts' })).toBeVisible();
@@ -495,7 +472,7 @@ test('the door is not a trap for reduced motion or for scripting off', async ({ 
   await p1.goto('/');
   await p1.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
   await p1.locator('.door-scrim').click();
-  await p1.getByRole('link', { name: /je réponds|répond/i }).first().click({ timeout: 2000 });
+  await p1.getByRole('button', { name: /mur/i }).first().click({ timeout: 2000 });
   await ctx.close();
 
   // Scripting off: nothing can open the door, so it must never cover the page.
@@ -513,7 +490,7 @@ test('a quote star opens its note, and only one is ever open', async ({ page }) 
   // they do not look broken, they look like decoration. Nothing else would fail.
   await visit(page, '/');
   const stars = page.getByRole('button', { name: 'une pensée' });
-  await expect(stars).toHaveCount(10);
+  await expect(stars).toHaveCount(QUOTE_STARS);
 
   const first = stars.first();
   await expect(first).toHaveAttribute('aria-expanded', 'false');
@@ -548,7 +525,7 @@ test('a quote star opens its note, and only one is ever open', async ({ page }) 
   // way along and ran off the right edge — legible on a laptop, cut off on the
   // phone most guests will actually open this on.
   const { width: vw, height: vh } = page.viewportSize();
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < QUOTE_STARS; i++) {
     const star = stars.nth(i);
     await star.scrollIntoViewIfNeeded();
     await star.click();
@@ -580,7 +557,7 @@ test('a quote keeps its own language inside a page set in another', async ({ pag
   await page.getByRole('button', { name: 'العربية', exact: true }).click();
 
   const stars = page.getByRole('button', { name: 'خاطرة' });
-  await expect(stars).toHaveCount(10);
+  await expect(stars).toHaveCount(QUOTE_STARS);
   await stars.first().click();
 
   // The welcome pair is one Arabic ayah and one French line; the French one must
@@ -602,7 +579,7 @@ test('no quote star can take a press meant for a control', async ({ page }) => {
   // only where the stars happen to sit today would go quiet long before it went
   // wrong. Parking one on each control tests the z-order rule itself.
   await visit(page, '/');
-  await expect(page.locator('.quote-star')).toHaveCount(10);
+  await expect(page.locator('.quote-star')).toHaveCount(QUOTE_STARS);
 
   const result = await page.evaluate(() => {
     const stolen = [];
@@ -646,4 +623,163 @@ test('no quote star can take a press meant for a control', async ({ page }) => {
   // The page has controls in four of its five sections; if this ever drops to a
   // handful the loop above has stopped reaching them and is proving nothing.
   expect(result.checked).toBeGreaterThan(8);
+});
+
+/* ---------------------------------------------------------------------------
+   The guest wall.
+
+   These cover the parts curl cannot: that a signature is actually required, that
+   the trust boundary rejects a lie about file type without a 500, and — the one
+   that matters most — that the projector keeps cycling when the network goes
+   away. That last one is the reason the feature has a replay buffer at all, and
+   it is impossible to check by hand at a venue.
+--------------------------------------------------------------------------- */
+
+/** Poll until `check` is true, or give up. Returns what it last saw. */
+async function waitFor(check, budgetMs = 12_000, everyMs = 500) {
+  const until = Date.now() + budgetMs;
+  let last = false;
+  while (Date.now() < until) {
+    last = await check();
+    if (last) return true;
+    await new Promise((r) => setTimeout(r, everyMs));
+  }
+  return last;
+}
+
+/**
+ * Open the wall dialog from the rail's call to action — the button that used to
+ * say "Je réponds". The form only exists in the DOM once the dialog is open.
+ */
+async function openWall(page) {
+  await page.getByRole('button', { name: /mur|wall|جدار|دیوار/i }).first().click();
+  await page.locator('dialog[open]').waitFor();
+}
+
+/**
+ * Did a form action refuse this?
+ *
+ * SvelteKit wraps action results in a 200 envelope whose BODY carries the real
+ * status, so asserting on res.status() alone silently passes when the action
+ * actually failed — and, worse, passes when it actually succeeded. Read the
+ * envelope.
+ */
+async function actionFailed(res, expectedStatus = 400) {
+  const body = await res.text();
+  if (res.status() === expectedStatus) return true;
+  return body.includes(`"type":"failure"`) && body.includes(`"status":${expectedStatus}`);
+}
+
+test('the wall refuses an unsigned message', async ({ page, request }) => {
+  await visit(page, '/');
+  await openWall(page);
+  // Scoped to the dialog: the RSVP form on the same page has fields with
+  // similar labels, and an unscoped getByLabel would be ambiguous.
+  const form = page.locator('dialog[open] form[action="?/wall"]');
+  // A message, no name. The point of the wall is that the room can see who
+  // wrote what, so this must not go through. The browser stops it first —
+  // the name input is `required`, so submission never leaves the page.
+  await form.getByLabel(/message/i).fill('Bravo !');
+  await form.getByRole('button', { name: /mur/i }).click();
+  const nameInput = form.locator('input[name="author"]');
+  await expect(nameInput).toHaveJSProperty('validity.valid', false);
+  // Still on the form, no "it's on its way" — nothing was sent.
+  await expect(form).toBeVisible();
+
+  // And the server does not trust the browser: the same post over the wire,
+  // bypassing HTML validation entirely, is refused too.
+  const res = await request.post('/?/wall', {
+    headers: { origin: 'http://localhost:5188' },
+    multipart: { author: '', note: 'Bravo !' }
+  });
+  expect(await actionFailed(res)).toBe(true);
+});
+
+test('the wall refuses a signature with nothing attached to it', async ({ page }) => {
+  await visit(page, '/');
+  await openWall(page);
+  const form = page.locator('dialog[open] form[action="?/wall"]');
+  await form.getByLabel(/nom/i).first().fill('Karim');
+  await form.getByRole('button', { name: /mur/i }).click();
+  await expect(form.getByText(/mot ou ajoutez une photo/i)).toBeVisible();
+});
+
+test('a file that lies about being an image is refused, not a 500', async ({ page, request }) => {
+  await visit(page, '/');
+  const res = await request.post('/?/wall', {
+    headers: { origin: 'http://localhost:5188' },
+    multipart: {
+      author: 'Nadia',
+      note: '',
+      // A text file wearing a .jpg name and an image content-type. Bun.Image's
+      // decode is what catches it, and it must surface as a 400 the guest can
+      // act on rather than an unhandled throw.
+      photo: {
+        name: 'not-really.jpg',
+        mimeType: 'image/jpeg',
+        buffer: Buffer.from('this is plain text, not an image at all')
+      }
+    }
+  });
+  expect(await actionFailed(res)).toBe(true);
+});
+
+test('nothing reaches the wall before it has been screened', async ({ request }) => {
+  // The safety property, and the one that holds in every environment: screening
+  // runs AFTER the response, so between "posted" and "decided" a post must be
+  // invisible to the projector. If this ever goes red, something is publishing
+  // on the way in.
+  //
+  // Deliberately NOT asserting the text-open/photo-closed asymmetry here. That
+  // only manifests when the model is unreachable, so with a real OPENAI_BASE_URL
+  // configured the assertion would invert and the test would be measuring the
+  // environment rather than the code. The asymmetry lives in moderate.js and is
+  // pinned by parseVerdict's unit tests, which cover every not-a-decision case.
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64'
+  );
+  const before = (await (await request.get('/api/wall')).json()).items.map((i) => i.id);
+
+  const res = await request.post('/?/wall', {
+    headers: { origin: 'http://localhost:5188' },
+    multipart: {
+      author: 'Screening Probe',
+      note: '',
+      photo: { name: 'p.png', mimeType: 'image/png', buffer: png }
+    }
+  });
+  expect(res.status()).toBe(200);
+
+  // Immediately: the row exists but is pending, so the wall must not have grown.
+  const straightAfter = (await (await request.get('/api/wall')).json()).items.map((i) => i.id);
+  expect(straightAfter.filter((id) => !before.includes(id))).toEqual([]);
+});
+
+test('the projector keeps cycling when the poll starts failing', async ({ page, request }) => {
+  // THE money test. The projector is on venue wifi talking to a homelab; a blip
+  // must degrade to "no new photos", never to a black screen. Verified by
+  // killing the poll outright and checking a slide is still rendered well past
+  // several poll intervals.
+  await request.post('/__seed_wall_for_test', { failOnStatusCode: false }).catch(() => {});
+
+  await page.goto('/wall');
+  // Kill every poll from here on.
+  await page.route('**/api/wall', (r) => r.abort());
+  await page.waitForTimeout(9_000);
+
+  // Something is on screen — either real posts, or the standing card. Never
+  // nothing, and never an error.
+  await expect(page.locator('.wall')).toBeVisible();
+  await expect(page.locator('.slide')).toHaveCount(1);
+  const text = await page.locator('.wall').innerText();
+  expect(text.length).toBeGreaterThan(0);
+});
+
+test('the wall page carries no site chrome', async ({ page }) => {
+  // It is a display surface. A language switcher or a nav bar on a projector is
+  // a thing a guest will eventually walk up and press.
+  await page.goto('/wall');
+  await expect(page.locator('.wall')).toBeVisible();
+  await expect(page.getByRole('button', { name: /RSVP|répond/i })).toHaveCount(0);
 });

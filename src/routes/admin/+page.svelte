@@ -18,6 +18,7 @@
   README for anything older.
 -->
 <script>
+  import { enhance } from '$app/forms';
   import { INPUT_BASE } from '$lib/components/Field.svelte';
   import { view } from '$lib/rsvp-view.js';
 
@@ -37,6 +38,21 @@
   // the e2e row assertions do not care which breakpoint they run at.
   const wide = `${cell} hidden lg:table-cell`;
   const sortButton = 'cursor-pointer caps hover:text-ink';
+
+  /**
+   * Three states, one glyph each. A word here costs a whole column and the
+   * message is what the column is for. The label is what a screen reader gets,
+   * and the model's own verdict is on the cell's title.
+   */
+  /** @type {Record<string, {icon: string, label: string, cls: string}>} */
+  const STATE = {
+    pending: { icon: '◌', label: 'Waiting to be screened', cls: 'text-ink-muted' },
+    approved: { icon: '●', label: 'On the wall', cls: 'text-primary' },
+    rejected: { icon: '✕', label: 'Taken down', cls: 'text-accent' }
+  };
+  /** Unknown status renders as a visible question mark rather than crashing. */
+  const stateOf = (/** @type {string} */ st) =>
+    STATE[st] ?? { icon: '?', label: st, cls: 'text-ink-muted' };
 
   let q = $state('');
   /** @type {import('$lib/rsvp-view.js').SortKey} */
@@ -236,7 +252,10 @@
                 <td class="{cell} whitespace-nowrap">
                   <!-- No use:enhance. A full round trip re-renders the three
                        totals in the heading, which is what you want to see after
-                       a delete anyway. -->
+                       a delete anyway. The wall buttons below DO enhance, for
+                       the opposite reason: they are pressed repeatedly, and a
+                       reload would send you back to the top of a long table
+                       every time. -->
                   <form method="POST" action="?/delete" onsubmit={(e) => confirmDelete(e, r.name)}>
                     <input type="hidden" name="name" value={r.name} />
                     <button
@@ -272,6 +291,105 @@
         </table>
       {/if}
     {/if}
+
+    <!--
+      The wall, in the same table as the RSVP list above — same `cell` and `head`
+      classes, same one-<tbody>-per-row shape, so /admin reads as one page rather
+      than a table and a pile of cards.
+
+      The message is the column that matters and gets the width. State is an
+      icon, because there are three of them and a word costs a column. The
+      verdict is the model's own wording and is only ever interesting when
+      something looks wrong, so it rides in the row's title attribute rather
+      than taking space from the text.
+    -->
+    <section class="mt-12">
+      <div class="flex items-baseline justify-between gap-4">
+        <h2 class="text-body font-light text-ink">Wall</h2>
+        {#if data.pinned}
+          <form method="POST" action="?/wallAction" class="flex items-baseline gap-2" use:enhance>
+            <span class="caps text-micro text-ink-muted">Holding until the next post</span>
+            <input type="hidden" name="do" value="auto" />
+            <button class="cursor-pointer caps text-micro text-primary underline underline-offset-4">
+              Resume auto-advance
+            </button>
+          </form>
+        {:else}
+          <span class="caps text-micro text-ink-muted">Auto-advancing</span>
+        {/if}
+      </div>
+
+      {#if !data.wall?.length}
+        <p class="mt-2 text-caption font-light text-ink-muted">Nothing yet.</p>
+      {:else}
+        <table class="mt-3 w-full border-collapse text-note font-light">
+          <thead>
+            <tr>
+              <th class="{head} w-px"><span class="sr-only">State</span></th>
+              <th class="{head} w-px"><span class="sr-only">Photo</span></th>
+              <th class={head}>From</th>
+              <th class={head}>Message</th>
+              <th class="{head} w-px">Action</th>
+            </tr>
+          </thead>
+          {#each data.wall as w (w.id)}
+            <tbody
+              class="border-b border-line-soft hover:bg-primary-faint/25
+                     {w.id === data.pinned ? 'bg-primary-faint/40' : ''}"
+            >
+              <tr>
+                <!-- The verdict lives here: available on hover when something
+                     looks wrong, invisible the rest of the time. -->
+                <td class={cell} title={w.verdict ?? ''}>
+                  <span class={stateOf(w.status).cls} aria-label={stateOf(w.status).label}>
+                    {stateOf(w.status).icon}
+                  </span>
+                </td>
+                <td class={cell}>
+                  {#if w.photo}
+                    <img
+                      src="/admin/img/{w.id}.jpg"
+                      alt=""
+                      class="h-11 w-11 object-cover"
+                      loading="lazy"
+                    />
+                  {/if}
+                </td>
+                <td class="{cell} whitespace-nowrap text-ink">{w.author ?? '—'}</td>
+                <td class={cell}>
+                  <p
+                    class="text-body leading-relaxed whitespace-pre-wrap text-ink-body"
+                    dir={w.lang === 'ar' || w.lang === 'fa' ? 'rtl' : 'ltr'}
+                  >{w.message ?? ''}</p>
+                  {#if w.song}
+                    <!-- Never goes to the projector — this is for whoever is
+                         running the music, and this table is the only place it
+                         can be read. -->
+                    <p class="mt-1 text-caption font-light text-ink-muted">♪ {w.song}</p>
+                  {/if}
+                </td>
+                <td class="{cell} whitespace-nowrap">
+                  <!-- Buttons, not a select: this is used standing up, at a
+                       party, one-handed. A dropdown is two interactions and a
+                       chance to pick the wrong row's menu; a button is one. -->
+                  <div class="flex gap-1.5">
+                    {#if w.status !== 'approved'}
+                      {@render act(w.id, 'approved', 'Publish', 'text-ink')}
+                    {/if}
+                    {#if w.status === 'approved' && w.id !== data.pinned}
+                      {@render act(w.id, 'show', 'Show', 'text-primary')}
+                    {/if}
+                    {#if w.status !== 'rejected'}
+                      {@render act(w.id, 'rejected', 'Take down', 'text-accent')}
+                    {/if}
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          {/each}
+        </table>
+      {/if}
+    </section>
   </main>
 </div>
 
@@ -279,4 +397,26 @@
      in the email column for wide ones — so the two cannot drift apart. -->
 {#snippet mailto(/** @type {string} */ email)}
   <a class="underline" href="mailto:{email}">{email}</a>
+{/snippet}
+
+<!-- One wall action. Rendered three times per row rather than written out three
+     times, so the padding and the border cannot drift the way the artifact's two
+     CTAs did. -->
+{#snippet act(
+  /** @type {string} */ id,
+  /** @type {string} */ value,
+  /** @type {string} */ label,
+  /** @type {string} */ tone
+)}
+  <!-- use:enhance is not decoration here. Without it each button is a full form
+       POST, the browser navigates, and /admin reloads scrolled back to the top —
+       so moderating the tenth photo means scrolling down to it again every
+       single time, on a phone, at a party. -->
+  <form method="POST" action="?/wallAction" use:enhance>
+    <input type="hidden" name="id" value={id} />
+    <input type="hidden" name="do" value={value} />
+    <button class="cursor-pointer border border-line px-2 py-1 text-xs {tone} hover:bg-primary-faint/40">
+      {label}
+    </button>
+  </form>
 {/snippet}

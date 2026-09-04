@@ -170,6 +170,69 @@ export function migrate() {
         name        text PRIMARY KEY,
         companion   int  NOT NULL DEFAULT 0
       )`;
+    // The guest wall. Image bytes live in Garage; only the two object keys are
+    // here — the same bargain chat_message makes by keeping no blobs either.
+    //
+    // `id` is a uuid rather than a bigserial ON PURPOSE: it is the public URL of
+    // the photo (/api/wall/img/<id>.jpg), and a sequential id would let anyone
+    // walk the wall, including the posts /admin has just binned.
+    //
+    // Both CHECKs are NAMED. Postgres has no `ADD CONSTRAINT IF NOT EXISTS`, so
+    // an unnamed constraint can never be altered idempotently later — and since
+    // `CREATE TABLE IF NOT EXISTS` is a no-op on a table that already exists,
+    // the first time a fourth status is wanted the change would be destructive,
+    // which is exactly the trigger the ponytail note at the top of this function
+    // names. Naming them now is free; not naming them costs a migration tool.
+    await sql`
+      CREATE TABLE IF NOT EXISTS wall_post (
+        id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        visitor_id  uuid NOT NULL,
+        author      text,
+        message     text,
+        orig_key    text,
+        wall_key    text,
+        status      text NOT NULL DEFAULT 'pending'
+                    CONSTRAINT wall_post_status_valid
+                    CHECK (status IN ('pending','approved','rejected')),
+        verdict     text,
+        lang        text,
+        created_at  timestamptz NOT NULL DEFAULT now(),
+        decided_at  timestamptz,
+        CONSTRAINT wall_post_not_empty
+          CHECK (message IS NOT NULL OR wall_key IS NOT NULL)
+      )`;
+    // Exactly the projector's query and nothing else: a partial index over only
+    // the rows it polls, in the order it wants them, so the poll needs no sort.
+    // Ordered by created_at, NOT decided_at — a post approved three minutes late
+    // belongs where it was written, not at the front of the queue.
+    // Song requests moved here when the RSVP section came off the page: the
+    // wall composer is now the only thing a guest fills in on the day. Additive
+    // ALTER because CREATE TABLE IF NOT EXISTS is a no-op on an existing table.
+    await sql`ALTER TABLE wall_post ADD COLUMN IF NOT EXISTS song text`;
+    await sql`
+      CREATE INDEX IF NOT EXISTS wall_post_live_idx
+        ON wall_post (created_at DESC) WHERE status = 'approved'`;
+    await sql`
+      CREATE INDEX IF NOT EXISTS wall_post_visitor_idx
+        ON wall_post (visitor_id, created_at)`;
+    // What the projector is showing right now, when a human has taken over.
+    //
+    // A one-row table, not a column on wall_post: this is global state ("the
+    // wall is currently pinned to X"), not a property of any post. The CHECK
+    // pins it to a single row so there is no way to end up with two opinions
+    // about what the projector is doing.
+    //
+    // NULL current_id means auto — the wall cycles on its own. Setting it is
+    // the carousel control on /admin; the projector picks it up on its next
+    // poll, so there is no push channel and nothing to keep alive.
+    await sql`
+      CREATE TABLE IF NOT EXISTS wall_control (
+        id         int PRIMARY KEY
+                   CONSTRAINT wall_control_singleton CHECK (id = 1),
+        current_id uuid,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`;
+    await sql`INSERT INTO wall_control (id) VALUES (1) ON CONFLICT (id) DO NOTHING`;
     up = true;
   })()
     .catch((err) => {

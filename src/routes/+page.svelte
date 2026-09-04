@@ -15,13 +15,16 @@
   import Countdown from '$lib/components/Countdown.svelte';
   import GardenPlan from '$lib/components/GardenPlan.svelte';
   import Chat from '$lib/components/Chat.svelte';
-  import RsvpForm from '$lib/components/RsvpForm.svelte';
+  import WallModal from '$lib/components/WallModal.svelte';
   import LangSwitcher from '$lib/components/LangSwitcher.svelte';
   import ThemeToggle from '$lib/components/ThemeToggle.svelte';
   import Chip from '$lib/components/Chip.svelte';
 
   let { data, form } = $props();
 
+
+  /** @type {ReturnType<typeof WallModal> | undefined} */
+  let wallModal = $state();
   const t = $derived(data.t);
 
 </script>
@@ -147,7 +150,11 @@
           </p>
 
           <div class="mb-4 lg:mb-6">
-            <Button href="#rsvp">{t.rsvpCta}</Button>
+            <!-- Was `href="#rsvp"`. Replaced the night before the wedding:
+                 nobody is answering an invitation at that point, and the wall is
+                 the thing we actually want a guest's thumb to land on. The RSVP
+                 form is still on the page for anyone who scrolls to it. -->
+            <Button onclick={() => wallModal?.open()}>{t.wallCta}</Button>
           </div>
         </div>
       </div>
@@ -314,20 +321,17 @@
         <p class="text-caption font-light text-ink-muted">{t.botNote}</p>
       </Section>
 
-      <Zigzag reverse={true} />
+      <!--
+        The RSVP section was here until the morning of the wedding. Nobody
+        answers an invitation on the day, and a form still asking for a reply
+        "before 15 July" reads as neglected.
 
-      <Section
-        title={t.rsvpTitle}
-        id="rsvp"
-        seed="rsvp"
-        quotes={starQuotes('rsvp', data.lang)}
-        hint={t.starHint}
-      >
-        <!-- `rsvpSub` — the reply-by date — is deliberately NOT printed here any
-             more. It still reaches the bot through $lib/chat-prompt.js, so a
-             guest who asks when to reply by still gets the date. -->
-        <RsvpForm {t} lang={data.lang} existing={data.rsvp} {form} canRsvp={data.canRsvp} />
-      </Section>
+        Only the guest-facing form is gone. The `rsvp` action, the table and
+        /admin's list all stay: they hold real replies that still need reading,
+        and the chatbot still answers "when should I reply by?" from
+        $lib/chat-prompt.js. The song request the form used to carry now lives in
+        the wall composer, which is the one thing a guest fills in today.
+      -->
 
       <!--
         Sunrise. `use:reveal` on the wrappers is doing two jobs at once: it rises
@@ -386,3 +390,9 @@
     </footer>
   </main>
 </div>
+
+<!-- Outside the layout grid on purpose: a modal <dialog> is promoted to the top
+     layer by the browser, so where it sits in the DOM does not affect painting,
+     and keeping it out here means no stacking-context surprises from the sticky
+     rail or the door scrim. -->
+<WallModal bind:this={wallModal} {t} lang={data.lang} {form} canPost={data.canPost} />

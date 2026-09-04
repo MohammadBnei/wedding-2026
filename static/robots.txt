@@ -1,5 +1,12 @@
-# allow crawling everything by default
+# The invitation itself is public and crawlable.
 User-agent: *
-Disallow:
+Allow: /
+
+# The wall is not. It is guest faces and guest messages on a URL with no login,
+# projected at the venue — public so the projector can open it, not so it can be
+# indexed. /api/ is machine chatter and has nothing a search result should show.
+Disallow: /wall
+Disallow: /api/
+Disallow: /admin
 
 Sitemap: https://wedding.bnei.dev/sitemap.xml
