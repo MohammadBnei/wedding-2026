@@ -18,6 +18,7 @@
   README for anything older.
 -->
 <script>
+  import { enhance } from '$app/forms';
   import { INPUT_BASE } from '$lib/components/Field.svelte';
   import { view } from '$lib/rsvp-view.js';
 
@@ -251,7 +252,10 @@
                 <td class="{cell} whitespace-nowrap">
                   <!-- No use:enhance. A full round trip re-renders the three
                        totals in the heading, which is what you want to see after
-                       a delete anyway. -->
+                       a delete anyway. The wall buttons below DO enhance, for
+                       the opposite reason: they are pressed repeatedly, and a
+                       reload would send you back to the top of a long table
+                       every time. -->
                   <form method="POST" action="?/delete" onsubmit={(e) => confirmDelete(e, r.name)}>
                     <input type="hidden" name="name" value={r.name} />
                     <button
@@ -303,12 +307,8 @@
       <div class="flex items-baseline justify-between gap-4">
         <h2 class="text-body font-light text-ink">Wall</h2>
         {#if data.pinned}
-          <form method="POST" action="?/wallAction" class="flex items-baseline gap-2">
-            <span class="caps text-micro text-ink-muted">
-              {data.pinnedUntil
-                ? `Held until ${new Date(data.pinnedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                : 'Held until you unpin'}
-            </span>
+          <form method="POST" action="?/wallAction" class="flex items-baseline gap-2" use:enhance>
+            <span class="caps text-micro text-ink-muted">Holding until the next post</span>
             <input type="hidden" name="do" value="auto" />
             <button class="cursor-pointer caps text-micro text-primary underline underline-offset-4">
               Resume auto-advance
@@ -371,27 +371,7 @@
                       {@render act(w.id, 'approved', 'Publish', 'text-ink')}
                     {/if}
                     {#if w.status === 'approved' && w.id !== data.pinned}
-                      <!-- Minutes is optional: blank holds it until someone
-                           presses "Resume auto-advance". A number is safer when
-                           the person pressing it is about to be dancing. -->
-                      <form method="POST" action="?/wallAction" class="flex items-center gap-1">
-                        <input type="hidden" name="id" value={w.id} />
-                        <input type="hidden" name="do" value="show" />
-                        <input
-                          type="number"
-                          name="minutes"
-                          min="1"
-                          max="120"
-                          placeholder="∞"
-                          aria-label="Minutes to hold this on screen; blank holds until you unpin"
-                          class="w-12 border border-line bg-surface-raise px-1.5 py-1 text-xs text-ink"
-                        />
-                        <button
-                          class="cursor-pointer border border-line px-2 py-1 text-xs text-primary hover:bg-primary-faint/40"
-                        >
-                          Show
-                        </button>
-                      </form>
+                      {@render act(w.id, 'show', 'Show', 'text-primary')}
                     {/if}
                     {#if w.status !== 'rejected'}
                       {@render act(w.id, 'rejected', 'Take down', 'text-accent')}
@@ -422,7 +402,11 @@
   /** @type {string} */ label,
   /** @type {string} */ tone
 )}
-  <form method="POST" action="?/wallAction">
+  <!-- use:enhance is not decoration here. Without it each button is a full form
+       POST, the browser navigates, and /admin reloads scrolled back to the top —
+       so moderating the tenth photo means scrolling down to it again every
+       single time, on a phone, at a party. -->
+  <form method="POST" action="?/wallAction" use:enhance>
     <input type="hidden" name="id" value={id} />
     <input type="hidden" name="do" value={value} />
     <button class="cursor-pointer border border-line px-2 py-1 text-xs {tone} hover:bg-primary-faint/40">
