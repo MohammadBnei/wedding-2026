@@ -46,7 +46,12 @@ export async function GET({ url, request }) {
   const q = (url.searchParams.get('q') ?? '').trim();
   if (!q) return json({ url: null, matched: false });
 
-  const key = songKey(q);
+  // `songKey(q) || q` — never the bare key. songKey collapses punctuation, so a
+  // title made only of characters it strips folds to '', and every such query
+  // would share ONE cache slot: the first one's video id would come back as a
+  // confident "▶ Play" for all the others. The `if (!q)` guard above does not
+  // catch it, because `q` is not empty — only the derived key is.
+  const key = songKey(q) || q;
   const hit = cache.get(key);
   if (hit) return json({ url: watchUrl(hit), matched: true });
 
