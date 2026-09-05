@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/MohammadBnei/wedding-2026/compare/0.14.0...0.14.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **wall:** stop minting the visitor cookie on wall images so they cache ([#32](https://github.com/MohammadBnei/wedding-2026/issues/32)) ([b0c4a1c](https://github.com/MohammadBnei/wedding-2026/commit/b0c4a1cf5d8dd2ccbf69cf92d9ffe3d757883e54))
+
 # [0.14.0](https://github.com/MohammadBnei/wedding-2026/compare/0.13.0...0.14.0) (2026-09-04)
 
 
