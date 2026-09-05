@@ -142,22 +142,50 @@
         suggest="/api/songs"
       />
 
-      <label class="flex flex-col gap-1.5">
-        <span class="text-micro tracking-caps uppercase text-ink-muted">{t.wallPhotoLabel}</span>
-        <input
-          type="file"
-          name="photo"
-          accept="image/jpeg,image/png,image/webp"
-          class="text-sm font-light text-ink-body file:mr-3 file:border file:border-line
-                 file:bg-surface-raise file:px-3 file:py-2 file:text-xs file:font-light
-                 file:text-ink"
-          onchange={(e) => {
-            const f = e.currentTarget.files?.[0];
-            photoName = f ? f.name : '';
-          }}
-        />
+      <!--
+        One control, one label. There used to be a caption above the input AND
+        the browser's own "Choose file" text, saying the same thing twice.
+
+        The input is visually hidden and its <label> is the button, which is the
+        only way to style a file picker consistently — `file:` variants get you a
+        near-copy of a button, not the button. It carries the same composition as
+        Button.svelte so it matches Send rather than approximating it.
+
+        `sr-only`, not `hidden` or `display:none`: the input must stay focusable
+        and reachable by a screen reader, and the label shows a focus ring for it
+        via focus-within.
+      -->
+      <div class="flex flex-col gap-1.5">
+        <div class="flex flex-wrap items-center gap-3">
+          <label
+            class="inline-flex cursor-pointer items-center justify-center border border-line
+                   bg-surface-raise px-5 py-2.5 text-caption font-semibold caps text-ink
+                   transition-opacity hover:opacity-90
+                   focus-within:outline focus-within:outline-2 focus-within:outline-primary"
+          >
+            {photoName ? t.wallPhotoChange : t.wallPhotoLabel}
+            <input
+              type="file"
+              name="photo"
+              class="sr-only"
+              accept="image/*"
+              onchange={(e) => {
+                const f = e.currentTarget.files?.[0];
+                photoName = f ? f.name : '';
+              }}
+            />
+          </label>
+
+          {#if photoName}
+            <!-- `photoName` was captured and rendered nowhere, so a guest picked
+                 a photo and got no sign it had taken. This is that sign. -->
+            <span class="min-w-0 flex-1 truncate text-caption font-light text-ink-muted">
+              {photoName}
+            </span>
+          {/if}
+        </div>
         {#if errors.photo}<span class={ERROR_TEXT}>{errors.photo}</span>{/if}
-      </label>
+      </div>
 
       {#if errors.form}
         <p class={ERROR_TEXT}>{errors.form}</p>

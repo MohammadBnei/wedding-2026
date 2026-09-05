@@ -742,6 +742,39 @@ test('the wall refuses a signature with nothing attached to it', async ({ page }
   await expect(form.getByText(/mot ou ajoutez une photo/i)).toBeVisible();
 });
 
+test('the photo control is one button, and confirms what you picked', async ({ page }) => {
+  await visit(page, '/');
+  await openWall(page);
+  const form = page.locator('dialog[open] form[action="?/wall"]');
+
+  // accept="image/*", not a hand-listed set: on iOS this is what turns the raw
+  // file browser into the photo picker. It is a hint, never a guarantee — the
+  // Bun.Image re-encode on the server is the actual boundary.
+  const input = form.locator('input[name="photo"]');
+  await expect(input).toHaveAttribute('accept', 'image/*');
+
+  // One label, not two. There used to be a caption AND the browser's own
+  // "Choose file" text saying the same thing.
+  await expect(form.getByText(/Ajouter une photo/)).toHaveCount(1);
+
+  // The input is hidden but must stay reachable — sr-only, not display:none.
+  await expect(input).toBeAttached();
+
+  // Picking a photo has to visibly take. `photoName` was captured and rendered
+  // nowhere, so a guest got no confirmation at all.
+  await input.setInputFiles({
+    name: 'ma-photo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      'base64'
+    )
+  });
+  await expect(form.getByText('ma-photo.png')).toBeVisible();
+  // And the button says "Change" once something is chosen.
+  await expect(form.getByText(/Changer/)).toBeVisible();
+});
+
 test('a file that lies about being an image is refused, not a 500', async ({ page, request }) => {
   await visit(page, '/');
   const res = await request.post('/?/wall', {
