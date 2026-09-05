@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/MohammadBnei/wedding-2026/compare/0.17.0...0.17.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **wall:** an iPhone photo has to arrive as JPEG, so name the types again ([#38](https://github.com/MohammadBnei/wedding-2026/issues/38)) ([d712489](https://github.com/MohammadBnei/wedding-2026/commit/d712489b0178e820ae63613ad6925254e771c3da)), closes [#36](https://github.com/MohammadBnei/wedding-2026/issues/36)
+
 # [0.17.0](https://github.com/MohammadBnei/wedding-2026/compare/0.16.0...0.17.0) (2026-09-05)
 
 
