@@ -946,3 +946,171 @@ test('the wall page carries no site chrome', async ({ page }) => {
   await expect(page.locator('.wall')).toBeVisible();
   await expect(page.getByRole('button', { name: /RSVP|répond/i })).toHaveCount(0);
 });
+
+/**
+ * The global stop.
+ *
+ * Worth an e2e rather than only a unit test on heldIndex(): the two ways this
+ * broke in review were both about ORDER — which of the three writers of `i` were
+ * gated, and whether the held id was read before or after the poll merged a new
+ * window. Neither is visible from the pure function, and both are invisible from
+ * the admin side, which cheerfully reads "stopped" either way.
+ */
+
+/**
+ * POST once, and once more if the CONNECTION dropped.
+ *
+ * These are the only tests that drive the admin API while a projector page is
+ * open and polling every 3s, and on a two-core CI runner that combination gets
+ * an occasional `read ECONNRESET` out of the dev server's keep-alive — seen once
+ * on the mobile project, never reproduced locally. A dropped socket is not the
+ * thing under test, and swallowing it here is narrow: only a THROW is retried, a
+ * real non-2xx still fails the assertion at the call site.
+ *
+ * @param {import('@playwright/test').APIRequestContext} request
+ * @param {string} url
+ * @param {Record<string, string>} form
+ */
+async function postOnce(request, url, form) {
+  try {
+    return await request.post(url, { multipart: form });
+  } catch {
+    return await request.post(url, { multipart: form });
+  }
+}
+
+/**
+ * @param {import('@playwright/test').APIRequestContext} request
+ * @param {string} action
+ */
+async function setWall(request, action) {
+  const res = await postOnce(request, '/admin?/wallAction', { do: action });
+  expect(res.ok()).toBeTruthy();
+}
+
+/**
+ * Stop the wall, run `body`, and hand it back whatever happens.
+ *
+ * The stop is GLOBAL state in wall_control, so a test that fails halfway would
+ * otherwise leave the wall stopped for everything after it — including, on a
+ * rerun, `the projector keeps cycling when the poll starts failing`, which would
+ * then fail for a reason that has nothing to do with what it tests.
+ *
+ * @param {import('@playwright/test').APIRequestContext} request
+ * @param {() => Promise<void>} body
+ */
+async function whileStopped(request, body) {
+  await setWall(request, 'pause');
+  try {
+    await body();
+  } finally {
+    await setWall(request, 'resume');
+  }
+}
+
+/** The projector needs a window worth cycling, or "did not advance" proves nothing. */
+async function cyclingWall(page, request) {
+  await setWall(request, 'resume');
+  await page.goto('/wall');
+  const lines = await page.locator('.rail .line').count();
+  test.skip(lines < 2, 'needs at least two approved posts to cycle');
+}
+
+test('a stopped wall holds its slide, and starting it releases it', async ({ page, request }) => {
+  // Proving "did not advance" costs more than a full slide (SLIDE_MS = 8s), and
+  // this does it three times — live, across a new post, and across a reload.
+  test.setTimeout(90_000);
+  await cyclingWall(page, request);
+
+  const caption = page.locator('.slide');
+  await expect(caption).toBeVisible();
+  let held = '';
+
+  await whileStopped(request, async () => {
+    // One poll to pick the stop up, then well past a full slide.
+    await page.waitForTimeout(1_500);
+    held = (await caption.textContent()) ?? '';
+    await page.waitForTimeout(11_000);
+    expect(await caption.textContent()).toBe(held);
+
+    // The case that matters most, and the one the first cut of this got wrong:
+    // a post landing DURING the stop must not take the screen. The poll has its
+    // own "something new arrived, show it now" jump, separate from the advance
+    // timer, and gating only the timer leaves a stopped wall moving while
+    // /admin still reads "stopped".
+    const fresh = await postOnce(request, '/?/wall', {
+      author: 'Pendant la pause',
+      note: 'ceci ne doit pas passer a l ecran'
+    });
+    expect(fresh.ok()).toBeTruthy();
+    await page.waitForTimeout(5_000);
+    expect(await caption.textContent()).toBe(held);
+
+    // ...and a reload during the stop comes back on the SAME post, rather than
+    // on whatever is newest — which, after the post above, is a different one.
+    await page.reload();
+    await page.waitForTimeout(1_500);
+    expect(await caption.textContent()).toBe(held);
+  });
+
+  await expect(async () => {
+    expect(await caption.textContent()).not.toBe(held);
+  }).toPass({ timeout: 20_000 });
+});
+
+test('a stopped wall stays stopped when the held post is taken down', async ({ page, request }) => {
+  // The guard this covers is the difference between "stopped" and "drifting".
+  // If the held post leaves the window — deleted from /admin, or aged out past
+  // WALL_WINDOW — the frozen id stops resolving and `at` falls back to the
+  // cycling index. Because the window is sorted newest-first, every post that
+  // arrives after that shifts what lives at that index, so the wall moves while
+  // /admin still reads "stopped" and can never re-freeze on its own.
+  test.setTimeout(90_000);
+  await cyclingWall(page, request);
+
+  const caption = page.locator('.slide');
+  await expect(caption).toBeVisible();
+
+  await whileStopped(request, async () => {
+    await page.waitForTimeout(1_500);
+
+    // Which post is actually on screen? Match the window against the caption.
+    const { items } = await (await request.get('/api/wall')).json();
+    const shown = await caption.textContent();
+    const held = items.find((/** @type {any} */ it) => it.message && shown?.includes(it.message));
+    expect(held, 'could not identify the held post').toBeTruthy();
+
+    // Take it down. The wall MUST move off it — showing a deleted post is the
+    // one thing worse than drifting — and must then hold wherever it lands.
+    await postOnce(request, '/admin?/wallAction', { id: held.id, do: 'delete' });
+    await page.waitForTimeout(4_000);
+    const after = await caption.textContent();
+    expect(after).not.toBe(shown);
+
+    // ...and now the actual assertion: a new post must not move it again.
+    const fresh = await postOnce(request, '/?/wall', {
+      author: 'Apres suppression',
+      note: 'le mur doit rester immobile'
+    });
+    expect(fresh.ok()).toBeTruthy();
+    await page.waitForTimeout(6_000);
+    expect(await caption.textContent()).toBe(after);
+  });
+});
+
+test('the emergency keys still work while the wall is stopped', async ({ page, request }) => {
+  await cyclingWall(page, request);
+
+  await whileStopped(request, async () => {
+    await page.waitForTimeout(1_500);
+    const caption = page.locator('.slide');
+    const held = await caption.textContent();
+    // A human at the laptop outranks a button pressed in another room —
+    // otherwise a bad photo frozen on the wall needs whoever is holding the
+    // admin phone.
+    await page.keyboard.press('ArrowRight');
+    await expect(async () => {
+      expect(await caption.textContent()).not.toBe(held);
+    }).toPass({ timeout: 5_000 });
+  });
+});

@@ -246,6 +246,23 @@ export function migrate() {
         updated_at timestamptz NOT NULL DEFAULT now()
       )`;
     await sql`INSERT INTO wall_control (id) VALUES (1) ON CONFLICT (id) DO NOTHING`;
+    // The global stop. NULL current_id is "cycle on your own"; `paused` is "hold
+    // where you are, whatever arrives" — a pin releases itself the moment the
+    // next post is approved (see pinnedId), which is the opposite of what a stop
+    // button has to do.
+    //
+    // In its OWN try/catch, unlike every statement above it. Those share the
+    // one catch at the bottom of this function, which sets `up = false` — so a
+    // statement Postgres refuses takes RSVP, chat and the wall down together,
+    // retried every 30 s forever. That risk is worth taking for a column the app
+    // cannot work without; it is not worth taking for a button. On a live
+    // database this was run by hand before the deploy and is a no-op here.
+    try {
+      await sql`ALTER TABLE wall_control ADD COLUMN IF NOT EXISTS paused boolean NOT NULL DEFAULT false`;
+    } catch (err) {
+      console.error('[db] wall_control.paused unavailable — the stop button will not work:',
+        err instanceof Error ? err.message : err);
+    }
     up = true;
   })()
     .catch((err) => {

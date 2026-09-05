@@ -2,7 +2,7 @@ import { dev } from '$app/environment';
 import { error, fail } from '@sveltejs/kit';
 import { sql, dbUp, dbOr } from '$lib/server/db.js';
 import { summarise } from '$lib/rsvp-summary.js';
-import { reviewQueue, pinnedId, setPinned, softDelete } from '$lib/server/wall.js';
+import { reviewQueue, pinnedId, setPinned, setPaused, isPaused, softDelete } from '$lib/server/wall.js';
 
 /**
  * NOT the security boundary. `default/authentik-forwardauth` on the
@@ -65,13 +65,14 @@ export async function load({ request }) {
 
   // The wall queue. Photos fail closed — an unreachable model leaves them
   // pending — so this list is the only way one ever reaches the projector.
-  const [wall, pinned] = await Promise.all([reviewQueue(), pinnedId()]);
+  const [wall, pinned, paused] = await Promise.all([reviewQueue(), pinnedId(), isPaused()]);
 
   return {
     ...summarise(rows),
     canRead: dbUp(),
     who: who || (dev ? 'dev' : ''),
     pinned,
+    paused,
     wall: wall.map((r) => ({
       id: r.id,
       author: r.author,
@@ -164,6 +165,20 @@ export const actions = {
         return fail(503, { message: 'Postgres refused it — the wall did not change.' });
       }
       return { wall: 'auto' };
+    }
+
+    // Before the uuid check: like `auto` above, a stop names no post. Getting
+    // this order wrong makes the button return "No post given." — which is what
+    // the OLD pod does for the length of a rolling update, so if you see that
+    // right after a deploy, press it again rather than debugging it.
+    if (act === 'pause' || act === 'resume') {
+      try {
+        await setPaused(act === 'pause');
+      } catch (err) {
+        console.error('[admin] wall pause failed:', err instanceof Error ? err.message : err);
+        return fail(503, { message: 'Postgres refused it — the wall did not change.' });
+      }
+      return { wall: act };
     }
 
     if (!/^[0-9a-f-]{36}$/i.test(id)) return fail(400, { message: 'No post given.' });
