@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.19.2](https://github.com/MohammadBnei/wedding-2026/compare/0.19.1...0.19.2) (2026-09-05)
+
 ## [0.19.1](https://github.com/MohammadBnei/wedding-2026/compare/0.19.0...0.19.1) (2026-09-05)
 
 
