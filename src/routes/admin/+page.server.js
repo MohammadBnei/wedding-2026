@@ -2,7 +2,7 @@ import { dev } from '$app/environment';
 import { error, fail } from '@sveltejs/kit';
 import { sql, dbUp, dbOr } from '$lib/server/db.js';
 import { summarise } from '$lib/rsvp-summary.js';
-import { reviewQueue, pinnedId, setPinned } from '$lib/server/wall.js';
+import { reviewQueue, pinnedId, setPinned, softDelete } from '$lib/server/wall.js';
 
 /**
  * NOT the security boundary. `default/authentik-forwardauth` on the
@@ -176,6 +176,15 @@ export const actions = {
           UPDATE wall_post
              SET status = ${act}, decided_at = now(), verdict = ${'by hand at /admin'}
            WHERE id = ${id}`;
+      } else if (act === 'delete') {
+        // SOFT, like rsvp.deleted_at above. Not a DELETE: the row is what
+        // records that this photo was binned, so the original we keep for the
+        // ente import does not travel there silently — and a mis-tap at one in
+        // the morning stays recoverable. It also keeps the ponytail note at the
+        // top of db.js's migrate() from coming due, since nothing here is
+        // destructive. The filters in liveWindow/originalFor/wallKeyFor are what
+        // make the wall drop it and its image URL 404.
+        await softDelete(id);
       } else {
         return fail(400, { message: 'Unknown action.' });
       }

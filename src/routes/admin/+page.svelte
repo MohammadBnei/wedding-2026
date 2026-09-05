@@ -18,11 +18,71 @@
   README for anything older.
 -->
 <script>
+  import { onMount } from 'svelte';
   import { enhance } from '$app/forms';
   import { INPUT_BASE } from '$lib/components/Field.svelte';
   import { view } from '$lib/rsvp-view.js';
 
   let { data, form } = $props();
+
+  /**
+   * The wall queue, polled. Seeded from `load` so the first paint is
+   * server-rendered, then kept fresh from /admin/queue.
+   *
+   * Not `invalidateAll()`: that re-runs the page load, whose `gate()` throws
+   * error(404) without the authentik header — so one expired session would
+   * replace this page with an error page permanently, at one in the morning.
+   * A failed fetch here lights a dot instead.
+   */
+  let wall = $state(data.wall ?? []);
+  let pinned = $state(data.pinned ?? null);
+  let queueOnline = $state(true);
+
+  /**
+   * True while a finger or mouse is down anywhere on the page.
+   *
+   * The queue sorts pending-first, newest-first, so a post arriving between
+   * tap-down and tap-up shifts every row down one — and the button under the
+   * thumb becomes a different post's. On a phone, at a party, that mis-tap is
+   * "Publish" on something nobody screened. Refreshes wait.
+   */
+  let pointerDown = $state(false);
+
+  /** The post being previewed full-size, or null.
+   * @type {string | null} */
+  let previewId = $state(null);
+  /** @type {HTMLDialogElement | undefined} */
+  let previewEl = $state();
+
+  /** @param {string} id */
+  function openPreview(id) {
+    previewId = id;
+    previewEl?.showModal();
+  }
+
+  onMount(() => {
+    // Slower than the projector's 3s: this is a human reading a list, and every
+    // tick also runs forwardAuth against authentik, which shares the same
+    // Postgres as the guest site — whose pool is max: 5.
+    const timer = setInterval(async () => {
+      // A phone in a pocket keeps intervals alive on some browsers; do not poll
+      // a page nobody is looking at, and never mutate the list mid-tap.
+      if (document.visibilityState !== 'visible' || pointerDown) return;
+      try {
+        const res = await fetch('/admin/queue');
+        if (!res.ok) throw new Error(String(res.status));
+        const body = await res.json();
+        wall = body.wall ?? [];
+        pinned = body.pinned ?? null;
+        queueOnline = true;
+      } catch {
+        // Keep showing the last good list rather than blanking it — a dbOr blip
+        // returning [] would otherwise flash "Nothing yet." at a moderator.
+        queueOnline = false;
+      }
+    }, 8_000);
+    return () => clearInterval(timer);
+  });
 
   const cell = 'px-3 py-2 align-top';
   // The rule under the header is a shadow, not a border: this <th> is sticky,
@@ -117,6 +177,8 @@
 <!-- min-h-screen bg-surface because app.css paints <html> in the night colour
      so the invitation's overscroll shows it. On a short list — one search hit,
      say — that leaves a navy slab under the table. -->
+<svelte:window onpointerdown={() => (pointerDown = true)} onpointerup={() => (pointerDown = false)} onpointercancel={() => (pointerDown = false)} />
+
 <div class="min-h-screen bg-surface">
   <main class="mx-auto max-w-5xl px-4 py-8 text-ink">
     <header class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
@@ -305,8 +367,17 @@
     -->
     <section class="mt-12">
       <div class="flex items-baseline justify-between gap-4">
-        <h2 class="text-body font-light text-ink">Wall</h2>
-        {#if data.pinned}
+        <h2 class="text-body font-light text-ink">
+          Wall
+          {#if !queueOnline}
+            <!-- Small and quiet: for whoever is holding the phone, not a banner.
+                 The list below is the last good one, not an empty one. -->
+            <span class="caps text-micro text-accent" title="Not refreshing — showing the last good list">
+              · offline
+            </span>
+          {/if}
+        </h2>
+        {#if pinned}
           <form method="POST" action="?/wallAction" class="flex items-baseline gap-2" use:enhance>
             <span class="caps text-micro text-ink-muted">Holding until the next post</span>
             <input type="hidden" name="do" value="auto" />
@@ -319,7 +390,7 @@
         {/if}
       </div>
 
-      {#if !data.wall?.length}
+      {#if !wall.length}
         <p class="mt-2 text-caption font-light text-ink-muted">Nothing yet.</p>
       {:else}
         <table class="mt-3 w-full border-collapse text-note font-light">
@@ -332,10 +403,10 @@
               <th class="{head} w-px">Action</th>
             </tr>
           </thead>
-          {#each data.wall as w (w.id)}
+          {#each wall as w (w.id)}
             <tbody
               class="border-b border-line-soft hover:bg-primary-faint/25
-                     {w.id === data.pinned ? 'bg-primary-faint/40' : ''}"
+                     {w.id === pinned ? 'bg-primary-faint/40' : ''}"
             >
               <tr>
                 <!-- The verdict lives here: available on hover when something
@@ -347,41 +418,68 @@
                 </td>
                 <td class={cell}>
                   {#if w.photo}
-                    <img
-                      src="/admin/img/{w.id}.jpg"
-                      alt=""
-                      class="h-11 w-11 object-cover"
-                      loading="lazy"
-                    />
+                    <!-- 44px was too small to judge a photograph by, which is
+                         the entire job here. Bigger, and a click opens the
+                         original full-size. -->
+                    <button
+                      type="button"
+                      class="cursor-pointer border border-line"
+                      aria-label="See this photo full size"
+                      onclick={() => openPreview(w.id)}
+                    >
+                      <img
+                        src="/admin/img/{w.id}.jpg"
+                        alt=""
+                        class="h-16 w-16 object-cover sm:h-20 sm:w-20"
+                        loading="lazy"
+                      />
+                    </button>
                   {/if}
                 </td>
-                <td class="{cell} whitespace-nowrap text-ink">{w.author ?? '—'}</td>
+                <!-- No whitespace-nowrap: a long signature was a single
+                     unbreakable box on a 390px screen. -->
+                <td class="{cell} text-ink">{w.author ?? '—'}</td>
                 <td class={cell}>
+                  <!-- break-all, not break-words. `overflow-wrap: break-word`
+                       does not reduce a box's MIN-CONTENT width, so in an
+                       auto-layout table one pasted URL still forces the whole
+                       table wider than the screen. The RSVP table above already
+                       learned this on the email column. -->
                   <p
-                    class="text-body leading-relaxed whitespace-pre-wrap text-ink-body"
+                    class="text-body leading-relaxed break-all whitespace-pre-wrap text-ink-body"
                     dir={w.lang === 'ar' || w.lang === 'fa' ? 'rtl' : 'ltr'}
                   >{w.message ?? ''}</p>
                   {#if w.song}
                     <!-- Never goes to the projector — this is for whoever is
                          running the music, and this table is the only place it
                          can be read. -->
-                    <p class="mt-1 text-caption font-light text-ink-muted">♪ {w.song}</p>
+                    <p class="mt-1 break-all text-caption font-light text-ink-muted">♪ {w.song}</p>
                   {/if}
                 </td>
-                <td class="{cell} whitespace-nowrap">
+                <td class={cell}>
                   <!-- Buttons, not a select: this is used standing up, at a
                        party, one-handed. A dropdown is two interactions and a
-                       chance to pick the wrong row's menu; a button is one. -->
-                  <div class="flex gap-1.5">
+                       chance to pick the wrong row's menu; a button is one.
+                       `flex-wrap`, and no whitespace-nowrap on the cell: four
+                       bordered buttons in a row was the widest unbreakable
+                       thing on the page and what pushed a phone sideways. -->
+                  <div class="flex flex-wrap gap-1.5">
                     {#if w.status !== 'approved'}
                       {@render act(w.id, 'approved', 'Publish', 'text-ink')}
                     {/if}
-                    {#if w.status === 'approved' && w.id !== data.pinned}
+                    {#if w.status === 'approved' && w.id !== pinned}
                       {@render act(w.id, 'show', 'Show', 'text-primary')}
                     {/if}
                     {#if w.status !== 'rejected'}
                       {@render act(w.id, 'rejected', 'Take down', 'text-accent')}
                     {/if}
+                    {@render act(
+                      w.id,
+                      'delete',
+                      'Delete',
+                      'text-accent',
+                      'Delete this post? It leaves the wall and the list. The original photo is kept.'
+                    )}
                   </div>
                 </td>
               </tr>
@@ -402,17 +500,82 @@
 <!-- One wall action. Rendered three times per row rather than written out three
      times, so the padding and the border cannot drift the way the artifact's two
      CTAs did. -->
+<!--
+  Outside the table on purpose. The HTML parser foster-parents any non-cell
+  element out of a <tbody>, so a <dialog> written inline in a row would sit
+  somewhere different on the server than on the client — the same class of
+  mismatch that produced HierarchyRequestError on the wall page. One dialog for
+  all rows also means the moderator's phone is not holding 200 full-size images.
+-->
+<dialog
+  bind:this={previewEl}
+  class="preview"
+  onclick={(e) => {
+    if (e.target === previewEl) previewEl?.close();
+  }}
+  onclose={() => (previewId = null)}
+>
+  {#if previewId}
+    <!-- ?full=1 is the ORIGINAL, and works for pending posts — which is the set
+         that actually needs looking at. Judging a photograph from a thumbnail
+         is not moderating it. -->
+    <img src="/admin/img/{previewId}.jpg?full=1" alt="" />
+  {/if}
+</dialog>
+
+<style>
+  .preview {
+    max-width: 100vw;
+    max-height: 100dvh;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  .preview:not([open]) {
+    display: none;
+  }
+  .preview::backdrop {
+    background: color-mix(in oklab, black 78%, transparent);
+  }
+  .preview img {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    max-width: 96vw;
+    max-height: 96dvh;
+    object-fit: contain;
+    /* The original keeps its EXIF rotation; only the derivative was oriented
+       on the server. Stated rather than relied upon. */
+    image-orientation: from-image;
+  }
+</style>
+
 {#snippet act(
   /** @type {string} */ id,
   /** @type {string} */ value,
   /** @type {string} */ label,
-  /** @type {string} */ tone
+  /** @type {string} */ tone,
+  /** @type {string} */ ask = ''
 )}
   <!-- use:enhance is not decoration here. Without it each button is a full form
        POST, the browser navigates, and /admin reloads scrolled back to the top —
        so moderating the tenth photo means scrolling down to it again every
        single time, on a phone, at a party. -->
-  <form method="POST" action="?/wallAction" use:enhance>
+  <!-- The confirm goes through enhance's `cancel`, NOT onsubmit +
+       preventDefault. SvelteKit's handle_submit calls preventDefault itself and
+       never reads defaultPrevented, so an onsubmit guard on an ENHANCED form is
+       silently ignored — pressing Cancel would delete anyway. The RSVP form
+       above can use onsubmit only because it is a plain POST. -->
+  <form
+    method="POST"
+    action="?/wallAction"
+    use:enhance={({ cancel }) => {
+      if (ask && !confirm(ask)) cancel();
+    }}
+  >
     <input type="hidden" name="id" value={id} />
     <input type="hidden" name="do" value={value} />
     <button class="cursor-pointer border border-line px-2 py-1 text-xs {tone} hover:bg-primary-faint/40">
