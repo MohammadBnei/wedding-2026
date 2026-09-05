@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.17.0](https://github.com/MohammadBnei/wedding-2026/compare/0.16.0...0.17.0) (2026-09-05)
+
+
+### Features
+
+* **wall:** the photo control is one button that tells you it worked ([#36](https://github.com/MohammadBnei/wedding-2026/issues/36)) ([6936c10](https://github.com/MohammadBnei/wedding-2026/commit/6936c108fcc8a6120da9ee9b3896ceb9d520977d))
+
 # [0.16.0](https://github.com/MohammadBnei/wedding-2026/compare/0.15.1...0.16.0) (2026-09-05)
 
 
