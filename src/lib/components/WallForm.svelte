@@ -9,10 +9,22 @@
   under a nickname, must still be able to sign.
 -->
 <script>
+  import { onMount } from 'svelte';
   import { enhance } from '$app/forms';
   import Field, { ERROR_TEXT } from './Field.svelte';
   import Button from './Button.svelte';
   import { MAX_MESSAGE, MAX_AUTHOR } from '$lib/wall.js';
+
+  /**
+   * Where the guest's name is remembered between posts.
+   *
+   * localStorage, not the `wid` cookie: the name is theirs to see and clear, it
+   * is already about to be projected on a wall so it is not a secret, and
+   * keeping it client-side means signing again after a reload costs nothing and
+   * touches no server state. Someone posting a second photo during the dancing
+   * should not have to type their name again on a phone.
+   */
+  const AUTHOR_KEY = 'wall-author';
 
   // `canPost` false means Postgres is down or the kill switch is flipped. Say so
   // before they write something and choose a photo, not after they press send.
@@ -26,6 +38,27 @@
   let photoName = $state('');
 
   const errors = $derived(form?.wallErrors ?? {});
+
+  // onMount, not $effect: this must run once, on the client, and must never
+  // fight the user's own typing. localStorage throws in a locked-down private
+  // window, and a guest who cannot be remembered should still be able to post.
+  onMount(() => {
+    try {
+      const saved = localStorage.getItem(AUTHOR_KEY);
+      if (saved && !author) author = saved;
+    } catch {
+      /* remembering is a convenience, never a requirement */
+    }
+  });
+
+  /** @param {string} name */
+  function remember(name) {
+    try {
+      if (name.trim()) localStorage.setItem(AUTHOR_KEY, name.trim());
+    } catch {
+      /* see above */
+    }
+  }
 </script>
 
 <div class="mt-6">
@@ -60,6 +93,9 @@
         return async ({ result, update }) => {
           sending = false;
           if (result.type === 'success') {
+            // Only on success. Remembering a name the server just rejected as
+            // too long would hand it back pre-filled and pre-broken.
+            remember(author);
             posted = true;
             // reset:false — a validation failure must not wipe what they typed,
             // and on venue wifi retyping a message is how people give up.
