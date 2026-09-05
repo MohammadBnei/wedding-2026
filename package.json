@@ -1,7 +1,7 @@
 {
   "name": "wedding-2026",
   "private": true,
-  "version": "0.15.1",
+  "version": "0.16.0",
   "type": "module",
   "scripts": {
     "dev": "bunx --bun vite dev",

@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.16.0](https://github.com/MohammadBnei/wedding-2026/compare/0.15.1...0.16.0) (2026-09-05)
+
+
+### Features
+
+* **admin:** live queue, soft delete, full-size preview, and a phone-shaped table ([#35](https://github.com/MohammadBnei/wedding-2026/issues/35)) ([6419afd](https://github.com/MohammadBnei/wedding-2026/commit/6419afd471b086fc7062ee1f6a094630cb08c413))
+
 ## [0.15.1](https://github.com/MohammadBnei/wedding-2026/compare/0.15.0...0.15.1) (2026-09-05)
 
 
