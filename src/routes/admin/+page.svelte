@@ -188,11 +188,19 @@
       <h1 class="font-display text-2xl">
         {data.heads} heads · {data.replies} replies · {data.declined} declined
       </h1>
-      <div class="flex items-baseline gap-4">
+      <!-- flex-wrap: three items in this row on a 393px screen is what the
+           `/admin never scrolls sideways` e2e gate catches. -->
+      <div class="flex flex-wrap items-baseline gap-4">
         <!-- Plain client-side nav: / carries no auth middleware, so unlike the
              chip pointing the other way this needs no full reload. -->
         <a class="text-xs font-light underline text-ink-muted hover:text-ink" href="/">
           ← Invitation
+        </a>
+        <!-- Same origin, same forwardAuth prefix, so this needs no
+             data-sveltekit-reload either — unlike the / -> /admin chip, whose
+             __data.json fetch would cross the auth gate. -->
+        <a class="text-xs font-light underline text-ink-muted hover:text-ink" href="/admin/songs">
+          Songs →
         </a>
         {#if data.who}
           <span class="caps text-micro font-light text-ink-muted">{data.who}</span>
