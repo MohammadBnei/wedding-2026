@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/MohammadBnei/wedding-2026/compare/0.15.0...0.15.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **wall:** right image, full resolution, and a visible cursor ([#34](https://github.com/MohammadBnei/wedding-2026/issues/34)) ([3c8804c](https://github.com/MohammadBnei/wedding-2026/commit/3c8804c05ed59b0d9deb80c691b777282714e45b))
+
 # [0.15.0](https://github.com/MohammadBnei/wedding-2026/compare/0.14.1...0.15.0) (2026-09-05)
 
 
