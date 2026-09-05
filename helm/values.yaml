@@ -6,7 +6,7 @@
 
 image:
   repository: registry.bnei.lan:5000/wedding-2026
-  tag: "0.16.0"
+  tag: "0.17.0"
 
 service:
   port: 3000
