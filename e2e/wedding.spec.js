@@ -747,11 +747,18 @@ test('the photo control is one button, and confirms what you picked', async ({ p
   await openWall(page);
   const form = page.locator('dialog[open] form[action="?/wall"]');
 
-  // accept="image/*", not a hand-listed set: on iOS this is what turns the raw
-  // file browser into the photo picker. It is a hint, never a guarantee — the
-  // Bun.Image re-encode on the server is the actual boundary.
+  // A hand-listed set, NOT `image/*`. This was `image/*` for one release, to get
+  // iOS to open the photo picker rather than the file browser — and it put HEIC
+  // originals on the wire, which Bun.Image cannot decode ("format not supported
+  // on this machine", verified in the production pod). Every photo posted during
+  // that release failed at the decode with no row, no blob and no log line.
+  //
+  // iOS opens the photo picker for a concrete image list too, and transcodes the
+  // HEIC to JPEG on the way out — which is the behaviour this depends on. It is
+  // still only a hint, never a guarantee: the Bun.Image re-encode on the server
+  // is the actual boundary.
   const input = form.locator('input[name="photo"]');
-  await expect(input).toHaveAttribute('accept', 'image/*');
+  await expect(input).toHaveAttribute('accept', 'image/jpeg,image/png,image/webp');
 
   // One label, not two. There used to be a caption AND the browser's own
   // "Choose file" text saying the same thing.

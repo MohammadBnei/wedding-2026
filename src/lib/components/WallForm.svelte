@@ -164,11 +164,30 @@
                    focus-within:outline focus-within:outline-2 focus-within:outline-primary"
           >
             {photoName ? t.wallPhotoChange : t.wallPhotoLabel}
+            <!--
+              THE ACCEPT LIST IS LOAD-BEARING, and it looks like a tidy-up.
+
+              iOS Safari transcodes a HEIC photo to JPEG on its way into the form
+              only when `accept` names concrete types it can convert to. Given
+              `image/*` it hands over the HEIC original untouched — and Bun.Image
+              cannot decode HEIC. Verified inside the production pod: "Image:
+              format not supported on this machine (HEIC/AVIF/TIFF require the OS
+              codec)". The upload then fails the decode in routes/+page.server.js
+              and the guest is told their photo is unreadable, with no row, no
+              blob, and nothing in the log.
+
+              Restoring the list also keeps uploads under adapter-node's
+              BODY_SIZE_LIMIT: the transcode shrinks a 48MP original that would
+              otherwise 413 before app code ever runs, which is the same symptom
+              with no error message at all.
+
+              Keep in step with ALLOWED_IMAGE_TYPES in $lib/wall.js.
+            -->
             <input
               type="file"
               name="photo"
               class="sr-only"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               onchange={(e) => {
                 const f = e.currentTarget.files?.[0];
                 photoName = f ? f.name : '';
