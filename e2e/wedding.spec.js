@@ -287,12 +287,50 @@ test('mobile is a single stacked column', async ({ page }, testInfo) => {
   expect(Math.abs(main.width - rail.width)).toBeLessThan(2);
 });
 
-test('the page never scrolls sideways', async ({ page }) => {
-  await visit(page, '/');
-  const overflow = await page.evaluate(
+const sidewaysOverflow = (page) =>
+  page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth
   );
-  expect(overflow).toBeLessThanOrEqual(0);
+
+test('the page never scrolls sideways', async ({ page }) => {
+  await visit(page, '/');
+  expect(await sidewaysOverflow(page)).toBeLessThanOrEqual(0);
+});
+
+test('/admin never scrolls sideways, even with an unbreakable message', async ({
+  page,
+  request
+}) => {
+  // This is where it actually broke: the wall table has five columns, a
+  // thumbnail, and an action group, on a 390px phone. The `/` test above never
+  // covered it.
+  //
+  // Deliberately NOT extended to /wall — that page sets body{overflow:hidden}
+  // and .wall{position:fixed}, so the assertion is 0 by construction and could
+  // never fail.
+  //
+  // The message is one long unbroken token on purpose: `overflow-wrap` does not
+  // reduce a table cell's min-content width, so only `break-all` survives this.
+  await request.post('/?/wall', {
+    headers: { origin: 'http://localhost:5188' },
+    multipart: {
+      author: 'Overflowing McLongname-Van-Der-Bergensteinsson',
+      // Under MAX_MESSAGE (280) or the server refuses the post and this test
+      // silently measures an empty table — which it did, on the first attempt.
+      note: 'https://example.test/' + 'a'.repeat(200)
+    }
+  });
+
+  await page.goto('/admin');
+  // Assert the row actually landed before measuring. Without this the test
+  // measures an empty table and always passes — which is exactly what it did on
+  // the first attempt, when the seeded message was over MAX_MESSAGE and the
+  // server refused it. `count`, not `toBeVisible`: at 1825px of overflow the
+  // element is off-screen, which is the very thing being measured.
+  expect(await page.getByText(/Overflowing McLongname/).count()).toBeGreaterThan(0);
+
+  // Measured: 0px with break-all, 1825px without it, at a 393px viewport.
+  expect(await sidewaysOverflow(page)).toBeLessThanOrEqual(0);
 });
 
 test('an English browser gets English without touching the switcher', async ({ browser }) => {
