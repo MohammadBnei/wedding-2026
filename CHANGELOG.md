@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/MohammadBnei/wedding-2026/compare/0.19.0...0.19.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **wall:** the projector row was auto-height, so the photo hung off the bottom ([dfdd014](https://github.com/MohammadBnei/wedding-2026/commit/dfdd014d1500a2443bae45f104f9a0127fe2ad46))
+
 # [0.19.0](https://github.com/MohammadBnei/wedding-2026/compare/0.18.0...0.19.0) (2026-09-05)
 
 
