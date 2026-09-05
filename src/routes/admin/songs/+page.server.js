@@ -32,6 +32,13 @@ export async function load({ request }) {
    * dbOr, unlike the writes in /admin: a missing list is losable, and 500ing the
    * page an hour before the first dance is not. LIMIT because the row count is
    * guest-controlled free text.
+   *
+   * ORDER BY is NOT decoration next to that LIMIT. In Postgres a trailing LIMIT
+   * binds to the whole UNION, and without an ORDER BY the planner may hand back
+   * ANY 500 of the matching rows — so past the cap it could drop the NEWEST
+   * requests, on the list that exists to catch new requests. It is also what
+   * makes mergeSongs's "rows arrive newest-first" premise true, which is what
+   * lets it keep the most recent spelling of a song.
    */
   const rows = await dbOr(
     [],
@@ -43,6 +50,7 @@ export async function load({ request }) {
       SELECT song, name AS who, updated_at AS at
         FROM rsvp
        WHERE song IS NOT NULL AND deleted_at IS NULL
+       ORDER BY at DESC
        LIMIT 500`
   );
 

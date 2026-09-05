@@ -47,6 +47,8 @@
   let played = $state([]);
 
   const STORE = 'songs-played';
+  /** How many rows get a YouTube lookup on load. See the note in onMount. */
+  const RESOLVE_MAX = 50;
 
   onMount(() => {
     // Guarded: a corrupt or hand-edited value must not take the page down at
@@ -58,10 +60,21 @@
       played = [];
     }
 
-    // One request per row. The browser caps itself at about six connections per
-    // origin, which IS the concurrency limit — there is deliberately no pool
-    // here. Each failure costs one row its Play link and nothing else.
-    for (const s of data.songs) {
+    // One request per row, for the newest RESOLVE_MAX rows only.
+    //
+    // The browser's ~6-connections-per-origin limit caps how many of these are
+    // in flight, which bounds the pod's MEMORY — but not the total volume, and
+    // volume is what gets an IP blocked. The row count is guest-controlled free
+    // text bounded only by GLOBAL_DAILY = 800, so one page open could otherwise
+    // fire hundreds of scrapes from the cluster's egress address and earn a bot
+    // block that turns every row into "Search" for the rest of the night.
+    //
+    // ponytail: a flat cap, not a windowed/IntersectionObserver loader. Fifty is
+    // far more songs than one reception produces, the rows past it still carry a
+    // working Search link, and they resolve on the next load once the cache in
+    // front of them has warmed. Build the observer the first evening someone
+    // actually scrolls past fifty.
+    for (const s of data.songs.slice(0, RESOLVE_MAX)) {
       const key = songKey(s.song);
       fetch(`/admin/songs/yt?q=${encodeURIComponent(s.song)}`)
         .then((r) => (r.ok ? r.json() : null))

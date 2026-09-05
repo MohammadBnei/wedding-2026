@@ -20,9 +20,18 @@ import { fold } from './match.js';
  * spellings and fold() — which only strips diacritics and lowercases — keeps
  * all three apart, on a list whose whole premise is that they are one row.
  *
- * So: fold, then collapse every run of non-alphanumerics to a single space.
- * "Bella Ciao — Modena City Ramblers" and "bella ciao - modena city ramblers"
- * land on the same key; "Bella Ciao" alone still does not, and should not.
+ * So: fold, then collapse every run of non-LETTER, non-NUMBER characters to a
+ * single space. "Bella Ciao — Modena City Ramblers" and "bella ciao - modena
+ * city ramblers" land on the same key; "Bella Ciao" alone still does not, and
+ * should not.
+ *
+ * `\p{L}\p{N}`, NOT `a-z0-9`. Half the people in the room read Arabic or
+ * Persian, and the site is translated into both — an `a-z0-9` class deletes
+ * every character of "يا رايح — رشيد طه", leaves an empty key, and mergeSongs
+ * then drops the row as punctuation-only. The request would vanish from the one
+ * page that exists to list every request, with nothing on screen to say so.
+ * For a Latin title the two classes produce byte-identical output, which is
+ * what keeps the played marks below stable across this change.
  *
  * Also the localStorage key for the played mark, which is why it has to be
  * stable across a reload and across a re-spelling by the next guest.
@@ -30,7 +39,7 @@ import { fold } from './match.js';
  * @param {string} s
  * @returns {string}
  */
-export const songKey = (s) => fold(s).replace(/[^a-z0-9]+/gu, ' ').trim();
+export const songKey = (s) => fold(s).replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
 /**
  * @typedef {object} SongRow

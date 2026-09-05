@@ -80,3 +80,26 @@ test('empty and punctuation-only songs are dropped, not collapsed into one row',
   expect(merged).toHaveLength(1);
   expect(merged[0].song).toBe(EM);
 });
+
+// The site is translated into Arabic and Persian and half the room reads them.
+// An `a-z0-9` key class deleted every character of these, produced an empty key,
+// and mergeSongs dropped the row as punctuation-only — the request disappeared
+// from the page whose entire premise is that it lists every request.
+test('an Arabic or Persian title survives, and still dedupes', () => {
+  const AR = 'يا رايح — رشيد طه';
+  const AR_HYPHEN = 'يا رايح - رشيد طه';
+
+  expect(songKey(AR)).not.toBe('');
+  expect(songKey(AR_HYPHEN)).toBe(songKey(AR));
+  expect(songKey('مرحبا')).not.toBe('');
+  // ...and is still a DIFFERENT song from a Latin one, not collapsed with it.
+  expect(songKey(AR)).not.toBe(songKey('Bella Ciao'));
+
+  const merged = mergeSongs([
+    { song: AR, who: 'Nadia', at: '2026-09-05T18:00:00.000Z' },
+    { song: AR_HYPHEN, who: 'Karim', at: '2026-09-05T17:00:00.000Z' }
+  ]);
+  expect(merged).toHaveLength(1);
+  expect(merged[0].count).toBe(2);
+  expect(merged[0].song).toBe(AR);
+});
