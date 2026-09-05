@@ -484,7 +484,7 @@
 
 <style>
   :global(body) {
-    background: #000;
+    background: var(--color-surface);
     overflow: hidden;
   }
 
@@ -493,7 +493,15 @@
     inset: 0;
     display: grid;
     grid-template-columns: 1fr min(22rem, 26vw);
-    background: #000;
+    /* Definite, not the implicit `auto`. Everything below sizes itself as a
+       percentage of this row, and against an auto row those percentages have
+       nothing to resolve to — so the frame fell back to the photo's INTRINSIC
+       height, and a 1200x1800 upload made the row twice the screen. The slide
+       hung off the bottom edge with its caption below the fold, which is what
+       "the image is not centred" looked like. minmax(0, 1fr) rather than 1fr
+       so the track may also shrink below its content. */
+    grid-template-rows: minmax(0, 1fr);
+    background: var(--color-surface);
   }
 
   /* Hidden by default; shown only while a hand is actually moving. */
@@ -505,7 +513,15 @@
     position: relative;
     display: grid;
     place-items: center;
+    /* The same definite row as .wall, one level down, for the same reason:
+       .slide asks for `height: 100%` and an auto row gives it nothing to be a
+       percentage OF. Fixing only the outer grid moves the overflow here. */
+    grid-template-rows: minmax(0, 1fr);
     min-width: 0;
+    /* The companion to min-width above, and load-bearing for the same reason:
+       a grid item's floor is its content, so without this the stage refuses to
+       shrink and hands the overflow straight back. */
+    min-height: 0;
     padding: 2.5vh 2vw;
   }
 
@@ -528,8 +544,15 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 72%;
-    flex: 0 0 auto;
+    /* Whatever the caption leaves, not a fixed 72%: 72% plus a long message and
+       the gap adds up to more than the slide, and the photo goes off the screen
+       again by another route. It still reserves the space before the bytes
+       arrive — that is what `flex: 1 1 auto` on the only growing item means —
+       so the anti-lurch property the fixed height was there for is kept.
+       `min-height: 0` is what lets it give way: an undecoded <img> asks for its
+       intrinsic size, and a flex item's floor is its content. */
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .photo {
@@ -549,17 +572,24 @@
   }
 
   .caption {
-    max-width: min(40ch, 90%);
+    max-width: 90%;
     text-align: center;
     flex: 0 0 auto;
   }
 
+  /* The measure belongs HERE, not on .caption. `ch` is a unit of the element's
+     OWN font, and .caption inherits the page's 16px while this line renders at
+     up to 3.4rem — so 40ch there measured 384px, about six words, and the
+     caption grew into a tall narrow column that squeezed the photo beside it
+     down to a quarter of the stage. On .message it means what it says: forty
+     characters of the display face. */
   .message {
     font-family: var(--font-display), serif;
     font-size: clamp(1.5rem, 3.4vw, 3.4rem);
     line-height: 1.25;
-    color: white;
-    margin: 0;
+    color: var(--color-ink);
+    max-width: 40ch;
+    margin: 0 auto;
     text-wrap: balance;
   }
 
@@ -572,13 +602,13 @@
   .names {
     font-family: var(--font-script), cursive;
     font-size: clamp(1.1rem, 2vw, 2.2rem);
-    color: color-mix(in oklab, white 78%, transparent);
+    color: var(--color-ink-muted);
     margin: 0.5em 0 0;
   }
 
   .names {
     font-size: clamp(2rem, 6vw, 5rem);
-    color: white;
+    color: var(--color-ink);
   }
 
   .rail {
@@ -587,8 +617,8 @@
     gap: 0.6rem;
     overflow-y: auto;
     padding: 1.2rem 1rem;
-    border-inline-start: 1px solid color-mix(in oklab, white 12%, transparent);
-    background: color-mix(in oklab, white 4%, transparent);
+    border-inline-start: 1px solid var(--color-line);
+    background: var(--color-surface-alt);
     scrollbar-width: none;
   }
   .rail::-webkit-scrollbar {
@@ -598,20 +628,34 @@
   .line {
     font-size: clamp(0.8rem, 1.05vw, 1.1rem);
     line-height: 1.45;
-    color: color-mix(in oklab, white 72%, transparent);
+    color: var(--color-ink-muted);
+  }
+
+  /* Guest text, both places it lands. A pasted link is one word with no break
+     opportunity in it, and nothing else here constrains it: on the stage the
+     message pushes the slide wider than the screen, and in the rail the line
+     runs off the right edge — a grid item's floor is its own content in both
+     cases, so neither track can hold it back. */
+  .caption,
+  .line {
+    overflow-wrap: anywhere;
   }
 
   /* The one currently on the stage, so the rail doubles as a position marker. */
   .line.live {
-    color: white;
+    color: var(--color-ink-body);
   }
+  /* The ink gold, not the field gold: the rail is paper now, and --color-gold
+     is the variant measured against surface-alt — which is exactly the ground
+     it lands on here. --color-gold-soft is for the night field and would be
+     2.3:1 on this one. */
   .line.live .who {
-    color: var(--color-gold-soft, #e8c98a);
+    color: var(--color-gold);
   }
 
   .who {
     font-weight: 600;
-    color: color-mix(in oklab, white 92%, transparent);
+    color: var(--color-ink);
   }
   .who::after {
     content: ' ';
@@ -631,7 +675,7 @@
     width: 0.4rem;
     height: 0.4rem;
     border-radius: 50%;
-    background: color-mix(in oklab, white 25%, transparent);
+    background: color-mix(in oklab, var(--color-ink) 25%, transparent);
   }
 
   /* Two dots rather than one that changes colour: they are independent facts
