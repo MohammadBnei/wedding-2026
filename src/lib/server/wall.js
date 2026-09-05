@@ -191,6 +191,44 @@ export async function setPinned(id) {
 }
 
 /**
+ * Is the projector held where it is?
+ *
+ * A separate read rather than a column on pinnedId()'s SELECT: that query JOINs
+ * wall_post and returns NO ROW AT ALL when nothing is pinned, so `paused` would
+ * come back undefined in the ordinary case.
+ *
+ * dbOr takes a THUNK and postgres.js hands back a RowList, so both halves of
+ * this matter: `dbOr(false, sql`...`)` throws "run is not a function" and pause
+ * silently never works, while returning the RowList unwrapped is a truthy
+ * `[{paused: false}]` that would freeze the wall permanently.
+ *
+ * Falling back to false is the safe direction. An unreachable database must not
+ * stop the projector — a wall that keeps cycling is the failure everyone can
+ * live with, a wall stuck on one slide all evening is not.
+ */
+export async function isPaused() {
+  const rows = await dbOr([], () => sql`SELECT paused FROM wall_control WHERE id = 1`);
+  return Boolean(rows[0]?.paused);
+}
+
+/**
+ * Stop or start the projector.
+ *
+ * Bare `sql`, never dbOr, for the same reason as setPinned(): an admin who
+ * pressed Stop and was told it worked while the wall kept cycling is being lied
+ * to in front of a room.
+ *
+ * Deliberately does NOT touch `updated_at`. That column is the PIN's release
+ * clock — pinnedId()'s NOT EXISTS compares it against decided_at — so bumping it
+ * here would silently release whatever post a human had put on the wall.
+ *
+ * @param {boolean} paused
+ */
+export async function setPaused(paused) {
+  await sql`UPDATE wall_control SET paused = ${paused} WHERE id = 1`;
+}
+
+/**
  * Every post, for /admin — pending first, then newest.
  *
  * Deliberately NOT filtered to "decided recently". It was, on a six-hour window,

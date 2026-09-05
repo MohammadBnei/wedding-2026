@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { mergeWindow, pickNext, SLIDE_MS, POLL_MS } from '$lib/wall.js';
+  import { heldIndex, mergeWindow, pickNext, SLIDE_MS, POLL_MS } from '$lib/wall.js';
   import { dirOf, SHARED } from '$lib/content/wedding.js';
 
   let { data } = $props();
@@ -11,6 +11,48 @@
   // would otherwise throw on `.length` and wipe the page to nothing.
   let items = $state(data.items ?? []);
   let pinned = $state(data.pinned ?? null);
+  /**
+   * /admin pressed Stop. Unlike a pin this names no post — it means "hold
+   * whatever is up, whatever arrives" — and unlike a pin it does not release
+   * itself when the next post is approved. That is the whole difference: a pin
+   * is "show this one", a stop is for the speeches.
+   */
+  let paused = $state(data.paused ?? false);
+  /**
+   * The post the stop is holding.
+   *
+   * `paused` alone is the guard — every writer of `i` checks it — and this is
+   * only what stops the held slide DRIFTING. The window is sorted by created_at,
+   * so a post arriving or being taken down during a stop changes which post
+   * lives at any given index, and a wall frozen "by index" would quietly show a
+   * different photo. Frozen by id, it cannot.
+   *
+   * Captured in the poll below rather than in an $effect: an effect that reads
+   * and writes this would loop.
+   *
+   * Mirrored to localStorage, and restored on mount, because a projector browser
+   * DOES get reloaded — a laptop wakes, a tab is restored, someone presses F5
+   * because the screen "looks stuck". Without that, a reload during a stop comes
+   * back holding whatever is newest, which after a few minutes of a busy room is
+   * a photo nobody chose. Per-projector and client-side for the same reason
+   * `seen` is: the server knows the wall is stopped, it cannot know which slide
+   * this particular screen was on.
+   * @type {string | null}
+   */
+  let frozenId = $state(null);
+  const FROZEN_KEY = 'wall-frozen';
+
+  /** @param {string | null} id */
+  function remember(id) {
+    frozenId = id;
+    try {
+      if (id) localStorage.setItem(FROZEN_KEY, id);
+      else localStorage.removeItem(FROZEN_KEY);
+    } catch {
+      // Storage disabled or full. The hold still works for this page view; only
+      // surviving a reload is lost, and that is not worth a black screen.
+    }
+  }
   let i = $state(0);
   let online = $state(true);
 
@@ -57,12 +99,14 @@
   /** @type {HTMLImageElement | undefined} */
   let imgEl = $state();
 
-  // When /admin has pinned a post, that IS the stage and the timer stands down.
-  // Otherwise the index cycles. Falling back to the index when the pinned id is
-  // not in the window matters: a pinned post that gets taken down must release
-  // the wall rather than freeze it on something that no longer exists.
-  const pinnedIndex = $derived(pinned ? items.findIndex((x) => x.id === pinned) : -1);
-  const at = $derived(pinnedIndex >= 0 ? pinnedIndex : i % Math.max(items.length, 1));
+  // When /admin has pinned a post or stopped the wall, that IS the stage and the
+  // timer stands down. Otherwise the index cycles. Falling back to the index when
+  // neither id is in the window matters: a pinned post that gets taken down must
+  // release the wall rather than freeze it on something that no longer exists.
+  // The pin-vs-stop precedence and the fall-through live in heldIndex(), in
+  // $lib/wall.js, where bun test can reach them.
+  const held = $derived(heldIndex(items, pinned, frozenId));
+  const at = $derived(held >= 0 ? held : i % Math.max(items.length, 1));
 
   const nextIndex = () => pickNext(items, seen, at);
   const current = $derived(items[at] ?? null);
@@ -147,11 +191,30 @@
     // most likely failure of the evening.
     navigator.wakeLock?.request('screen').catch(() => {});
 
+    // Restore the held slide BEFORE the first poll, so a reload during a stop
+    // comes back where it was rather than on whatever is newest. Only while
+    // stopped: a leftover id from an earlier stop must not hold a running wall,
+    // and resuming clears the key anyway.
+    if (paused) {
+      try {
+        frozenId = localStorage.getItem(FROZEN_KEY);
+      } catch {
+        frozenId = null;
+      }
+    }
+
     // Every timer body is wrapped. An unhandled throw in either of these stops
     // the interval for good and freezes the wall on one frame — which looks
     // deliberate, so nobody reports it, and nothing else recovers it.
     const poll = setInterval(async () => {
       try {
+        // Read BEFORE anything below reassigns `items`. `current` is a $derived
+        // over `items`, and Svelte recomputes a dirty derived synchronously on
+        // read — so taken after the merge this is the post the wall is about to
+        // move to, not the one the room is looking at. That is the difference
+        // between stopping on the photo you meant and stopping on the one that
+        // arrived a moment ago.
+        const onScreen = current?.id ?? null;
         const res = await fetch('/api/wall');
         if (!res.ok) throw new Error(String(res.status));
         const body = await res.json();
@@ -160,14 +223,23 @@
         // Forget ids that have aged out of the window, so `seen` cannot grow
         // without bound over an eight-hour evening.
         seen = seen.filter((id) => merged.items.some((x) => x.id === id));
-        if (merged.fresh.length && !body.pinned) {
+        if (merged.fresh.length && !body.pinned && !body.paused) {
           // Something new arrived: show it now rather than at the end of the
           // current cycle. A guest who just posted gets to watch it go up, which
-          // is the moment this whole feature exists for. Not while pinned — a
-          // human has taken the wheel.
+          // is the moment this whole feature exists for. Not while pinned or
+          // stopped — a human has taken the wheel. This is the SECOND of the two
+          // writers of `i`, and leaving it ungated is how a stopped wall jumps to
+          // a new photo while /admin still reads "Stopped".
           i = nextIndex();
         }
         pinned = body.pinned ?? null;
+        paused = Boolean(body.paused);
+        // Not a rising edge (`paused && !wasPaused`). On a reload during a stop
+        // the very first poll already sees paused, so a rising edge would never
+        // fire and the projector would come back cycling from index 0 — held in
+        // /admin's eyes and moving on the wall.
+        if (paused && frozenId === null) remember(onScreen);
+        if (!paused && frozenId !== null) remember(null);
         online = true;
       } catch {
         // Change NOTHING. The buffer keeps cycling what it already has, so a
@@ -179,7 +251,7 @@
 
     const advance = setInterval(() => {
       try {
-        if (!pinned && items.length) i = nextIndex();
+        if (!pinned && !paused && items.length) i = nextIndex();
       } catch {
         /* never let the cycle die */
       }
@@ -195,6 +267,14 @@
    * The emergency control. Someone standing beside the laptop gets a bad photo
    * off the screen with one keypress — no phone, no authentik, no queue. Taking
    * it down permanently, or pinning the stage, is /admin's job.
+   *
+   * Deliberately still works while the wall is STOPPED, and clears the freeze as
+   * it goes. A keypress means a human is standing at the laptop, and they should
+   * outrank a button pressed in another room — otherwise a bad photo frozen on
+   * the wall can only be cleared by finding whoever has the admin phone. The
+   * advance timer stays stood down either way: stopped means "does not move on
+   * its own", not "cannot be moved".
+   */
   /**
    * The pointer starts hidden and appears on movement, then hides again.
    *
@@ -216,10 +296,15 @@
   function onKey(e) {
     if (e.key === 'ArrowRight' || e.key === ' ') {
       e.preventDefault();
+      // Clear the freeze first: `at` reads through heldIndex, so moving `i`
+      // while a frozen id still resolves would do nothing at all.
+      remember(null);
       if (items.length) i = nextIndex();
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      if (items.length) i = (at - 1 + items.length) % items.length;
+      const from = at;
+      remember(null);
+      if (items.length) i = (from - 1 + items.length) % items.length;
     }
   }
 </script>
@@ -285,6 +370,14 @@
     <!-- Deliberately tiny and dim. It is for whoever walks past the laptop, not
          for the room, and it must never look like an error message on a wall. -->
     <span class="offline" aria-hidden="true"></span>
+  {/if}
+
+  {#if paused}
+    <!-- Same reader, same restraint as the dot above: without it, someone stops
+         the wall from another room and the person at the laptop has no way to
+         tell a deliberate hold from a frozen browser. Offset so the two can be
+         up at once. -->
+    <span class="held" aria-hidden="true"></span>
   {/if}
 </div>
 
@@ -429,7 +522,8 @@
     opacity: 0.5;
   }
 
-  .offline {
+  .offline,
+  .held {
     position: fixed;
     bottom: 0.6rem;
     inset-inline-end: 0.6rem;
@@ -437,6 +531,14 @@
     height: 0.4rem;
     border-radius: 50%;
     background: color-mix(in oklab, white 25%, transparent);
+  }
+
+  /* Two dots rather than one that changes colour: they are independent facts
+     and can both be true. A stopped wall that has also lost the network is the
+     one combination where the stop cannot be lifted, so it is worth being able
+     to see it. */
+  .held {
+    inset-inline-end: 1.4rem;
   }
 
   @keyframes fade {

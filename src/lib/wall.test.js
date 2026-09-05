@@ -5,6 +5,7 @@ import {
   parseVerdict,
   mergeWindow,
   pickNext,
+  heldIndex,
   moderationPrompt,
   SLIDE_MS,
   POLL_MS,
@@ -244,4 +245,37 @@ describe('moderationPrompt', () => {
     // because it cannot read Persian would silently bin a whole family.
     expect(moderationPrompt({ hasImage: false })).toContain('NOT a reason');
   });
+});
+
+// --- heldIndex --------------------------------------------------------------
+// The projector's two ways of standing still. Every case here is one the wall
+// actually reaches on the night, and the last two are the ones that decide
+// whether "Stopped" on a phone means anything on the screen.
+
+const WINDOW = [{ id: 'c' }, { id: 'b' }, { id: 'a' }];
+
+test('heldIndex: nothing held means keep cycling', () => {
+  expect(heldIndex(WINDOW, null, null)).toBe(-1);
+  expect(heldIndex(WINDOW, undefined, undefined)).toBe(-1);
+  expect(heldIndex([], null, null)).toBe(-1);
+});
+
+test('heldIndex: a pin wins', () => {
+  expect(heldIndex(WINDOW, 'b', null)).toBe(1);
+  // ...even over a freeze, because "show this one" is the more specific ask.
+  expect(heldIndex(WINDOW, 'b', 'a')).toBe(1);
+});
+
+test('heldIndex: a freeze holds when nothing is pinned', () => {
+  expect(heldIndex(WINDOW, null, 'a')).toBe(2);
+});
+
+test('heldIndex: a pin that is gone falls through to the freeze, not to cycling', () => {
+  // The pinned post was taken down or aged out. A stopped wall must not start
+  // moving again just because the pin evaporated.
+  expect(heldIndex(WINDOW, 'gone', 'c')).toBe(0);
+});
+
+test('heldIndex: both gone means cycle, rather than an index nothing lives at', () => {
+  expect(heldIndex(WINDOW, 'gone', 'also-gone')).toBe(-1);
 });
