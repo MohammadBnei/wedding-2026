@@ -17,12 +17,24 @@ export async function handle({ event, resolve }) {
 
   const { cookies } = event;
 
+  // Wall images are public, immutable bytes with no visitor in them, and they
+  // are the one thing on this site fetched over and over — forty of them, all
+  // evening, by a projector on venue wifi.
+  //
+  // Minting the cookie on those responses was quietly expensive: a response
+  // carrying Set-Cookie is never cached by Cloudflare (confirmed live —
+  // cf-cache-status: BYPASS), and SvelteKit drops the Cache-Control we set on
+  // it too. So every slide came off the home uplink, and the browser cache the
+  // offline replay leans on was not being populated either. Skipping the cookie
+  // for this one path costs nothing: nothing downstream of it reads visitorId.
+  const isWallImage = event.url.pathname.startsWith('/api/wall/img/');
+
   // A stable anonymous id. Everything this visitor owns — their chat transcript
   // and their RSVP — is keyed on it, which is what makes a refresh keep state.
   let visitorId = cookies.get('wid');
   if (!visitorId || !/^[0-9a-f-]{36}$/i.test(visitorId)) {
     visitorId = crypto.randomUUID();
-    cookies.set('wid', visitorId, cookieOpts(event.url, { httpOnly: true }));
+    if (!isWallImage) cookies.set('wid', visitorId, cookieOpts(event.url, { httpOnly: true }));
   }
 
   // Language: an explicit choice wins, then the browser's preference, then French.
