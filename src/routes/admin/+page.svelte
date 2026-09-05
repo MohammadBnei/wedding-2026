@@ -36,6 +36,15 @@
    */
   let wall = $state(data.wall ?? []);
   let pinned = $state(data.pinned ?? null);
+  /**
+   * Is the projector stopped?
+   *
+   * $state seeded from `data` once, like `pinned` and `wall` above — so it has
+   * to be set in BOTH the poll below and the button's enhance callback. Without
+   * the second, pressing Stop leaves this header unchanged for up to eight
+   * seconds, on the one control whose entire job is being unmissable.
+   */
+  let paused = $state(data.paused ?? false);
   let queueOnline = $state(true);
 
   /**
@@ -74,6 +83,7 @@
         const body = await res.json();
         wall = body.wall ?? [];
         pinned = body.pinned ?? null;
+        paused = Boolean(body.paused);
         queueOnline = true;
       } catch {
         // Keep showing the last good list rather than blanking it — a dbOr blip
@@ -374,9 +384,17 @@
       than taking space from the text.
     -->
     <section class="mt-12">
-      <div class="flex items-baseline justify-between gap-4">
+      <!-- flex-wrap: this row carries three controls on a 393px screen now, and
+           `/admin never scrolls sideways` is an e2e gate. -->
+      <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
         <h2 class="text-body font-light text-ink">
           Wall
+          {#if paused}
+            <!-- Loud by this page's standards, because the failure it prevents is
+                 someone walking away believing the projector is held when it is
+                 not. -->
+            <span class="caps text-micro text-accent">· stopped</span>
+          {/if}
           {#if !queueOnline}
             <!-- Small and quiet: for whoever is holding the phone, not a banner.
                  The list below is the last good one, not an empty one. -->
@@ -385,6 +403,38 @@
             </span>
           {/if}
         </h2>
+
+        <!--
+          The global stop. Not the same control as the pin beside it: a pin says
+          "show this one" and releases itself the moment the next post is
+          approved, which is exactly wrong for the speeches. This holds until
+          someone presses Start.
+
+          No confirm(): it is instantly reversible, and it is pressed in a hurry.
+          It does NOT close the composer — guests keep posting, their photos keep
+          being screened, and the wall shows them all when it starts again.
+        -->
+        <form
+          method="POST"
+          action="?/wallAction"
+          use:enhance={() => async ({ result, update }) => {
+            // Set here as well as in the poll, so the label flips on the press
+            // rather than up to eight seconds later. Only on success — a 503
+            // means the wall did not change and neither should this.
+            if (result?.type === 'success') paused = !paused;
+            await update();
+          }}
+        >
+          <input type="hidden" name="do" value={paused ? 'resume' : 'pause'} />
+          <button
+            class="cursor-pointer border border-line px-2 py-1 text-xs {paused
+              ? 'text-primary'
+              : 'text-accent'} hover:bg-primary-faint/40"
+          >
+            {paused ? 'Start the wall' : 'Stop the wall'}
+          </button>
+        </form>
+
         {#if pinned}
           <form method="POST" action="?/wallAction" class="flex items-baseline gap-2" use:enhance>
             <span class="caps text-micro text-ink-muted">Holding until the next post</span>

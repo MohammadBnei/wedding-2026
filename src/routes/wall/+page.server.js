@@ -1,4 +1,4 @@
-import { liveWindow, toItem, pinnedId } from '$lib/server/wall.js';
+import { liveWindow, toItem, pinnedId, isPaused } from '$lib/server/wall.js';
 
 /**
  * Seed the projector server-side so the first paint already has content — and
@@ -8,6 +8,6 @@ import { liveWindow, toItem, pinnedId } from '$lib/server/wall.js';
  * whether it works.
  */
 export async function load() {
-  const [rows, pinned] = await Promise.all([liveWindow(), pinnedId()]);
-  return { items: rows.map(toItem), pinned };
+  const [rows, pinned, paused] = await Promise.all([liveWindow(), pinnedId(), isPaused()]);
+  return { items: rows.map(toItem), pinned, paused };
 }

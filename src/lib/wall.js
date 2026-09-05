@@ -172,6 +172,39 @@ export function mergeWindow(current, incoming) {
 }
 
 /**
+ * Which slide the stage is HELD on, or -1 for "cycle normally".
+ *
+ * Two things can hold the wall, and they are not the same thing:
+ *
+ *   `pinned`   — /admin said "show this one". Releases itself the moment the
+ *                next post is approved (the NOT EXISTS in pinnedId()).
+ *   `frozenId` — /admin pressed Stop. Holds until someone presses Start, and
+ *                exists only so that a post arriving during the stop cannot
+ *                shift the held slide out from under the index: the window is
+ *                sorted by created_at, so both an insertion AND a removal change
+ *                which post lives at any given position.
+ *
+ * Falls THROUGH from pinned to frozen rather than short-circuiting on it. A
+ * pinned post that has been taken down or aged out of the window must not strand
+ * a stopped wall on nothing — the code this replaces already fell back to the
+ * cycling index for exactly that reason.
+ *
+ * Lives here, next to pickNext, for the reason stated at the top of this file:
+ * `bun test` cannot import a .svelte file, and this is now the piece of
+ * projector logic that nobody can check by looking at it.
+ *
+ * @param {{id: string}[]} items  the window, newest first
+ * @param {string | null | undefined} pinned
+ * @param {string | null | undefined} frozenId
+ * @returns {number} index into `items`, or -1 to keep cycling
+ */
+export function heldIndex(items, pinned, frozenId) {
+  const p = pinned ? items.findIndex((x) => x.id === pinned) : -1;
+  if (p >= 0) return p;
+  return frozenId ? items.findIndex((x) => x.id === frozenId) : -1;
+}
+
+/**
  * Which post the stage should show next.
  *
  * Unseen always wins, oldest first — every post gets its own moment, so a guest
