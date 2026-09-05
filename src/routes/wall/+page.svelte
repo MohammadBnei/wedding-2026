@@ -492,7 +492,11 @@
     position: fixed;
     inset: 0;
     display: grid;
-    grid-template-columns: 1fr min(22rem, 26vw);
+    /* Two thirds to the stage, one to the rail. Deliberately a ratio and not
+       `min(22rem, …)`: the rail is read from across a room, so it has to scale
+       with the projection rather than settle at a fixed 22rem that is a
+       generous panel on a laptop and a thin strip on a three-metre screen. */
+    grid-template-columns: 2fr 1fr;
     /* Definite, not the implicit `auto`. Everything below sizes itself as a
        percentage of this row, and against an auto row those percentages have
        nothing to resolve to — so the frame fell back to the photo's INTRINSIC
