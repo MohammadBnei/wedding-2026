@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.18.0](https://github.com/MohammadBnei/wedding-2026/compare/0.17.1...0.18.0) (2026-09-05)
+
+
+### Features
+
+* **admin:** every song in one list, with the YouTube link already found ([#37](https://github.com/MohammadBnei/wedding-2026/issues/37)) ([04bfc03](https://github.com/MohammadBnei/wedding-2026/commit/04bfc032782e244a047804f27fb2adc500e22e3c)), closes [#39](https://github.com/MohammadBnei/wedding-2026/issues/39)
+
 ## [0.17.1](https://github.com/MohammadBnei/wedding-2026/compare/0.17.0...0.17.1) (2026-09-05)
 
 
