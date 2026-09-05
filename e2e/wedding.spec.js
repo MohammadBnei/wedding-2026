@@ -950,9 +950,34 @@ test('the wall page carries no site chrome', async ({ page }) => {
  * the admin side, which cheerfully reads "stopped" either way.
  */
 
-/** @param {import('@playwright/test').APIRequestContext} request */
+/**
+ * POST once, and once more if the CONNECTION dropped.
+ *
+ * These are the only tests that drive the admin API while a projector page is
+ * open and polling every 3s, and on a two-core CI runner that combination gets
+ * an occasional `read ECONNRESET` out of the dev server's keep-alive — seen once
+ * on the mobile project, never reproduced locally. A dropped socket is not the
+ * thing under test, and swallowing it here is narrow: only a THROW is retried, a
+ * real non-2xx still fails the assertion at the call site.
+ *
+ * @param {import('@playwright/test').APIRequestContext} request
+ * @param {string} url
+ * @param {Record<string, string>} form
+ */
+async function postOnce(request, url, form) {
+  try {
+    return await request.post(url, { multipart: form });
+  } catch {
+    return await request.post(url, { multipart: form });
+  }
+}
+
+/**
+ * @param {import('@playwright/test').APIRequestContext} request
+ * @param {string} action
+ */
 async function setWall(request, action) {
-  const res = await request.post('/admin?/wallAction', { multipart: { do: action } });
+  const res = await postOnce(request, '/admin?/wallAction', { do: action });
   expect(res.ok()).toBeTruthy();
 }
 
@@ -1006,8 +1031,9 @@ test('a stopped wall holds its slide, and starting it releases it', async ({ pag
     // own "something new arrived, show it now" jump, separate from the advance
     // timer, and gating only the timer leaves a stopped wall moving while
     // /admin still reads "stopped".
-    const fresh = await request.post('/?/wall', {
-      multipart: { author: 'Pendant la pause', note: 'ceci ne doit pas passer a l ecran' }
+    const fresh = await postOnce(request, '/?/wall', {
+      author: 'Pendant la pause',
+      note: 'ceci ne doit pas passer a l ecran'
     });
     expect(fresh.ok()).toBeTruthy();
     await page.waitForTimeout(5_000);
@@ -1049,14 +1075,15 @@ test('a stopped wall stays stopped when the held post is taken down', async ({ p
 
     // Take it down. The wall MUST move off it — showing a deleted post is the
     // one thing worse than drifting — and must then hold wherever it lands.
-    await request.post('/admin?/wallAction', { multipart: { id: held.id, do: 'delete' } });
+    await postOnce(request, '/admin?/wallAction', { id: held.id, do: 'delete' });
     await page.waitForTimeout(4_000);
     const after = await caption.textContent();
     expect(after).not.toBe(shown);
 
     // ...and now the actual assertion: a new post must not move it again.
-    const fresh = await request.post('/?/wall', {
-      multipart: { author: 'Apres suppression', note: 'le mur doit rester immobile' }
+    const fresh = await postOnce(request, '/?/wall', {
+      author: 'Apres suppression',
+      note: 'le mur doit rester immobile'
     });
     expect(fresh.ok()).toBeTruthy();
     await page.waitForTimeout(6_000);
