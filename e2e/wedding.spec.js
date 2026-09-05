@@ -776,6 +776,47 @@ test('the projector keeps cycling when the poll starts failing', async ({ page, 
   expect(text.length).toBeGreaterThan(0);
 });
 
+test('the wall remembers your name, so a second post costs one field', async ({ page }) => {
+  await visit(page, '/');
+  await page.evaluate(() => localStorage.removeItem('wall-author'));
+  await openWall(page);
+  const form = page.locator('dialog[open] form[action="?/wall"]');
+  await form.locator('input[name="author"]').fill('Mémoire');
+  await form.getByLabel(/message/i).fill('Première carte');
+  await form.getByRole('button', { name: /mur/i }).click();
+
+  // A successful post replaces the form with the "waiting to appear" panel, so
+  // there is no field left to read here — assert the panel, then the storage.
+  await expect(page.locator('dialog[open]')).toContainText(/apparaîtra/i);
+  expect(await page.evaluate(() => localStorage.getItem('wall-author'))).toBe('Mémoire');
+
+  // The point: a fresh load, on the same phone, during the dancing. The name
+  // comes back; the message deliberately does not.
+  await visit(page, '/');
+  await openWall(page);
+  const again = page.locator('dialog[open] form[action="?/wall"]');
+  await expect(again.locator('input[name="author"]')).toHaveValue('Mémoire');
+  await expect(again.getByLabel(/message/i)).toHaveValue('');
+});
+
+test('a name is only remembered once a post actually lands', async ({ page }) => {
+  // Remembering on submit rather than on success would hand back a name the
+  // server refused, pre-filled and pre-broken, with no clue why.
+  //
+  // The rejection used here is a signed post with neither message nor photo,
+  // because it is one a guest can actually reach: an over-long name cannot be
+  // typed at all — maxlength truncates it in the browser first.
+  await visit(page, '/');
+  await page.evaluate(() => localStorage.removeItem('wall-author'));
+  await openWall(page);
+  const form = page.locator('dialog[open] form[action="?/wall"]');
+  await form.locator('input[name="author"]').fill('Rejeté');
+  await form.getByRole('button', { name: /mur/i }).click();
+
+  await expect(form.getByText(/mot ou ajoutez une photo/i)).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('wall-author'))).toBeNull();
+});
+
 test('wall images set no cookie, so they can actually be cached', async ({ request }) => {
   // A response carrying Set-Cookie is never cached by Cloudflare — confirmed
   // live, cf-cache-status: BYPASS — and SvelteKit drops the Cache-Control we set
