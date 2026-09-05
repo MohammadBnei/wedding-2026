@@ -263,6 +263,20 @@ export function migrate() {
       console.error('[db] wall_control.paused unavailable — the stop button will not work:',
         err instanceof Error ? err.message : err);
     }
+    // How long the projector holds each slide. Its OWN try/catch for the same
+    // reason `paused` above has one, and not sharing that one either: two
+    // buttons that fail independently should fail independently. The DEFAULT
+    // matches SLIDE_MS in $lib/wall.js, which is also what slideMs() falls back
+    // to — so a database that refuses this line loses the control, not the wall.
+    // No CHECK on the range: clampSlideMs guards both the write and the read
+    // (see server/wall.js), and a constraint here could only turn a bad value
+    // into a 503 on a button rather than into eight seconds.
+    try {
+      await sql`ALTER TABLE wall_control ADD COLUMN IF NOT EXISTS slide_ms int NOT NULL DEFAULT 8000`;
+    } catch (err) {
+      console.error('[db] wall_control.slide_ms unavailable — the wall runs at the default 8s:',
+        err instanceof Error ? err.message : err);
+    }
     up = true;
   })()
     .catch((err) => {

@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { liveWindow, toItem, pinnedId, isPaused } from '$lib/server/wall.js';
+import { liveWindow, toItem, pinnedId, isPaused, slideMs } from '$lib/server/wall.js';
 
 /**
  * What the projector polls, every POLL_MS.
@@ -17,7 +17,12 @@ import { liveWindow, toItem, pinnedId, isPaused } from '$lib/server/wall.js';
  * walked.
  */
 export async function GET() {
-  const [rows, pinned, paused] = await Promise.all([liveWindow(), pinnedId(), isPaused()]);
+  const [rows, pinned, paused, slide] = await Promise.all([
+    liveWindow(),
+    pinnedId(),
+    isPaused(),
+    slideMs()
+  ]);
   const items = rows.map(toItem);
   return json(
     // `pinned` is the carousel control on /admin. When it is set the projector
@@ -27,7 +32,10 @@ export async function GET() {
     // `paused` is /admin's stop button. Unlike `pinned` it names no post: the
     // projector holds whatever it already has up, so a post approved during the
     // stop is merged into the window but does not take the screen.
-    { items, pinned, paused },
+    // `slideMs` is /admin's seconds-per-slide. Sent on every poll like the two
+    // above, and for the same reason: the projector has no push channel, so a
+    // change made on a phone has to arrive on the next tick or not at all.
+    { items, pinned, paused, slideMs: slide },
     {
       headers: {
         // Never cache the index itself — it is the freshness signal. The IMAGES

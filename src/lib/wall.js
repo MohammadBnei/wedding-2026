@@ -39,10 +39,65 @@ export const PER_VISITOR_HOURLY = 30;
 export const GLOBAL_DAILY = 800;
 /** How many approved posts the projector holds and cycles. */
 export const WALL_WINDOW = 40;
-/** How long each slide is up. */
+/**
+ * How long each slide is up, by DEFAULT.
+ *
+ * Still the number to change for a fresh database — it is the column default in
+ * migrate() and the fallback for every value that cannot be read — but it is no
+ * longer what the projector obeys. /admin writes wall_control.slide_ms and the
+ * wall picks it up on its next poll, so at a party the answer to "these are too
+ * slow" is a button, not a deploy.
+ */
 export const SLIDE_MS = 8_000;
+/**
+ * The range /admin may set.
+ *
+ * The floor is the one that matters. A slide changing faster than the room can
+ * read it is merely bad, but a 0 or a negative reaching the projector is a
+ * ticker that fires every turn of the event loop — a busy loop on the one
+ * machine in the building that nobody is logged into, and the wall goes down
+ * with the CPU. The ceiling only stops a mis-typed 600 holding the stage for ten
+ * minutes and looking exactly like a stop button that will not release.
+ */
+export const MIN_SLIDE_MS = 2_000;
+export const MAX_SLIDE_MS = 60_000;
+/** What /admin offers as buttons, in seconds. Every one must survive
+ * clampSlideMs untouched — see the test. */
+export const SLIDE_PRESETS = [5, 8, 15, 30];
 /** How often the projector asks for new posts. */
 export const POLL_MS = 3_000;
+/**
+ * How often the projector checks whether the current slide is due.
+ *
+ * Not how long a slide lasts — see the comment on the ticker in
+ * routes/wall/+page.svelte for why the advance is a clock check rather than a
+ * setInterval at SLIDE_MS. It only has to be well under MIN_SLIDE_MS, or the
+ * shortest setting would quietly round up to two ticks.
+ */
+export const TICK_MS = 250;
+
+/**
+ * Force a duration into the allowed range.
+ *
+ * Applied on the WRITE, so the database can never hold a value that would peg
+ * the projector, and AGAIN on the READ, so a row written by hand — or by an
+ * older build, or before the column existed — cannot either. Two clamps for one
+ * value is deliberate: the projector is unattended, and the failure is not a
+ * wrong number on a screen but a laptop at 100% CPU in a corner of the room.
+ *
+ * Anything that is not a number becomes the DEFAULT rather than an error. The
+ * only writer is a preset button on /admin, and the honest failure for a display
+ * surface is "eight seconds", never "no timer at all".
+ *
+ * @param {unknown} raw milliseconds
+ * @returns {number} milliseconds, MIN_SLIDE_MS..MAX_SLIDE_MS
+ */
+export function clampSlideMs(raw) {
+  if (raw === null || raw === undefined) return SLIDE_MS;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return SLIDE_MS;
+  return Math.min(MAX_SLIDE_MS, Math.max(MIN_SLIDE_MS, Math.round(n)));
+}
 
 /** @typedef {'pending'|'approved'|'rejected'} WallStatus */
 

@@ -1,6 +1,6 @@
 import { dev } from '$app/environment';
 import { error, json } from '@sveltejs/kit';
-import { reviewQueue, pinnedId, isPaused } from '$lib/server/wall.js';
+import { reviewQueue, pinnedId, isPaused, slideMs } from '$lib/server/wall.js';
 
 /**
  * The wall queue, as JSON, for /admin to poll.
@@ -21,11 +21,17 @@ import { reviewQueue, pinnedId, isPaused } from '$lib/server/wall.js';
 export async function GET({ request }) {
   if (!dev && !request.headers.get('x-authentik-username')) error(404);
 
-  const [wall, pinned, paused] = await Promise.all([reviewQueue(), pinnedId(), isPaused()]);
+  const [wall, pinned, paused, slide] = await Promise.all([
+    reviewQueue(),
+    pinnedId(),
+    isPaused(),
+    slideMs()
+  ]);
   return json(
     {
       pinned,
       paused,
+      slideMs: slide,
       wall: wall.map((r) => ({
         id: r.id,
         author: r.author,

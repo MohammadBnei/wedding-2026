@@ -2,7 +2,16 @@ import { dev } from '$app/environment';
 import { error, fail } from '@sveltejs/kit';
 import { sql, dbUp, dbOr } from '$lib/server/db.js';
 import { summarise } from '$lib/rsvp-summary.js';
-import { reviewQueue, pinnedId, setPinned, setPaused, isPaused, softDelete } from '$lib/server/wall.js';
+import {
+  reviewQueue,
+  pinnedId,
+  setPinned,
+  setPaused,
+  isPaused,
+  slideMs,
+  setSlideMs,
+  softDelete
+} from '$lib/server/wall.js';
 
 /**
  * NOT the security boundary. `default/authentik-forwardauth` on the
@@ -65,7 +74,12 @@ export async function load({ request }) {
 
   // The wall queue. Photos fail closed — an unreachable model leaves them
   // pending — so this list is the only way one ever reaches the projector.
-  const [wall, pinned, paused] = await Promise.all([reviewQueue(), pinnedId(), isPaused()]);
+  const [wall, pinned, paused, slide] = await Promise.all([
+    reviewQueue(),
+    pinnedId(),
+    isPaused(),
+    slideMs()
+  ]);
 
   return {
     ...summarise(rows),
@@ -73,6 +87,7 @@ export async function load({ request }) {
     who: who || (dev ? 'dev' : ''),
     pinned,
     paused,
+    slideMs: slide,
     wall: wall.map((r) => ({
       id: r.id,
       author: r.author,
@@ -179,6 +194,29 @@ export const actions = {
         return fail(503, { message: 'Postgres refused it — the wall did not change.' });
       }
       return { wall: act };
+    }
+
+    // Also above the uuid check, for the same reason `pause` is: a duration
+    // names no post either.
+    if (act === 'slide') {
+      // Seconds on the wire, because that is what the buttons say and what an
+      // admin would type into a curl. Rejected rather than guessed at when it is
+      // missing or unreadable: the only caller is the four-button form below, so
+      // anything else is a broken client, and silently choosing a number for it
+      // would hide that. The RANGE is not this function's business — setSlideMs
+      // clamps, and it clamps on the read as well, because a 0 reaching the
+      // projector is a busy loop on an unattended laptop.
+      const secs = Number(form.get('seconds'));
+      if (!Number.isFinite(secs) || secs <= 0) return fail(400, { message: 'No duration given.' });
+      try {
+        // The STORED value comes back, not the requested one, so a clamped
+        // 90 shows up on the page as 60 rather than as a setting that did not
+        // take.
+        return { wall: 'slide', slideMs: await setSlideMs(secs * 1000) };
+      } catch (err) {
+        console.error('[admin] wall slide failed:', err instanceof Error ? err.message : err);
+        return fail(503, { message: 'Postgres refused it — the wall did not change.' });
+      }
     }
 
     if (!/^[0-9a-f-]{36}$/i.test(id)) return fail(400, { message: 'No post given.' });

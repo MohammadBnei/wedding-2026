@@ -1,4 +1,4 @@
-import { liveWindow, toItem, pinnedId, isPaused } from '$lib/server/wall.js';
+import { liveWindow, toItem, pinnedId, isPaused, slideMs } from '$lib/server/wall.js';
 
 /**
  * Seed the projector server-side so the first paint already has content — and
@@ -8,6 +8,14 @@ import { liveWindow, toItem, pinnedId, isPaused } from '$lib/server/wall.js';
  * whether it works.
  */
 export async function load() {
-  const [rows, pinned, paused] = await Promise.all([liveWindow(), pinnedId(), isPaused()]);
-  return { items: rows.map(toItem), pinned, paused };
+  const [rows, pinned, paused, slide] = await Promise.all([
+    liveWindow(),
+    pinnedId(),
+    isPaused(),
+    slideMs()
+  ]);
+  // `slideMs` rides along so the first slide after a reload already lasts what
+  // /admin set. Without it the projector runs one slide at the default and then
+  // corrects itself, which reads as the setting having been forgotten.
+  return { items: rows.map(toItem), pinned, paused, slideMs: slide };
 }

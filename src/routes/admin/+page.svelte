@@ -22,6 +22,7 @@
   import { enhance } from '$app/forms';
   import { INPUT_BASE } from '$lib/components/Field.svelte';
   import { view } from '$lib/rsvp-view.js';
+  import { clampSlideMs, SLIDE_PRESETS } from '$lib/wall.js';
 
   let { data, form } = $props();
 
@@ -45,6 +46,16 @@
    * seconds, on the one control whose entire job is being unmissable.
    */
   let paused = $state(data.paused ?? false);
+  /**
+   * Seconds per slide, in milliseconds, as the projector will run them.
+   *
+   * Set in three places for the same reason `paused` is set in two: `load`, the
+   * poll, and the button's enhance callback. The last is what makes the pressed
+   * preset light up on the press rather than up to eight seconds later — on a
+   * control someone is pressing precisely because they think the wall is not
+   * listening to them.
+   */
+  let slideMs = $state(clampSlideMs(data.slideMs));
   let queueOnline = $state(true);
 
   /**
@@ -84,6 +95,7 @@
         wall = body.wall ?? [];
         pinned = body.pinned ?? null;
         paused = Boolean(body.paused);
+        slideMs = clampSlideMs(body.slideMs);
         queueOnline = true;
       } catch {
         // Keep showing the last good list rather than blanking it — a dbOr blip
@@ -433,6 +445,56 @@
           >
             {paused ? 'Start the wall' : 'Stop the wall'}
           </button>
+        </form>
+
+        <!--
+          Seconds per slide. Presets rather than a number input, and one <form>
+          with four submit buttons rather than four forms: this is pressed with a
+          thumb, standing up, in a dark room. A spinner or a text field wants two
+          hands and a keyboard, and every duration anyone has ever actually
+          wanted at a party is one of these four.
+
+          A submit button carries its own name and value, so the four need no
+          hidden inputs and no JavaScript to tell them apart.
+
+          The current value is stated in words next to them, not implied by the
+          highlight alone: a value set outside the presets — by an earlier build,
+          or by hand — would otherwise leave four unlit buttons and no way to
+          tell what the wall is doing.
+
+          Sits beside Stop deliberately. They are the two halves of one question,
+          "what is the wall doing right now", and splitting them across the page
+          is how someone changes the rate while it is stopped and concludes the
+          setting does not work.
+        -->
+        <form
+          method="POST"
+          action="?/wallAction"
+          class="flex items-baseline gap-1"
+          use:enhance={() => async ({ result, update }) => {
+            // The STORED value, which is the clamped one — so asking for
+            // something out of range shows what actually happened rather than
+            // what was pressed. Only on success, like the stop button: a 503
+            // means the wall did not change and neither should this.
+            if (result?.type === 'success') slideMs = clampSlideMs(result.data?.slideMs);
+            await update();
+          }}
+        >
+          <input type="hidden" name="do" value="slide" />
+          <span class="caps text-micro text-ink-muted">{Math.round(slideMs / 1000)}s per slide</span>
+          {#each SLIDE_PRESETS as s (s)}
+            <button
+              name="seconds"
+              value={s}
+              aria-pressed={slideMs === s * 1000}
+              class="cursor-pointer border px-2 py-1 text-xs hover:bg-primary-faint/40 {slideMs ===
+              s * 1000
+                ? 'border-primary text-primary'
+                : 'border-line text-ink-muted'}"
+            >
+              {s}s
+            </button>
+          {/each}
         </form>
 
         {#if pinned}

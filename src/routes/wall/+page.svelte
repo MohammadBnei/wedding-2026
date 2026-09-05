@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { heldIndex, mergeWindow, pickNext, SLIDE_MS, POLL_MS } from '$lib/wall.js';
+  import { heldIndex, mergeWindow, pickNext, clampSlideMs, POLL_MS, TICK_MS } from '$lib/wall.js';
   import { dirOf, SHARED } from '$lib/content/wedding.js';
 
   let { data } = $props();
@@ -18,6 +18,15 @@
    * is "show this one", a stop is for the speeches.
    */
   let paused = $state(data.paused ?? false);
+  /**
+   * Seconds per slide, as /admin set it, in milliseconds.
+   *
+   * Clamped here as well as on the server. This is a display surface that runs
+   * unattended for eight hours: a 0 arriving from a stale pod, a hand-edited row
+   * or a half-finished deploy would turn the ticker below into a busy loop, and
+   * the CPU it pegs belongs to the laptop driving the projector.
+   */
+  let slideMs = $state(clampSlideMs(data.slideMs));
   /**
    * The post the stop is holding.
    *
@@ -55,6 +64,31 @@
   }
   let i = $state(0);
   let online = $state(true);
+
+  /**
+   * When the slide on screen started its turn.
+   *
+   * Deliberately NOT $state: nothing renders it, and making it reactive would
+   * dirty every $derived that reads through `i` four times a second.
+   */
+  let lastAdvance = Date.now();
+
+  /**
+   * Move the stage, and restart the clock.
+   *
+   * Every writer of `i` goes through here — the ticker, the poll's "something
+   * new arrived" jump, and both emergency keys. That is the whole point: with
+   * the clock reset in the ticker only, a photo the poll jumped to or a slide
+   * someone skipped to by hand would inherit whatever was left of the previous
+   * turn and could be gone in a fraction of a second, right after a guest
+   * watched their own post go up.
+   *
+   * @param {number} n index into `items`
+   */
+  function go(n) {
+    i = n;
+    lastAdvance = Date.now();
+  }
 
   /**
    * Ids this projector has already put on the stage.
@@ -236,10 +270,14 @@
           // stopped — a human has taken the wheel. This is the SECOND of the two
           // writers of `i`, and leaving it ungated is how a stopped wall jumps to
           // a new photo while /admin still reads "Stopped".
-          i = nextIndex();
+          go(nextIndex());
         }
         pinned = body.pinned ?? null;
         paused = Boolean(body.paused);
+        // Picked up on every poll, which is what makes a change on /admin reach
+        // a projector nobody is standing next to — see the ticker below for why
+        // that is enough to change the RATE and not just the number.
+        slideMs = clampSlideMs(body.slideMs);
         // Guarded on the RESOLVED index, not on `frozenId === null`. Three
         // reasons, and only the first is obvious:
         //
@@ -268,13 +306,45 @@
       }
     }, POLL_MS);
 
+    /**
+     * The advance. A short fixed ticker that asks "is this slide's turn up?",
+     * NOT a setInterval at slideMs.
+     *
+     * The rate has to be changeable from a phone while the projector runs, and
+     * an interval created once in onMount cannot change — its period is fixed
+     * at creation, so the value would only take effect on a reload, which is the
+     * whole reason this control is not a one-line change. The obvious repair,
+     * clearing and recreating the interval, has a trap that is quiet and fatal:
+     * recreate it on every poll and the timer restarts every 3s, which is less
+     * than every setting on offer, so the wall never advances again — and it
+     * looks exactly like a wall someone stopped.
+     *
+     * A clock check has no such state to get wrong. It is also drift-free: the
+     * deadline is computed from when the slide actually started, so a tick the
+     * browser delayed (a background tab, a GC pause, a laptop waking up) does
+     * not accumulate into slides that are slowly wrong.
+     *
+     * Wrapped like the poll: an unhandled throw kills the interval for good and
+     * freezes the wall on one frame, which looks deliberate, so nobody reports
+     * it.
+     */
     const advance = setInterval(() => {
       try {
-        if (!pinned && !paused && items.length) i = nextIndex();
+        // A pin or a stop holds the stage, exactly as before — the timer stands
+        // down rather than the index being clamped. Keeping the clock level with
+        // now while held matters: without it, a stop lifted after ten minutes
+        // has a deadline ten minutes in the past and the wall jumps the instant
+        // someone presses Start, instead of giving the slide they were looking
+        // at a full turn.
+        if (pinned || paused || !items.length) {
+          lastAdvance = Date.now();
+          return;
+        }
+        if (Date.now() - lastAdvance >= slideMs) go(nextIndex());
       } catch {
         /* never let the cycle die */
       }
-    }, SLIDE_MS);
+    }, TICK_MS);
 
     return () => {
       clearInterval(poll);
@@ -330,12 +400,12 @@
       e.preventDefault();
       const from = at;
       remember(null);
-      if (items.length) i = pickNext(items, seen, from);
+      if (items.length) go(pickNext(items, seen, from));
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       const from = at;
       remember(null);
-      if (items.length) i = (from - 1 + items.length) % items.length;
+      if (items.length) go((from - 1 + items.length) % items.length);
     }
   }
 </script>
