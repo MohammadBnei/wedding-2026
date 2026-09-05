@@ -209,6 +209,19 @@ export function migrate() {
     // wall composer is now the only thing a guest fills in on the day. Additive
     // ALTER because CREATE TABLE IF NOT EXISTS is a no-op on an existing table.
     await sql`ALTER TABLE wall_post ADD COLUMN IF NOT EXISTS song text`;
+    // The original's media type, so the projector can be served the untouched
+    // upload with an honest Content-Type. VALIDATED AGAINST AN ALLOWLIST BEFORE
+    // IT IS STORED (see routes/+page.server.js) — the value arrives in the
+    // client's multipart part header and is therefore attacker-controlled; a
+    // guest who could get `text/html` in here would have script execution on
+    // wedding.bnei.dev, on the same origin as /admin.
+    await sql`ALTER TABLE wall_post ADD COLUMN IF NOT EXISTS orig_type text`;
+    // Soft delete, matching rsvp.deleted_at. Deliberately NOT a DELETE: the row
+    // is what records that a photo was binned, so the kept original does not
+    // travel silently into the ente archive — and a mis-tap at 1am stays
+    // recoverable. Also keeps the ponytail note at the top of this function
+    // from coming due, since nothing here is destructive.
+    await sql`ALTER TABLE wall_post ADD COLUMN IF NOT EXISTS deleted_at timestamptz`;
     await sql`
       CREATE INDEX IF NOT EXISTS wall_post_live_idx
         ON wall_post (created_at DESC) WHERE status = 'approved'`;

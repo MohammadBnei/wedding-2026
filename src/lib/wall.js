@@ -47,6 +47,38 @@ export const POLL_MS = 3_000;
 /** @typedef {'pending'|'approved'|'rejected'} WallStatus */
 
 /**
+ * Media types we are willing to store AND hand back.
+ *
+ * The projector is served the untouched original, so its Content-Type comes
+ * from a value the client supplied in its multipart part header — settable to
+ * anything with one curl flag. An unvalidated `text/html` there is stored XSS
+ * on the origin that also hosts /admin, and `nosniff` makes that worse rather
+ * than better: it tells the browser to trust the declared type instead of
+ * sniffing the bytes.
+ *
+ * So the allowlist is applied at INSERT, not at serve time. Anything else is
+ * stored as image/jpeg, which is what the derivative always is.
+ */
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+/**
+ * @param {string | null | undefined} raw a client-supplied media type
+ * @returns {string} one of ALLOWED_IMAGE_TYPES, never anything else
+ */
+export function safeImageType(raw) {
+  const t = String(raw ?? '').trim().toLowerCase();
+  return ALLOWED_IMAGE_TYPES.includes(t) ? t : 'image/jpeg';
+}
+
+/**
+ * A lowercase v4-shaped uuid, anchored. Deliberately NOT case-insensitive:
+ * Postgres compares uuids case-insensitively, so `<UUID>.JPG` and `<uuid>.jpg`
+ * are the same object but different CDN cache keys — an amplifier once the
+ * objects are full-resolution rather than 200KB.
+ */
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
  * Turn a model's reply into a status.
  *
  * Returns 'approved' ONLY on a literal `ok === true`. Everything else —

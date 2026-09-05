@@ -19,7 +19,7 @@ export async function liveWindow() {
     SELECT id, author, message, lang, created_at,
            (wall_key IS NOT NULL) AS photo
       FROM wall_post
-     WHERE status = 'approved'
+     WHERE status = 'approved' AND deleted_at IS NULL
      ORDER BY created_at DESC
      LIMIT ${WALL_WINDOW}`);
 }
@@ -68,15 +68,16 @@ export async function checkWallLimit(visitorId) {
  * invisible until they spend the evening watching for a card that never comes.
  *
  * @param {{visitorId: string, author: string|null, message: string|null,
- *          song: string|null, origKey: string|null, wallKey: string|null,
- *          lang: string}} p
+ *          song: string|null, origKey: string|null, origType: string|null,
+ *          wallKey: string|null, lang: string}} p
  * @returns {Promise<string>} the new id
  */
 export async function insertPost(p) {
   const [row] = await sql`
-    INSERT INTO wall_post (visitor_id, author, message, song, orig_key, wall_key, lang)
+    INSERT INTO wall_post
+      (visitor_id, author, message, song, orig_key, orig_type, wall_key, lang)
     VALUES (${p.visitorId}, ${p.author}, ${p.message}, ${p.song},
-            ${p.origKey}, ${p.wallKey}, ${p.lang})
+            ${p.origKey}, ${p.origType}, ${p.wallKey}, ${p.lang})
     RETURNING id`;
   return row.id;
 }
@@ -100,9 +101,46 @@ export async function setStatus(id, status, verdict) {
  */
 export async function wallKeyFor(id, { approvedOnly = true } = {}) {
   const rows = await dbOr([], () => approvedOnly
-    ? sql`SELECT wall_key FROM wall_post WHERE id = ${id} AND status = 'approved'`
-    : sql`SELECT wall_key FROM wall_post WHERE id = ${id}`);
+    ? sql`SELECT wall_key FROM wall_post
+           WHERE id = ${id} AND status = 'approved' AND deleted_at IS NULL`
+    : sql`SELECT wall_key FROM wall_post WHERE id = ${id} AND deleted_at IS NULL`);
   return rows[0]?.wall_key ?? null;
+}
+
+/**
+ * The ORIGINAL upload for a post, plus its media type — what the projector is
+ * served, because the 1080p derivative is upscaled (Bun.Image's `fit: inside`
+ * enlarges) and re-compressed, which looks soft on a three-metre screen.
+ *
+ * Falls back to the derivative when there is no original, so a missing blob
+ * degrades to a worse picture rather than to a blank slide.
+ *
+ * `orig_type` was validated against an allowlist before it was stored — see
+ * safeImageType in $lib/wall.js for why that is not optional.
+ *
+ * @param {string} id
+ * @returns {Promise<{key: string, type: string} | null>}
+ */
+export async function originalFor(id) {
+  const rows = await dbOr([], () => sql`
+    SELECT orig_key, wall_key, orig_type
+      FROM wall_post
+     WHERE id = ${id} AND status = 'approved' AND deleted_at IS NULL`);
+  const r = rows[0];
+  if (!r) return null;
+  const key = r.orig_key ?? r.wall_key;
+  if (!key) return null;
+  // A row from before orig_type existed, or one falling back to the derivative,
+  // is a JPEG either way.
+  return { key, type: r.orig_key && r.orig_type ? r.orig_type : 'image/jpeg' };
+}
+
+/**
+ * Soft delete. The row survives so the binned photo is marked, not forgotten.
+ * @param {string} id
+ */
+export async function softDelete(id) {
+  await sql`UPDATE wall_post SET deleted_at = now() WHERE id = ${id}`;
 }
 
 /**
@@ -116,7 +154,8 @@ export async function pinnedId() {
   const rows = await dbOr([], () => sql`
     SELECT c.current_id
       FROM wall_control c
-      JOIN wall_post p ON p.id = c.current_id AND p.status = 'approved'
+      JOIN wall_post p
+        ON p.id = c.current_id AND p.status = 'approved' AND p.deleted_at IS NULL
      WHERE c.id = 1
        AND NOT EXISTS (
          SELECT 1 FROM wall_post n
@@ -167,6 +206,7 @@ export async function reviewQueue() {
     SELECT id, author, message, song, lang, status, verdict, created_at,
            (wall_key IS NOT NULL) AS photo
       FROM wall_post
+     WHERE deleted_at IS NULL
      ORDER BY (status = 'pending') DESC, created_at DESC
      LIMIT 200`);
 }

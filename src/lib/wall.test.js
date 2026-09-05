@@ -1,5 +1,7 @@
 import { test, expect, describe } from 'bun:test';
 import {
+  safeImageType,
+  UUID_RE,
   parseVerdict,
   mergeWindow,
   pickNext,
@@ -117,6 +119,54 @@ describe('mergeWindow', () => {
   test('an empty incoming window empties the screen', () => {
     // Only ever called on SUCCESS, so this really does mean "nothing approved".
     expect(mergeWindow([item('a', '2026-09-05T18:00:00.000Z')], []).items).toEqual([]);
+  });
+});
+
+describe('safeImageType', () => {
+  test('passes the three types we actually store', () => {
+    for (const t of ['image/jpeg', 'image/png', 'image/webp']) {
+      expect(safeImageType(t)).toBe(t);
+    }
+  });
+
+  test('collapses anything else to image/jpeg', () => {
+    // THE security test. `photo.type` is the client's own multipart part
+    // header — `curl -F 'photo=@x.gif;type=text/html'` sets it to anything —
+    // and the projector is served the original, so this value would otherwise
+    // become a Content-Type on the same origin as /admin. `nosniff` makes an
+    // unvalidated one WORSE, not better: it tells the browser to trust the
+    // declared type instead of sniffing the bytes.
+    for (const evil of [
+      'text/html',
+      'image/svg+xml', // the one image format that can carry script
+      'application/javascript',
+      'text/html; charset=utf-8',
+      'image/jpeg\r\nX-Injected: 1', // header splitting
+      '',
+      null,
+      undefined,
+      'IMAGE/JPEG ' // trimmed + lowercased, so this one is fine
+    ]) {
+      const out = safeImageType(evil);
+      expect(['image/jpeg', 'image/png', 'image/webp']).toContain(out);
+    }
+    expect(safeImageType('text/html')).toBe('image/jpeg');
+    expect(safeImageType('image/svg+xml')).toBe('image/jpeg');
+    expect(safeImageType('  IMAGE/JPEG  ')).toBe('image/jpeg');
+  });
+});
+
+describe('UUID_RE', () => {
+  test('accepts a lowercase uuid and nothing else', () => {
+    expect(UUID_RE.test('0c274d71-c4d2-4b82-bd11-f08b2daa4bab')).toBe(true);
+    // Uppercase is the SAME row to Postgres but a DIFFERENT CDN cache key, so
+    // accepting it turns one photo into many multi-megabyte origin fetches.
+    expect(UUID_RE.test('0C274D71-C4D2-4B82-BD11-F08B2DAA4BAB')).toBe(false);
+    // 36 dashes matched the old `[0-9a-f-]{36}` and reached Postgres, which
+    // raised 22P02 on every request and flooded the logs.
+    expect(UUID_RE.test('-'.repeat(36))).toBe(false);
+    expect(UUID_RE.test('../../etc/passwd')).toBe(false);
+    expect(UUID_RE.test('')).toBe(false);
   });
 });
 

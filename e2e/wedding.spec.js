@@ -835,6 +835,32 @@ test('wall images set no cookie, so they can actually be cached', async ({ reque
   expect(page.headers()['set-cookie']).toBeDefined();
 });
 
+test('the projector image route is hardened and serves the original', async ({ request }) => {
+  // The projector is served the untouched upload, so this route hands back
+  // bytes we did not re-encode. These are the guards that make that acceptable.
+  const bogus = '00000000-0000-0000-0000-000000000000';
+
+  // The plain `<id>.jpg` URL is gone. It is cached browser-side and edge-side as
+  // the OLD derivative under `immutable, max-age=604800`, so reusing it would
+  // have kept serving the soft picture for a week and the change would have
+  // looked like it did nothing.
+  expect((await request.get(`/api/wall/img/${bogus}.jpg`)).status()).toBe(404);
+
+  // Uppercase is the same row to Postgres but a different CDN cache key — at
+  // full resolution that turns one photo into repeated multi-megabyte fetches
+  // off a residential uplink.
+  expect((await request.get(`/api/wall/img/${bogus.toUpperCase()}-o.jpg`)).status()).toBe(404);
+
+  // 36 dashes matched the old `[0-9a-f-]{36}` and reached Postgres, which
+  // raised 22P02 on every request.
+  expect((await request.get(`/api/wall/img/${'-'.repeat(36)}-o.jpg`)).status()).toBe(404);
+
+  // Still no Set-Cookie, or Cloudflare will not cache it (cf-cache-status:
+  // BYPASS) and the projector loses the disk cache its offline replay needs.
+  const res = await request.get(`/api/wall/img/${bogus}-o.jpg`);
+  expect(res.headers()['set-cookie']).toBeUndefined();
+});
+
 test('the wall page carries no site chrome', async ({ page }) => {
   // It is a display surface. A language switcher or a nav bar on a projector is
   // a thing a guest will eventually walk up and press.
