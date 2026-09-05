@@ -1114,3 +1114,78 @@ test('the emergency keys still work while the wall is stopped', async ({ page, r
     }).toPass({ timeout: 5_000 });
   });
 });
+
+/**
+ * Seconds per slide.
+ *
+ * Worth an e2e and not only the clamp's unit test, because the half that breaks
+ * is the half no pure function can see: the advance used to be a setInterval
+ * created once in onMount, so a new value reached the projector on every poll
+ * and changed nothing at all until someone reloaded it. That failure looks
+ * identical to a working wall until you stand in front of it with a stopwatch.
+ *
+ * @param {import('@playwright/test').APIRequestContext} request
+ * @param {number} seconds
+ */
+async function setSlide(request, seconds) {
+  const res = await request.post('/admin?/wallAction', {
+    multipart: { do: 'slide', seconds: String(seconds) }
+  });
+  expect(res.ok()).toBeTruthy();
+}
+
+test('the slide duration is set from /admin and takes effect without a reload', async ({
+  page,
+  request
+}) => {
+  test.setTimeout(60_000);
+  await cyclingWall(page, request);
+  const caption = page.locator('.slide');
+  await expect(caption).toBeVisible();
+
+  try {
+    // The page above was loaded while the wall was on the 8s default, so its
+    // ticker is already running. Everything below happens with no reload.
+    await setSlide(request, 3);
+    await expect(async () => {
+      expect((await (await request.get('/api/wall')).json()).slideMs).toBe(3_000);
+    }).toPass({ timeout: 5_000 });
+
+    const before = await caption.textContent();
+    // One poll to collect the new value (3s), then one short slide. Comfortably
+    // under the 8s the projector was mounted with — which is the whole
+    // assertion: at 8s this caption would still be the same one.
+    await expect(async () => {
+      expect(await caption.textContent()).not.toBe(before);
+    }).toPass({ timeout: 6_000 });
+
+    // ...and the two controls do not fight. A stop still holds, at any rate —
+    // the rate change must not have resurrected a writer of `i` that the stop
+    // does not gate.
+    await whileStopped(request, async () => {
+      await page.waitForTimeout(1_500);
+      const held = (await caption.textContent()) ?? '';
+      await page.waitForTimeout(6_000);
+      expect(await caption.textContent()).toBe(held);
+    });
+  } finally {
+    // Global state in wall_control, like the stop: left at 3s it would make
+    // every timing assertion in the tests above fail for a reason none of them
+    // is about.
+    await setSlide(request, 8);
+  }
+});
+
+test('a duration the projector could not survive never reaches it', async ({ request }) => {
+  // setInterval-style busy loop protection, at the boundary rather than only in
+  // the unit test: this is the one value in the app that can take an unattended
+  // laptop to 100% CPU, and /admin is a form anyone with the session can curl.
+  try {
+    await setSlide(request, 0.001);
+    expect((await (await request.get('/api/wall')).json()).slideMs).toBe(2_000);
+    await setSlide(request, 9_999);
+    expect((await (await request.get('/api/wall')).json()).slideMs).toBe(60_000);
+  } finally {
+    await setSlide(request, 8);
+  }
+});

@@ -1,5 +1,5 @@
 import { sql, dbOr } from './db.js';
-import { PER_VISITOR_HOURLY, GLOBAL_DAILY, WALL_WINDOW } from '$lib/wall.js';
+import { PER_VISITOR_HOURLY, GLOBAL_DAILY, WALL_WINDOW, clampSlideMs } from '$lib/wall.js';
 
 /**
  * The wall's data layer. Mirrors the shape of server/chat.js.
@@ -226,6 +226,49 @@ export async function isPaused() {
  */
 export async function setPaused(paused) {
   await sql`UPDATE wall_control SET paused = ${paused} WHERE id = 1`;
+}
+
+/**
+ * How long the projector holds each slide, in milliseconds.
+ *
+ * Clamped on the way OUT as well as on the way in. The column has a DEFAULT but
+ * deliberately no CHECK, so a row edited by hand — or one from a build before
+ * setSlideMs existed — can still hold a 0, and a 0 reaching the projector is a
+ * ticker firing every turn of its event loop: a busy loop on an unattended
+ * laptop, which takes the wall down with the CPU.
+ *
+ * Same shape as isPaused() above, and same reason for the [] fallback: dbOr
+ * takes a THUNK and postgres.js hands back a RowList, so the row has to be
+ * unwrapped. Falling back to the default is the safe direction — an unreachable
+ * database, or a deploy that ran before the ALTER, must leave the wall cycling
+ * at eight seconds rather than not at all.
+ */
+export async function slideMs() {
+  const rows = await dbOr([], () => sql`SELECT slide_ms FROM wall_control WHERE id = 1`);
+  return clampSlideMs(rows[0]?.slide_ms);
+}
+
+/**
+ * Set how long each slide is up.
+ *
+ * Bare `sql`, never dbOr, for the same reason as setPinned() and setPaused(): an
+ * admin told the wall now runs at five seconds while it keeps running at eight
+ * is being lied to about the thing they are standing in front of.
+ *
+ * Deliberately does NOT touch `updated_at` — that column is the PIN's release
+ * clock (see pinnedId()'s NOT EXISTS), so bumping it here would silently drop
+ * whatever post a human had put on the wall, from a control that has nothing to
+ * do with pinning.
+ *
+ * @param {number} ms
+ * @returns {Promise<number>} what was actually stored, after clamping — the
+ *   caller hands this back to /admin so the button row shows the real value
+ *   rather than the one that was asked for.
+ */
+export async function setSlideMs(ms) {
+  const v = clampSlideMs(ms);
+  await sql`UPDATE wall_control SET slide_ms = ${v} WHERE id = 1`;
+  return v;
 }
 
 /**

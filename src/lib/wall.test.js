@@ -7,6 +7,11 @@ import {
   pickNext,
   heldIndex,
   moderationPrompt,
+  clampSlideMs,
+  MIN_SLIDE_MS,
+  MAX_SLIDE_MS,
+  SLIDE_PRESETS,
+  TICK_MS,
   SLIDE_MS,
   POLL_MS,
   WALL_WINDOW
@@ -278,4 +283,61 @@ test('heldIndex: a pin that is gone falls through to the freeze, not to cycling'
 
 test('heldIndex: both gone means cycle, rather than an index nothing lives at', () => {
   expect(heldIndex(WINDOW, 'gone', 'also-gone')).toBe(-1);
+});
+
+// --- clampSlideMs -----------------------------------------------------------
+// The projector runs unattended on a laptop in the corner of a room. Everything
+// here is about the values that must never reach its ticker, not about tidiness.
+
+test('clampSlideMs: an ordinary value passes through', () => {
+  expect(clampSlideMs(5_000)).toBe(5_000);
+  expect(clampSlideMs(MIN_SLIDE_MS)).toBe(MIN_SLIDE_MS);
+  expect(clampSlideMs(MAX_SLIDE_MS)).toBe(MAX_SLIDE_MS);
+});
+
+test('clampSlideMs: zero and negatives can never get out', () => {
+  // The one that matters. A 0 reaching the projector is a ticker that fires
+  // every turn of the event loop — a busy loop on the machine driving the wall.
+  expect(clampSlideMs(0)).toBe(MIN_SLIDE_MS);
+  expect(clampSlideMs(-1)).toBe(MIN_SLIDE_MS);
+  expect(clampSlideMs(-999_999)).toBe(MIN_SLIDE_MS);
+  expect(clampSlideMs(1)).toBe(MIN_SLIDE_MS);
+});
+
+test('clampSlideMs: an absurd value is capped rather than refused', () => {
+  // A mis-typed 600 seconds must not look like a stop button nobody can release.
+  expect(clampSlideMs(3_600_000)).toBe(MAX_SLIDE_MS);
+  expect(clampSlideMs(Infinity)).toBe(SLIDE_MS);
+});
+
+test('clampSlideMs: anything unreadable falls back to the default, not to nothing', () => {
+  // A missing column, a stale pod that does not send the field, a hand-edited
+  // NULL. The honest failure for a display surface is eight seconds.
+  expect(clampSlideMs(undefined)).toBe(SLIDE_MS);
+  expect(clampSlideMs(null)).toBe(SLIDE_MS);
+  expect(clampSlideMs('nonsense')).toBe(SLIDE_MS);
+  expect(clampSlideMs(NaN)).toBe(SLIDE_MS);
+  expect(clampSlideMs({})).toBe(SLIDE_MS);
+  // Postgres hands an int back as a number, but a JSON round-trip through the
+  // poll could hand back a string, and dropping to 8s there would look like the
+  // setting silently reverting.
+  expect(clampSlideMs('5000')).toBe(5_000);
+});
+
+test('every /admin preset survives the clamp untouched', () => {
+  // A preset outside the range would set something other than what its label
+  // says, on the one control whose entire job is saying what the wall is doing.
+  for (const s of SLIDE_PRESETS) expect(clampSlideMs(s * 1_000)).toBe(s * 1_000);
+});
+
+test('the ticker is finer than the shortest slide it has to time', () => {
+  // The advance is a clock check on a fixed TICK_MS interval, so a tick as
+  // coarse as the floor would quietly run the shortest setting at two ticks —
+  // an admin pressing 5s and getting 10s, with nothing to see in the code.
+  expect(TICK_MS).toBeLessThan(MIN_SLIDE_MS / 4);
+});
+
+test('the default is a value /admin can actually set back', () => {
+  expect(clampSlideMs(SLIDE_MS)).toBe(SLIDE_MS);
+  expect(SLIDE_PRESETS).toContain(SLIDE_MS / 1_000);
 });
