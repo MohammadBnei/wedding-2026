@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.15.0](https://github.com/MohammadBnei/wedding-2026/compare/0.14.1...0.15.0) (2026-09-05)
+
+
+### Features
+
+* **wall:** remember the guest's name between posts ([#33](https://github.com/MohammadBnei/wedding-2026/issues/33)) ([0d22373](https://github.com/MohammadBnei/wedding-2026/commit/0d2237349230e23b78d9290e510da58db0bef1df))
+
 ## [0.14.1](https://github.com/MohammadBnei/wedding-2026/compare/0.14.0...0.14.1) (2026-09-05)
 
 
