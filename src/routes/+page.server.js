@@ -10,7 +10,8 @@ import {
 import { moderateInBackground } from '$lib/server/moderate.js';
 import { putObject, storageBroken } from '$lib/server/s3.js';
 import {
-  MAX_MESSAGE, MAX_AUTHOR, MAX_UPLOAD_BYTES, MAX_PIXELS, WALL_WIDTH, WALL_HEIGHT
+  MAX_MESSAGE, MAX_AUTHOR, MAX_UPLOAD_BYTES, MAX_PIXELS, WALL_WIDTH, WALL_HEIGHT,
+  safeImageType
 } from '$lib/wall.js';
 
 /** The kill switch. Flipped in Infisical, which has autoReload: true, so it
@@ -161,8 +162,12 @@ export const actions = {
 
     /** @type {Uint8Array | null} */
     let wallBytes = null;
+    /** @type {string | null} */
     let origKey = null;
+    /** @type {string | null} */
     let wallKey = null;
+    /** @type {string | null} */
+    let origType = null;
 
     if (hasPhoto) {
       // Misconfigured object storage (endpoint without credentials) refuses the
@@ -198,11 +203,16 @@ export const actions = {
         const id = crypto.randomUUID();
         origKey = `orig/${id}`;
         wallKey = `wall/${id}.jpg`;
-        // The original is written verbatim and is WRITE-ONLY: nothing in this
-        // app ever serves it, including /admin. It exists to be pulled into ente
-        // by hand after the event, which is what makes storing bytes we did not
-        // validate safe.
-        await putObject(origKey, raw, photo.type || 'application/octet-stream');
+        // The original IS served now — the projector gets it, because the
+        // derivative is upscaled and re-compressed and looks soft on a big
+        // screen. That makes `photo.type` dangerous: it comes from the client's
+        // own multipart part header, so a guest can set it to anything, and
+        // echoing it back as a Content-Type on this origin would be script
+        // execution on the same domain as /admin. safeImageType() collapses it
+        // to a three-entry allowlist here, at the point of storage, so no
+        // unvalidated string can ever reach a response header.
+        origType = safeImageType(photo.type);
+        await putObject(origKey, raw, origType);
         await putObject(wallKey, /** @type {Uint8Array} */ (wallBytes), 'image/jpeg');
       } catch (err) {
         console.error('[wall] store failed:', err instanceof Error ? err.message : err);
@@ -225,6 +235,7 @@ export const actions = {
         message: message || null,
         song,
         origKey,
+        origType,
         wallKey,
         lang: locals.lang
       });

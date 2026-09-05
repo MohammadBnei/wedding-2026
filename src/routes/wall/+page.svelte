@@ -35,6 +35,28 @@
    */
   let seen = $state([]);
 
+  /**
+   * The id whose bytes are actually on screen.
+   *
+   * The caption swaps the instant `current` changes, but the browser keeps
+   * painting the previously decoded bitmap until the new one arrives — which is
+   * how a new message appeared under someone else's photograph. The caption is
+   * held back until the image it belongs to has loaded.
+   *
+   * Deliberately NOT set from `onload`'s closure over `current`: the load event
+   * fires a task later, and a slide advance in between would label A's bitmap as
+   * B and reproduce the bug exactly. The id is read off the element instead.
+   *
+   * Deliberately NOT set from `onload` alone either: the page is server-rendered
+   * (`+layout.js` sets ssr = true) and images are `immutable`-cached, so on a
+   * reload the first image is usually complete BEFORE hydration attaches any
+   * listener — the event is already gone. Hence the `complete` check below.
+   * @type {string | null}
+   */
+  let loadedId = $state(null);
+  /** @type {HTMLImageElement | undefined} */
+  let imgEl = $state();
+
   // When /admin has pinned a post, that IS the stage and the timer stands down.
   // Otherwise the index cycles. Falling back to the index when the pinned id is
   // not in the window matters: a pinned post that gets taken down must release
@@ -44,13 +66,60 @@
 
   const nextIndex = () => pickNext(items, seen, at);
   const current = $derived(items[at] ?? null);
-  const nextItem = $derived(items.length > 1 ? items[(at + 1) % items.length] : null);
+  // Preload what the stage will ACTUALLY show next — pickNext, the same
+  // function the advance timer calls. `(at + 1) % length` warmed the next item
+  // by index, which is rarely the next item shown, so the image that mattered
+  // was never in cache. That gap was invisible at 200KB and is not at full
+  // resolution. The length guard stays: pickNext returns `at` itself when there
+  // is only one item, which would preload what is already on screen.
+  const nextItem = $derived(items.length > 1 ? (items[pickNext(items, seen, at)] ?? null) : null);
 
   /** @param {{id: string}} it */
-  const src = (it) => `/api/wall/img/${it.id}.jpg`;
+  const src = (it) => `/api/wall/img/${it.id}-o.jpg`;
+
+  /**
+   * The id the fired event BELONGS to, read off the element rather than closed
+   * over from `current`. The load event arrives a task after the fetch, and a
+   * slide advance in between would otherwise label the old bitmap as the new
+   * post — which is the bug this whole change exists to fix.
+   * @param {Event} e
+   */
+  const idOf = (e) => /** @type {HTMLImageElement} */ (e.currentTarget).dataset.id ?? null;
 
   /** @param {string | null} lang */
   const dirOfPost = (lang) => dirOf(/** @type {any} */ (lang) || 'fr');
+
+  // True once the CURRENT post's image is painted, or once we have given up on
+  // it. A text-only post is ready immediately.
+  const ready = $derived(!current?.photo || loadedId === current?.id);
+
+  /**
+   * Catch an image that finished before we could listen.
+   *
+   * `complete` is true for a cached or already-decoded image, and
+   * `naturalWidth > 0` distinguishes "loaded" from "failed". Without this the
+   * projector shows a caption over black for a whole slide on every reload —
+   * and reloading is what people do when the wall looks wrong.
+   */
+  $effect(() => {
+    const id = current?.id;
+    if (!id || !current?.photo) return;
+    if (imgEl?.complete && imgEl.naturalWidth > 0) loadedId = id;
+  });
+
+  /**
+   * Never let a slide stall. An image that 404s (a post taken down mid-cycle) or
+   * one the browser cannot decode never fires `load`, and while a post is PINNED
+   * the advance timer stands down — so without this the stage stays black
+   * indefinitely with no way out. Showing the caption alone is the honest
+   * fallback.
+   */
+  $effect(() => {
+    const id = current?.id;
+    if (!id || !current?.photo || loadedId === id) return;
+    const t = setTimeout(() => (loadedId = id), 2_000);
+    return () => clearTimeout(t);
+  });
 
   // Anything that reaches the stage counts as seen — including the one the
   // server pinned, so releasing a pin does not immediately replay it.
@@ -126,8 +195,24 @@
    * The emergency control. Someone standing beside the laptop gets a bad photo
    * off the screen with one keypress — no phone, no authentik, no queue. Taking
    * it down permanently, or pinning the stage, is /admin's job.
-   * @param {KeyboardEvent} e
+  /**
+   * The pointer starts hidden and appears on movement, then hides again.
+   *
+   * This order matters: "visible, then hide after N seconds" paints a cursor on
+   * the projection for N seconds after every reload, and a laptop with its lid
+   * shut never moves the mouse to trigger the hide. Starting hidden means the
+   * room never sees it unless a hand is actually on the trackpad.
    */
+  let pointerIdle = $state(true);
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let idleTimer;
+  function onMove() {
+    pointerIdle = false;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => (pointerIdle = true), 2_500);
+  }
+
+  /** @param {KeyboardEvent} e */
   function onKey(e) {
     if (e.key === 'ArrowRight' || e.key === ' ') {
       e.preventDefault();
@@ -139,14 +224,30 @@
   }
 </script>
 
-<svelte:window onkeydown={onKey} />
+<svelte:window onkeydown={onKey} onmousemove={onMove} />
 
-<div class="wall">
+<div class="wall" class:idle={pointerIdle}>
   <section class="stage">
     {#if current}
-      <article class="slide" class:with-photo={current.photo}>
+      <!-- `with-photo` follows READY, not `photo`: sizing the caption for a
+           photograph that never arrived leaves small text alone in a black
+           frame. -->
+      <article class="slide" class:with-photo={current.photo && ready}>
         {#if current.photo}
-          <img class="photo" src={src(current)} alt="" />
+          <!-- The frame holds its space whether or not the image has painted,
+               so the caption does not lurch upward and then back down on every
+               slide. -->
+          <div class="frame" class:ready>
+            <img
+              bind:this={imgEl}
+              class="photo"
+              src={src(current)}
+              data-id={current.id}
+              alt=""
+              onload={(e) => (loadedId = idOf(e))}
+              onerror={(e) => (loadedId = idOf(e))}
+            />
+          </div>
         {/if}
         {#if current.message || current.author}
           <!-- Below the photo, not over it. An overlay is unreadable on a light
@@ -199,6 +300,10 @@
     display: grid;
     grid-template-columns: 1fr min(22rem, 26vw);
     background: #000;
+  }
+
+  /* Hidden by default; shown only while a hand is actually moving. */
+  .wall.idle {
     cursor: none;
   }
 
@@ -221,13 +326,32 @@
     animation: fade 700ms ease-out;
   }
 
+  /* The frame reserves the photo's space before the bytes arrive. Without it an
+     undecoded <img> has no intrinsic size, the caption sits vertically centred,
+     and then jumps when the image lands — a visible lurch on every slide. */
+  .frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 72%;
+    flex: 0 0 auto;
+  }
+
   .photo {
-    /* Bounded so the caption below always has room — object-fit alone would let
-       a tall portrait photo push the text off the bottom of the screen. */
     max-width: 100%;
-    max-height: 72%;
+    max-height: 100%;
     object-fit: contain;
-    flex: 0 1 auto;
+    /* The original carries its EXIF orientation; only the derivative was
+       auto-oriented on the server. This is the browser default, stated rather
+       than relied upon. */
+    image-orientation: from-image;
+    opacity: 0;
+  }
+
+  .frame.ready .photo {
+    opacity: 1;
+    transition: opacity 260ms ease-out;
   }
 
   .caption {
@@ -322,6 +446,10 @@
 
   @media (prefers-reduced-motion: reduce) {
     .slide { animation: none; }
+    /* The fade in is motion too, and the file's rule is that motion lives
+       behind this guard. Snap it, do not remove it — the image must still
+       become visible. */
+    .frame.ready .photo { transition: none; }
   }
 
   /* A narrow window (someone checking it on a phone) drops the rail — at that

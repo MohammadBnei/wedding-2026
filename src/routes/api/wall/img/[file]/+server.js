@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { wallKeyFor } from '$lib/server/wall.js';
+import { originalFor } from '$lib/server/wall.js';
+import { UUID_RE } from '$lib/wall.js';
 import { getObject } from '$lib/server/s3.js';
 
 /**
@@ -16,18 +17,39 @@ import { getObject } from '$lib/server/s3.js';
  * a CORS request. Preload with `new Image().src`, never fetch(), or that stops
  * being true.
  *
- * Only ever serves the DERIVATIVE, and only for an APPROVED post. The original
- * is write-only — it exists to be pulled into ente by hand after the event, and
- * it is the one blob here that was never re-encoded by us.
+ * Serves the ORIGINAL upload, not the 1080p derivative: the derivative is
+ * produced by `resize(1920, 1080, { fit: 'inside' })`, and Bun.Image's `inside`
+ * ENLARGES — so a photo forwarded through a chat app arrives small and already
+ * lossy, gets upscaled, and is re-compressed at quality 82. On a three-metre
+ * screen that is visibly soft.
+ *
+ * This is a deliberate narrowing of the old invariant ("we only ever serve back
+ * bytes we encoded ourselves"). What still holds: `Bun.Image` decoded these
+ * bytes before they were stored, and it REJECTS SVG — the one image format that
+ * can carry script. What replaces the rest is the Content-Type allowlist applied
+ * at insert (`safeImageType`), because the type arrives in the client's own
+ * multipart header and `nosniff` makes an unvalidated one MORE dangerous, not
+ * less: it tells the browser to trust the declared type rather than sniff.
+ *
+ * The `-o` suffix is not cosmetic. The plain `<id>.jpg` URL is already cached,
+ * browser and edge, as the derivative under `immutable, max-age=604800` — so
+ * reusing it would keep serving the old picture for a week and the change would
+ * look like it had done nothing.
+ *
+ * Only ever an APPROVED, not-deleted post.
  */
 export async function GET({ params, setHeaders }) {
-  const m = /^([0-9a-f-]{36})\.jpg$/i.exec(params.file);
-  if (!m) error(404);
+  // Strictly lowercase, and no /i. Postgres compares uuids case-insensitively,
+  // so `<UUID>-o.JPG` is the same object as `<uuid>-o.jpg` but a DIFFERENT CDN
+  // cache key — which at full resolution turns a typo into repeated multi-MB
+  // fetches off a residential uplink.
+  const m = /^([0-9a-f-]{36})-o\.jpg$/.exec(params.file);
+  if (!m || !UUID_RE.test(m[1])) error(404);
 
-  const key = await wallKeyFor(m[1]);
-  if (!key) error(404); // not approved, no photo, or no such post — all the same to a stranger
+  const found = await originalFor(m[1]);
+  if (!found) error(404); // not approved, deleted, no photo, or no such post
 
-  const bytes = await getObject(key);
+  const bytes = await getObject(found.key);
   if (!bytes) error(404);
 
   setHeaders({
@@ -37,6 +59,6 @@ export async function GET({ params, setHeaders }) {
     'cache-control': 'public, max-age=604800, immutable'
   });
   return new Response(/** @type {BodyInit} */ (bytes), {
-    headers: { 'content-type': 'image/jpeg' }
+    headers: { 'content-type': found.type }
   });
 }
