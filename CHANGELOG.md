@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.19.0](https://github.com/MohammadBnei/wedding-2026/compare/0.18.0...0.19.0) (2026-09-05)
+
+
+### Features
+
+* **wall:** set seconds per slide from /admin, live ([#40](https://github.com/MohammadBnei/wedding-2026/issues/40)) ([c17cd6f](https://github.com/MohammadBnei/wedding-2026/commit/c17cd6fb658e39f6ac3fc22d0f4cfcaa030d0632)), closes [#37](https://github.com/MohammadBnei/wedding-2026/issues/37)
+
 # [0.18.0](https://github.com/MohammadBnei/wedding-2026/compare/0.17.1...0.18.0) (2026-09-05)
 
 
