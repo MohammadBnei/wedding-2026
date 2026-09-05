@@ -1025,6 +1025,45 @@ test('a stopped wall holds its slide, and starting it releases it', async ({ pag
   }).toPass({ timeout: 20_000 });
 });
 
+test('a stopped wall stays stopped when the held post is taken down', async ({ page, request }) => {
+  // The guard this covers is the difference between "stopped" and "drifting".
+  // If the held post leaves the window — deleted from /admin, or aged out past
+  // WALL_WINDOW — the frozen id stops resolving and `at` falls back to the
+  // cycling index. Because the window is sorted newest-first, every post that
+  // arrives after that shifts what lives at that index, so the wall moves while
+  // /admin still reads "stopped" and can never re-freeze on its own.
+  test.setTimeout(90_000);
+  await cyclingWall(page, request);
+
+  const caption = page.locator('.slide');
+  await expect(caption).toBeVisible();
+
+  await whileStopped(request, async () => {
+    await page.waitForTimeout(1_500);
+
+    // Which post is actually on screen? Match the window against the caption.
+    const { items } = await (await request.get('/api/wall')).json();
+    const shown = await caption.textContent();
+    const held = items.find((/** @type {any} */ it) => it.message && shown?.includes(it.message));
+    expect(held, 'could not identify the held post').toBeTruthy();
+
+    // Take it down. The wall MUST move off it — showing a deleted post is the
+    // one thing worse than drifting — and must then hold wherever it lands.
+    await request.post('/admin?/wallAction', { multipart: { id: held.id, do: 'delete' } });
+    await page.waitForTimeout(4_000);
+    const after = await caption.textContent();
+    expect(after).not.toBe(shown);
+
+    // ...and now the actual assertion: a new post must not move it again.
+    const fresh = await request.post('/?/wall', {
+      multipart: { author: 'Apres suppression', note: 'le mur doit rester immobile' }
+    });
+    expect(fresh.ok()).toBeTruthy();
+    await page.waitForTimeout(6_000);
+    expect(await caption.textContent()).toBe(after);
+  });
+});
+
 test('the emergency keys still work while the wall is stopped', async ({ page, request }) => {
   await cyclingWall(page, request);
 

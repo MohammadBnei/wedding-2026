@@ -195,12 +195,16 @@
     // comes back where it was rather than on whatever is newest. Only while
     // stopped: a leftover id from an earlier stop must not hold a running wall,
     // and resuming clears the key anyway.
-    if (paused) {
-      try {
-        frozenId = localStorage.getItem(FROZEN_KEY);
-      } catch {
-        frozenId = null;
-      }
+    try {
+      // Only restore while stopped. And CLEAR otherwise: remember(null) runs
+      // from the poll and nowhere else, so closing or sleeping the projector
+      // during a stop leaves the key behind indefinitely. The next stop plus a
+      // reload would then restore an id long since aged out of the window,
+      // straight into the drift the poll guard above exists to prevent.
+      if (paused) frozenId = localStorage.getItem(FROZEN_KEY);
+      else localStorage.removeItem(FROZEN_KEY);
+    } catch {
+      frozenId = null;
     }
 
     // Every timer body is wrapped. An unhandled throw in either of these stops
@@ -208,16 +212,18 @@
     // deliberate, so nobody reports it, and nothing else recovers it.
     const poll = setInterval(async () => {
       try {
-        // Read BEFORE anything below reassigns `items`. `current` is a $derived
-        // over `items`, and Svelte recomputes a dirty derived synchronously on
-        // read — so taken after the merge this is the post the wall is about to
-        // move to, not the one the room is looking at. That is the difference
-        // between stopping on the photo you meant and stopping on the one that
-        // arrived a moment ago.
-        const onScreen = current?.id ?? null;
         const res = await fetch('/api/wall');
         if (!res.ok) throw new Error(String(res.status));
         const body = await res.json();
+        // AFTER the awaits, BEFORE the merge. Both halves matter. After, because
+        // the 8s advance timer can fire while this fetch is in flight — `paused`
+        // is still false locally until the line below, so nothing stands it
+        // down, and a capture from before the await would freeze on a slide the
+        // wall has already left, jumping it BACKWARDS at the moment someone
+        // presses Stop. Before the merge, because `current` is a $derived over
+        // `items` and Svelte recomputes a dirty derived synchronously on read —
+        // taken afterwards it names the post the wall is about to move TO.
+        const onScreen = current?.id ?? null;
         const merged = mergeWindow(items, body.items);
         items = merged.items;
         // Forget ids that have aged out of the window, so `seen` cannot grow
@@ -234,11 +240,24 @@
         }
         pinned = body.pinned ?? null;
         paused = Boolean(body.paused);
-        // Not a rising edge (`paused && !wasPaused`). On a reload during a stop
-        // the very first poll already sees paused, so a rising edge would never
-        // fire and the projector would come back cycling from index 0 — held in
-        // /admin's eyes and moving on the wall.
-        if (paused && frozenId === null) remember(onScreen);
+        // Guarded on the RESOLVED index, not on `frozenId === null`. Three
+        // reasons, and only the first is obvious:
+        //
+        //   - Not a rising edge (`paused && !wasPaused`): on a reload during a
+        //     stop the first poll already sees paused, so a rising edge would
+        //     never fire and the wall would come back cycling from index 0.
+        //   - Not `frozenId === null` either: if the held post is taken down
+        //     from /admin or ages out past WALL_WINDOW, heldIndex goes to -1 and
+        //     `at` falls back to `i % items.length` — and since the window is
+        //     sorted newest-first, every post arriving during the stop then
+        //     shifts what lives at that index. The wall drifts while /admin
+        //     still reads "stopped", and with frozenId non-null it could never
+        //     re-freeze. Re-arming on the resolved index closes that.
+        //   - A pin resolves too, so this correctly stands aside while one is
+        //     set and lets the pin hold the stage.
+        if (paused && heldIndex(merged.items, body.pinned ?? null, frozenId) < 0) {
+          remember(onScreen);
+        }
         if (!paused && frozenId !== null) remember(null);
         online = true;
       } catch {
@@ -264,18 +283,6 @@
   });
 
   /**
-   * The emergency control. Someone standing beside the laptop gets a bad photo
-   * off the screen with one keypress — no phone, no authentik, no queue. Taking
-   * it down permanently, or pinning the stage, is /admin's job.
-   *
-   * Deliberately still works while the wall is STOPPED, and clears the freeze as
-   * it goes. A keypress means a human is standing at the laptop, and they should
-   * outrank a button pressed in another room — otherwise a bad photo frozen on
-   * the wall can only be cleared by finding whoever has the admin phone. The
-   * advance timer stays stood down either way: stopped means "does not move on
-   * its own", not "cannot be moved".
-   */
-  /**
    * The pointer starts hidden and appears on movement, then hides again.
    *
    * This order matters: "visible, then hide after N seconds" paints a cursor on
@@ -292,14 +299,38 @@
     idleTimer = setTimeout(() => (pointerIdle = true), 2_500);
   }
 
-  /** @param {KeyboardEvent} e */
+  /**
+   * The emergency control. Someone standing beside the laptop gets a bad photo
+   * off the screen with one keypress — no phone, no authentik, no queue. Taking
+   * it down permanently, or pinning the stage, is /admin's job.
+   *
+   * (This block used to sit twenty lines up, above `pointerIdle`: `main` had an
+   * unterminated `/**` that ran the two comments together, so it documented the
+   * cursor. Closing it left it orphaned. It belongs here.)
+   *
+   * Deliberately still works while the wall is STOPPED, and clears the freeze as
+   * it goes. A keypress means a human is standing at the laptop, and they should
+   * outrank a button pressed in another room — otherwise a bad photo frozen on
+   * the wall can only be cleared by finding whoever has the admin phone. The
+   * advance timer stays stood down either way: stopped means "does not move on
+   * its own", not "cannot be moved".
+   *
+   * Both branches read `at` BEFORE clearing the freeze. `at` resolves through
+   * heldIndex, so clearing first collapses it to `i % items.length` — whatever
+   * the cycling index was before the stop began, not the slide on screen. Once
+   * everything in the window has been seen, pickNext falls through to
+   * `(at + 1) % length`, so skipping a photo frozen at index 5 with a stale
+   * i = 2 would jump to index 3: backwards, past the very slide you were trying
+   * to get rid of.
+   *
+   * @param {KeyboardEvent} e
+   */
   function onKey(e) {
     if (e.key === 'ArrowRight' || e.key === ' ') {
       e.preventDefault();
-      // Clear the freeze first: `at` reads through heldIndex, so moving `i`
-      // while a frozen id still resolves would do nothing at all.
+      const from = at;
       remember(null);
-      if (items.length) i = nextIndex();
+      if (items.length) i = pickNext(items, seen, from);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       const from = at;
