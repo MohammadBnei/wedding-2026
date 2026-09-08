@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.20.0](https://github.com/MohammadBnei/wedding-2026/compare/0.19.2...0.20.0) (2026-09-08)
+
+
+### Features
+
+* **site:** thank the guests and close every write path ([#41](https://github.com/MohammadBnei/wedding-2026/issues/41)) ([e21b302](https://github.com/MohammadBnei/wedding-2026/commit/e21b3023b39cc4d0e528d78b504ab575e0c5efaa))
+
 ## [0.19.2](https://github.com/MohammadBnei/wedding-2026/compare/0.19.1...0.19.2) (2026-09-05)
 
 ## [0.19.1](https://github.com/MohammadBnei/wedding-2026/compare/0.19.0...0.19.1) (2026-09-05)
