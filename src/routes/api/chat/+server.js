@@ -1,10 +1,17 @@
 import { json, error } from '@sveltejs/kit';
 import { sql, dbOr } from '$lib/server/db.js';
+import { isOver } from '$lib/server/mode.js';
 import { answer, checkRateLimit, history, MAX_MESSAGE } from '$lib/server/chat.js';
 import { pickLang, t, fallbackText } from '$lib/content/wedding.js';
 
 /** @type {import('./$types').RequestHandler} */
 export async function POST({ request, locals }) {
+  // Closed after the day, before the body is read and well before the rate
+  // limit or the provider call — this endpoint costs money per request and the
+  // panel that used to call it is off the page, so anything arriving here now
+  // is a crawler or a replay. 410 rather than 503: it is not coming back.
+  if (isOver()) error(410, 'closed');
+
   const body = await request.json().catch(() => null);
   const message = typeof body?.message === 'string' ? body.message.trim() : '';
   const lang = pickLang(body?.lang ?? locals.lang);

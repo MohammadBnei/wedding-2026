@@ -25,6 +25,29 @@ export async function liveWindow() {
 }
 
 /**
+ * Every approved post, oldest first — the post-wedding gallery.
+ *
+ * Two differences from liveWindow(), and both matter. No LIMIT: the projector
+ * showed a rolling window because it only ever displays one slide at a time,
+ * but a gallery that quietly stopped at forty would drop the back half of the
+ * evening with nothing to say it had. And ASC rather than DESC, because a
+ * gallery is read top to bottom and the night should run forwards.
+ *
+ * Keeps liveWindow's `dbOr([], …)`, so a database outage yields an empty list
+ * rather than a 500 — which is why routes/wall/+page.server.js also returns
+ * dbUp(): empty and unreachable look identical here, and the gallery has to be
+ * able to tell the guest which one it is.
+ */
+export async function allApproved() {
+  return await dbOr([], () => sql`
+    SELECT id, author, message, lang, created_at,
+           (wall_key IS NOT NULL) AS photo
+      FROM wall_post
+     WHERE status = 'approved' AND deleted_at IS NULL
+     ORDER BY created_at ASC`);
+}
+
+/**
  * Shape a row for the wire. `lang` rides along because a mixed-language wall has
  * to set `dir` per POST — taking direction from the projector's own cookie would
  * render every Arabic and Persian message with its punctuation on the wrong end,

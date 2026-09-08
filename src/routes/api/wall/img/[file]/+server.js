@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { originalFor } from '$lib/server/wall.js';
-import { UUID_RE } from '$lib/wall.js';
+import { originalFor, wallKeyFor } from '$lib/server/wall.js';
+import { parseImageName } from '$lib/wall.js';
 import { getObject } from '$lib/server/s3.js';
 
 /**
@@ -17,11 +17,17 @@ import { getObject } from '$lib/server/s3.js';
  * a CORS request. Preload with `new Image().src`, never fetch(), or that stops
  * being true.
  *
- * Serves the ORIGINAL upload, not the 1080p derivative: the derivative is
- * produced by `resize(1920, 1080, { fit: 'inside' })`, and Bun.Image's `inside`
- * ENLARGES — so a photo forwarded through a chat app arrives small and already
- * lossy, gets upscaled, and is re-compressed at quality 82. On a three-metre
- * screen that is visibly soft.
+ * TWO suffixes, and the difference is bandwidth. `-o` is the ORIGINAL upload,
+ * which is what the projector gets: the derivative is produced by
+ * `resize(1920, 1080, { fit: 'inside' })`, and Bun.Image's `inside` ENLARGES —
+ * so a photo forwarded through a chat app arrives small and already lossy, gets
+ * upscaled, and is re-compressed at quality 82. On a three-metre screen that is
+ * visibly soft.
+ *
+ * `-t` is that derivative, and it exists for the post-wedding gallery. A grid
+ * shows every approved photo at once, and at `-o` sizes that is tens of
+ * megabytes of originals pulled off a residential uplink for a page of
+ * thumbnails nobody has clicked.
  *
  * This is a deliberate narrowing of the old invariant ("we only ever serve back
  * bytes we encoded ourselves"). What still holds: `Bun.Image` decoded these
@@ -39,14 +45,24 @@ import { getObject } from '$lib/server/s3.js';
  * Only ever an APPROVED, not-deleted post.
  */
 export async function GET({ params, setHeaders }) {
-  // Strictly lowercase, and no /i. Postgres compares uuids case-insensitively,
-  // so `<UUID>-o.JPG` is the same object as `<uuid>-o.jpg` but a DIFFERENT CDN
-  // cache key — which at full resolution turns a typo into repeated multi-MB
-  // fetches off a residential uplink.
-  const m = /^([0-9a-f-]{36})-o\.jpg$/.exec(params.file);
-  if (!m || !UUID_RE.test(m[1])) error(404);
+  // Which object, and is it one we serve at all. The parsing — including the
+  // lowercase-only rule and the 36-dash rejection — lives in $lib/wall.js so it
+  // can be asserted on without a bucket; see parseImageName there.
+  const want = parseImageName(params.file);
+  if (!want) error(404);
 
-  const found = await originalFor(m[1]);
+  // `-o` hands back the untouched upload for the projector; `-t` the 1080p
+  // derivative for the gallery grid. Both filter to approved-and-not-deleted in
+  // the query itself, so neither can reach a pending or taken-down post.
+  let found = null;
+  if (want.kind === 'orig') {
+    found = await originalFor(want.id);
+  } else {
+    // Always a JPEG: the derivative is what routes/+page.server.js encoded with
+    // `.jpeg({ quality: 82 })`, not anything the guest handed us.
+    const key = await wallKeyFor(want.id);
+    if (key) found = { key, type: 'image/jpeg' };
+  }
   if (!found) error(404); // not approved, deleted, no photo, or no such post
 
   const bytes = await getObject(found.key);
