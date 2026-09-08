@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { sql, dbUp, dbOr } from '$lib/server/db.js';
+import { isOver } from '$lib/server/mode.js';
 import { history } from '$lib/server/chat.js';
 import { t } from '$lib/content/wedding.js';
 import { MAX_COUNT } from '$lib/rsvp.js';
@@ -21,8 +22,12 @@ const wallEnabled = () => (env.WALL_ENABLED ?? 'true') !== 'false';
 
 /** @type {import('./$types').PageServerLoad} */
 export async function load({ locals }) {
+  const over = isOver();
+
   const [messages, rsvpRows] = await Promise.all([
-    history(locals.visitorId),
+    // The transcript feeds <Chat>, which is not on the page after the day. No
+    // point paying for the round trip to render nothing.
+    over ? Promise.resolve([]) : history(locals.visitorId),
     dbOr(
       [],
       () =>
@@ -39,6 +44,11 @@ export async function load({ locals }) {
     // look normal. The RSVP does not: the guest must be told BEFORE they fill it
     // in, not after they press send.
     canRsvp: dbUp(),
+    // `over` is NOT returned here — +layout.server.js already puts it in the
+    // data the page inherits, and two loads publishing the same key is two
+    // things to keep in step. `canPost` is deliberately not ANDed with it
+    // either: the composer is not rendered at all once it is true, and the lock
+    // that matters is the guard at the top of the `wall` action, not a UI hint.
     // Same bargain as canRsvp: the guest is told the wall is closed BEFORE they
     // write a message and pick a photo, not after they press send.
     canPost: dbUp() && wallEnabled()
@@ -50,6 +60,12 @@ const LIMITS = { name: 120, song: 200, message: 2000, email: 200 };
 /** @type {import('./$types').Actions} */
 export const actions = {
   rsvp: async ({ request, locals }) => {
+    // The guest-facing form came off the page before the wedding; the action
+    // did not, so a replayed POST could still write a row. 410 and no payload:
+    // there is no form left to render an error into, and Gone says what a 503
+    // would not — this is finished, not busy. Same for `wall` below.
+    if (isOver()) return fail(410);
+
     const form = await request.formData();
     /** @param {string} k */
     const str = (k) => String(form.get(k) ?? '').trim();
@@ -123,6 +139,10 @@ export const actions = {
    */
   wall: async ({ request, locals }) => {
     const msg = t(locals.lang);
+
+    // Closed for good, before anything else. Distinct from the kill switch
+    // below: that one is temporary and says so with a 503.
+    if (isOver()) return fail(410);
 
     // The kill switch first, before reading the body.
     if (!wallEnabled()) return fail(503, { wallErrors: { form: msg.wallClosed } });

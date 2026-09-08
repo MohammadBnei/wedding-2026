@@ -1,6 +1,7 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { t } from '$lib/content/wedding.js';
+import { isOver } from '$lib/server/mode.js';
 
 /**
  * Language, theme and the string table are needed by the layout AND the page, so
@@ -9,11 +10,20 @@ import { t } from '$lib/content/wedding.js';
  * @type {import('./$types').LayoutServerLoad}
  */
 export async function load({ locals, cookies }) {
-  const strings = t(locals.lang);
+  // Read once, here, and passed down as data. Every guest-facing surface —
+  // the page, the wall, +error.svelte via page.data — branches on this rather
+  // than reaching for the env var again, so the whole render agrees with itself
+  // even if the flag were flipped mid-request.
+  const over = isOver();
+  const strings = t(locals.lang, over);
 
   return {
     lang: locals.lang,
     theme: locals.theme,
+    // Post-wedding mode. The writes are locked server-side regardless (see
+    // +page.server.js and api/chat) — this is what the components read to stop
+    // offering what is no longer there.
+    over,
     // The shared-album link. Env-driven so it can be swapped (or pulled) without
     // a rebuild — an album URL tends to be decided late and changed after the day.
     // Empty hides the link entirely rather than rendering a dead button.

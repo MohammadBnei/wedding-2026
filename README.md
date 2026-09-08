@@ -253,6 +253,60 @@ The delete does **not** use `dbOr`, for the reason the RSVP write does not: an
 admin shown "deleted" for a row that is still there counts that guest again when
 the catering numbers are due.
 
+## After the day
+
+`WEDDING_OVER=true`, set in Infisical (`wedding-2026-ih1x`, `autoReload: true`,
+so the pod restarts and picks it up with **no rebuild and no deploy**), turns
+the invitation into a thank-you. It is read in one place, `$lib/server/mode.js`,
+and passed down as `data.over` from `+layout.server.js`.
+
+It does four things:
+
+- **Closes every guest write path.** `?/rsvp`, `?/wall` and `POST /api/chat` all
+  answer **410 Gone** — not 503, which is what a database outage and the
+  `WALL_ENABLED` kill switch already mean, and which tells crawlers and uptime
+  monitors to come back. The RSVP form left the page before the wedding but its
+  action never did, so a replayed POST could still write a row until this.
+- **Swaps the copy into the past tense**, via a third table in `wedding.js`:
+  `AFTER`, laid over `STR`+`EXTRA` by `t(lang, true)`. `AFTER` may only
+  *replace* keys that already exist — strings that only exist after the day
+  (`overTitle`, `gallery*`) go in `EXTRA` instead. That rule is what lets `t()`
+  keep one return type for both modes, and `wedding.test.js` enforces it: widen
+  the type and post-wedding-only keys start type-checking in invitation mode,
+  where they are `undefined` and render as an empty text node.
+- **Drops what no longer applies** — the countdown (`countdown.js` clamps at
+  zero, so it would read a flat `0 / 0 / 0`), the add-to-calendar button, the
+  travel and dress-code rows, and the chatbot. The garden plan stays; its pins
+  are rewritten in `AFTER`.
+- **Turns `/wall` from the projector into a gallery.** Same route, two
+  components: `Projector.svelte` (lifted out of the route unchanged, because its
+  timers and poll start on mount — an `{#if}` around its markup alone would not
+  have stopped them) and `Gallery.svelte`.
+
+It is **opt-in** and an exact match on `"true"`, deliberately the opposite
+polarity to `WALL_ENABLED` (`!== 'false'`). Both fail toward the site still
+working, and it means merging the feature changes nothing until the flag is set.
+Unsetting it puts the invitation back — the two are independent, and the wall is
+closed when either says so.
+
+### Two things that bite
+
+**The gallery must not use a `.wall` class.** `Projector.svelte` locks body
+scrolling with `:global(body:has(.wall))`, and SvelteKit ships the stylesheet of
+every component the route imports whether or not it renders — `{#if}` gates
+instantiation, not CSS. With a bare `:global(body)` there, or a `.wall` in the
+gallery, the scrolling page silently stops scrolling.
+
+**Gallery thumbnails are `-t.jpg`, not `-o.jpg`.** `/api/wall/img/` serves the
+untouched original at `-o` because the projector ran at three metres; a grid of
+those is tens of megabytes of full-resolution photographs off a home uplink for
+thumbnails nobody clicked. `-t` is the 1080p derivative. The plain `<uuid>.jpg`
+form stays retired — it is still cached browser- and edge-side as the *old*
+derivative under `immutable, max-age=604800`. Parsing lives in
+`parseImageName()` in `$lib/wall.js` so it can be tested without a bucket: the
+route's own e2e assertions all use a nonexistent uuid, which 404s whether the
+branch works or was never written.
+
 ## Deliberately absent
 
 There are **no phone numbers** on this site and none in this repo. The one

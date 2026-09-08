@@ -2,6 +2,7 @@ import { test, expect, describe } from 'bun:test';
 import {
   safeImageType,
   UUID_RE,
+  parseImageName,
   parseVerdict,
   mergeWindow,
   pickNext,
@@ -340,4 +341,43 @@ test('the ticker is finer than the shortest slide it has to time', () => {
 test('the default is a value /admin can actually set back', () => {
   expect(clampSlideMs(SLIDE_MS)).toBe(SLIDE_MS);
   expect(SLIDE_PRESETS).toContain(SLIDE_MS / 1_000);
+});
+
+describe('parseImageName', () => {
+  const id = '3f2a1b4c-5d6e-4f70-8a91-b2c3d4e5f607';
+
+  test('the two suffixes reach different objects', () => {
+    // The whole point of the split: the projector wants the original, the
+    // gallery grid wants the derivative. Collapsing these is invisible on a
+    // laptop and is tens of megabytes over a residential uplink.
+    expect(parseImageName(`${id}-o.jpg`)).toEqual({ id, kind: 'orig' });
+    expect(parseImageName(`${id}-t.jpg`)).toEqual({ id, kind: 'thumb' });
+  });
+
+  test('the plain <uuid>.jpg key stays retired', () => {
+    // It is cached browser- and edge-side as the OLD derivative under
+    // `immutable, max-age=604800`. Serving anything from it again would hand
+    // back week-old bytes and read as the change having done nothing.
+    expect(parseImageName(`${id}.jpg`)).toBeNull();
+  });
+
+  test('uppercase is refused, because Postgres would accept it', () => {
+    // Same row to Postgres, different CDN cache key — at full resolution that
+    // turns one photo into repeated multi-megabyte fetches.
+    expect(parseImageName(`${id.toUpperCase()}-o.jpg`)).toBeNull();
+    expect(parseImageName(`${id.toUpperCase()}-t.jpg`)).toBeNull();
+  });
+
+  test('36 dashes never reach Postgres', () => {
+    // They match `[0-9a-f-]{36}` and used to, which raised 22P02 on every
+    // request. UUID_RE is the second gate that stops it.
+    expect(parseImageName(`${'-'.repeat(36)}-o.jpg`)).toBeNull();
+    expect(parseImageName(`${'-'.repeat(36)}-t.jpg`)).toBeNull();
+  });
+
+  test('nothing else is an image URL', () => {
+    for (const f of [`${id}-x.jpg`, `${id}-t.png`, `${id}-t.jpg.jpg`, '', '../../etc/passwd']) {
+      expect(parseImageName(f)).toBeNull();
+    }
+  });
 });

@@ -152,9 +152,18 @@
           <div class="mb-4 lg:mb-6">
             <!-- Was `href="#rsvp"`. Replaced the night before the wedding:
                  nobody is answering an invitation at that point, and the wall is
-                 the thing we actually want a guest's thumb to land on. The RSVP
-                 form is still on the page for anyone who scrolls to it. -->
-            <Button onclick={() => wallModal?.open()}>{t.wallCta}</Button>
+                 the thing we actually want a guest's thumb to land on.
+
+                 After the day the same button stops opening the composer and
+                 leads to /wall instead, which is by then the gallery rather than
+                 the projector. `data-sveltekit-reload` for the same reason
+                 /wedding.ics carries it — and because the two screens behind
+                 that route differ in what the server loads for them. -->
+            {#if data.over}
+              <Button href="/wall" data-sveltekit-reload>{t.wallCta}</Button>
+            {:else}
+              <Button onclick={() => wallModal?.open()}>{t.wallCta}</Button>
+            {/if}
           </div>
         </div>
       </div>
@@ -250,7 +259,12 @@
           reference={t.verseRef}
         />
 
-        <Countdown {t} lang={data.lang} />
+        <!-- countdown.js clamps at zero rather than counting up, so after the
+             day this reads a flat "0 / 0 / 0" — honest arithmetic, and a strange
+             thing to leave standing in the middle of a thank-you. -->
+        {#if !data.over}
+          <Countdown {t} lang={data.lang} />
+        {/if}
       </Section>
 
       <Section
@@ -265,9 +279,11 @@
              calendar app, and `download` forces a save instead. The endpoint
              serves it `inline` to match. `data-sveltekit-reload` stops the client
              router from trying to treat an endpoint as a page. -->
-        <div class="mt-2 flex justify-center">
-          <Button href="/wedding.ics" data-sveltekit-reload>{t.calendarCta}</Button>
-        </div>
+        {#if !data.over}
+          <div class="mt-2 flex justify-center">
+            <Button href="/wedding.ics" data-sveltekit-reload>{t.calendarCta}</Button>
+          </div>
+        {/if}
       </Section>
 
       <Zigzag reverse={true} />
@@ -279,8 +295,12 @@
         hint={t.starHint}
       >
         <GardenPlan pins={t.pins} placeholder={t.planPlaceholder} lang={data.lang} />
+        <!-- How to get here, what to wear, where to park: instructions for a
+             journey nobody is making any more. The garden plan above stays —
+             it is a drawing of where the day happened, and its pins are
+             rewritten into the past tense in AFTER (wedding.js). -->
         <div class="mt-2 flex flex-col gap-3.5">
-          {#each t.facts as fact (fact.label)}
+          {#each data.over ? [] : t.facts as fact (fact.label)}
             <Row lead={fact.label} leadWidth="label">
               {fact.value}
               <!-- The maps link rides the row it answers — the driving one. A
@@ -308,18 +328,45 @@
 
       <Zigzag reverse={false} />
 
-      <Section
-        title={t.chatTitle}
-        tone="alt"
-        fill
-        seed="chat"
-        quotes={starQuotes('chat', data.lang)}
-        hint={t.starHint}
-      >
-        <p class="text-note leading-relaxed font-light text-ink-muted">{t.chatSub}</p>
-        <Chat {t} messages={data.messages} lang={data.lang} />
-        <p class="text-caption font-light text-ink-muted">{t.botNote}</p>
-      </Section>
+      <!--
+        The chatbot answered questions about a day that had not happened yet.
+        After it, /api/chat is closed server-side (410) and this section becomes
+        the thank-you.
+
+        Both keep `seed="chat"` and that section's two quote stars, so the
+        ornament and the hidden quotes carry over rather than disappearing with
+        the panel. Two, not more: Section lays quote stars out one per band with
+        no crowding check, which only holds at exactly two — see the note in
+        Section.svelte.
+      -->
+      {#if data.over}
+        <Section
+          title={t.overTitle}
+          tone="alt"
+          fill
+          seed="chat"
+          quotes={starQuotes('chat', data.lang)}
+          hint={t.starHint}
+        >
+          <p class="text-body leading-loose font-light text-ink-body text-pretty">{t.overBody}</p>
+          <div class="mt-2 flex justify-center">
+            <Button href="/wall" data-sveltekit-reload>{t.wallCta}</Button>
+          </div>
+        </Section>
+      {:else}
+        <Section
+          title={t.chatTitle}
+          tone="alt"
+          fill
+          seed="chat"
+          quotes={starQuotes('chat', data.lang)}
+          hint={t.starHint}
+        >
+          <p class="text-note leading-relaxed font-light text-ink-muted">{t.chatSub}</p>
+          <Chat {t} messages={data.messages} lang={data.lang} />
+          <p class="text-caption font-light text-ink-muted">{t.botNote}</p>
+        </Section>
+      {/if}
 
       <!--
         The RSVP section was here until the morning of the wedding. Nobody
@@ -395,4 +442,6 @@
      layer by the browser, so where it sits in the DOM does not affect painting,
      and keeping it out here means no stacking-context surprises from the sticky
      rail or the door scrim. -->
-<WallModal bind:this={wallModal} {t} lang={data.lang} {form} canPost={data.canPost} />
+{#if !data.over}
+  <WallModal bind:this={wallModal} {t} lang={data.lang} {form} canPost={data.canPost} />
+{/if}

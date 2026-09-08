@@ -484,11 +484,25 @@ export function fallbackText(lang) {
  * read off `data.t` was a svelte-check error. Naming the merged shape here fixes
  * all of them in one place instead of at each call site.
  *
+ * `over` lays the post-wedding copy on top — see AFTER below. The return type is
+ * deliberately the SAME either way, which is only possible because AFTER may
+ * only replace keys that already exist. Widening it for post-wedding-only keys
+ * would make them type-check in invitation mode too, where they are undefined,
+ * and an undefined string renders as an empty text node rather than an error.
+ *
+ * Only routes/+layout.server.js passes `over`; everything else inherits the
+ * result through `data.t`. Callers that build their own strings — ics.js,
+ * chat-prompt.js — are unaffected, and are unreachable in over-mode anyway.
+ *
  * @param {Lang} lang
+ * @param {boolean} [over] post-wedding mode; see $lib/server/mode.js
  * @returns {typeof STR.fr & typeof EXTRA.fr}
  */
-export function t(lang) {
-  return /** @type {typeof STR.fr & typeof EXTRA.fr} */ (STR[pickLang(lang)]);
+export function t(lang, over = false) {
+  const l = pickLang(lang);
+  return /** @type {typeof STR.fr & typeof EXTRA.fr} */ (
+    over ? { ...STR[l], ...AFTER[l] } : STR[l]
+  );
 }
 
 /**
@@ -647,6 +661,19 @@ const EXTRA = {
     // The quote star's accessible name. The stars carry no visible label on
     // purpose — a screen reader still needs one, and "button" alone is not it.
     starHint: 'une pensée',
+    // --- After the day -----------------------------------------------------
+    // Rendered only when WEDDING_OVER is set (see $lib/server/mode.js). They
+    // live in EXTRA rather than in AFTER below so the parity test at the top of
+    // wedding.test.js covers them across all four locales, and so t()'s return
+    // type does not have to widen — AFTER only ever REPLACES a key that already
+    // exists here or in STR.
+    overTitle: 'Merci',
+    overBody: "Vous êtes venus de loin pour certains, vous avez chanté, vous avez dansé, et vous nous avez laissé une journée dont nous nous souviendrons toute notre vie. Cette page reste ouverte : le mur garde tout ce que vous y avez écrit et photographié.",
+    galleryTitle: 'Le mur des invités',
+    galleryIntro: "Tout ce que vous avez écrit et photographié ce jour-là, dans l'ordre où c'est arrivé.",
+    galleryEmpty: 'Le mur est vide.',
+    galleryOffline: "Le mur ne peut pas être affiché pour le moment. Rien n'est perdu — merci de réessayer dans quelques instants.",
+    galleryBack: "Retour à la page",
     langLabel: 'Langue'
   },
   en: {
@@ -741,6 +768,19 @@ const EXTRA = {
       }
     },
     starHint: 'a thought',
+    // --- After the day -----------------------------------------------------
+    // Rendered only when WEDDING_OVER is set (see $lib/server/mode.js). They
+    // live in EXTRA rather than in AFTER below so the parity test at the top of
+    // wedding.test.js covers them across all four locales, and so t()'s return
+    // type does not have to widen — AFTER only ever REPLACES a key that already
+    // exists here or in STR.
+    overTitle: 'Thank you',
+    overBody: 'Some of you came a very long way. You sang, you danced, and you left us a day we will remember for the rest of our lives. This page stays open: the wall keeps everything you wrote and photographed on it.',
+    galleryTitle: 'The guest wall',
+    galleryIntro: 'Everything you wrote and photographed that day, in the order it arrived.',
+    galleryEmpty: 'The wall is empty.',
+    galleryOffline: 'The wall cannot be shown at the moment. Nothing is lost — please try again shortly.',
+    galleryBack: 'Back to the page',
     langLabel: 'Language'
   },
   ar: {
@@ -828,6 +868,19 @@ const EXTRA = {
       libas: { gloss: '', ref: 'سورة البقرة، ١٨٧' }
     },
     starHint: 'خاطرة',
+    // --- After the day -----------------------------------------------------
+    // Rendered only when WEDDING_OVER is set (see $lib/server/mode.js). They
+    // live in EXTRA rather than in AFTER below so the parity test at the top of
+    // wedding.test.js covers them across all four locales, and so t()'s return
+    // type does not have to widen — AFTER only ever REPLACES a key that already
+    // exists here or in STR.
+    overTitle: 'شكراً لكم',
+    overBody: 'منكم من قطع مسافة طويلة ليكون معنا. غنّيتم ورقصتم، وتركتم لنا يوماً سنذكره ما حيينا. تبقى هذه الصفحة مفتوحة: الجدار يحفظ كلّ ما كتبتموه وصوّرتموه عليه.',
+    galleryTitle: 'جدار الضيوف',
+    galleryIntro: 'كلّ ما كتبتموه وصوّرتموه ذلك اليوم، بالترتيب الذي وصل به.',
+    galleryEmpty: 'الجدار خالٍ.',
+    galleryOffline: 'لا يمكن عرض الجدار في الوقت الحالي. لم يضِع شيء — نرجو المحاولة بعد قليل.',
+    galleryBack: 'العودة إلى الصفحة',
     langLabel: 'اللغة'
   },
   fa: {
@@ -909,7 +962,170 @@ const EXTRA = {
       libas: { gloss: '«آنان پوشش شمایند و شما پوشش آنان.»', ref: 'سورهٔ بقره، ۱۸۷' }
     },
     starHint: 'اندیشه‌ای',
+    // --- After the day -----------------------------------------------------
+    // Rendered only when WEDDING_OVER is set (see $lib/server/mode.js). They
+    // live in EXTRA rather than in AFTER below so the parity test at the top of
+    // wedding.test.js covers them across all four locales, and so t()'s return
+    // type does not have to widen — AFTER only ever REPLACES a key that already
+    // exists here or in STR.
+    overTitle: 'سپاسگزاریم',
+    overBody: 'بعضی از شما راهی دراز آمدید. خواندید، رقصیدید و روزی برای ما به جا گذاشتید که تا پایان عمر به یادش خواهیم بود. این صفحه باز می‌ماند: دیوار هر آنچه را بر آن نوشتید و عکس گرفتید نگاه می‌دارد.',
+    galleryTitle: 'دیوار مهمانان',
+    galleryIntro: 'هر آنچه آن روز نوشتید و عکس گرفتید، به همان ترتیبی که رسید.',
+    galleryEmpty: 'دیوار خالی است.',
+    galleryOffline: 'نمایش دیوار در این لحظه ممکن نیست. چیزی از دست نرفته — لطفاً کمی بعد دوباره تلاش کنید.',
+    galleryBack: 'بازگشت به صفحه',
     langLabel: 'زبان'
+  }
+};
+
+/**
+ * The wedding, in the past tense.
+ *
+ * A THIRD table, applied over STR+EXTRA by `t(lang, true)` when WEDDING_OVER is
+ * set — see $lib/server/mode.js. It is deliberately NOT merged into STR at the
+ * foot of this file the way EXTRA is: the invitation copy has to stay reachable,
+ * because the flag is reversible and unsetting it must put the site back.
+ *
+ * TWO RULES, both enforced by wedding.test.js:
+ *
+ * 1. Every key here must ALREADY EXIST in STR or EXTRA. This table only ever
+ *    replaces copy, never introduces it — which is what lets t() keep its
+ *    existing return type. A post-wedding-only key would have to widen that
+ *    type, and would then type-check in invitation mode too and render an empty
+ *    text node. Strings that exist only after the day (overTitle, gallery*) live
+ *    in EXTRA instead.
+ * 2. All four locales define the same keys. A key overridden in French and
+ *    forgotten in Persian is a page that is half in the future tense, and it is
+ *    visible only to someone who reads Persian.
+ *
+ * Written natively in each language, like everything else here — the Arabic and
+ * the Persian are not the French run through a translator.
+ */
+export const AFTER = {
+  fr: {
+    heroInvite: "vous remercient d'avoir partagé ce jour avec eux",
+    welcome1: "Vous avez été là. Vous avez rempli le jardin de la famille Banaei de vos voix, de vos pas de danse et de vos éclats de rire, et vous avez fait de cette journée ce qu'elle a été. Merci, du fond du cœur.",
+    dayTitle: "Ce jour-là",
+    essTitle: "Le jardin",
+    closing: "Merci d'avoir célébré cette journée avec nous.",
+    wallCta: "Voir le mur des invités",
+    eventKind: 'Un mariage célébré',
+    /** @type {ScheduleEntry[]} */
+    schedule: [
+      {
+        time: "15h", title: "Au jardin",
+        items: [
+          "Un buffet en plusieurs étapes",
+          "Des photos de groupe",
+          "Des jeux",
+          "Le gâteau",
+          "De la musique et de la danse"
+        ]
+      }
+    ],
+    pins: [
+      { label: "1 · le stationnement", text: "C'est là que les voitures se sont garées, le long de la rue et aux alentours." },
+      { label: "2 · le portail", text: "L'entrée s'est faite par le portail, resté ouvert toute la journée." },
+      { label: "3 · l'accueil", text: "C'est là que nous nous sommes retrouvés à l'arrivée." },
+      { label: "4 · les tables", text: "Les tables étaient dressées côté jardin, et le plan de table vous y attendait." },
+      { label: "5 · le buffet", text: "Sous le toit rouge, contre la maison : il a été servi tout l'après-midi." },
+      { label: "6 · les enfants", text: "Un coin du jardin leur était réservé, tout au fond." },
+      { label: "7 · la danse", text: "Derrière la maison : c'est là que la musique et la danse ont pris place." }
+    ]
+  },
+  en: {
+    heroInvite: 'thank you for sharing this day with them',
+    welcome1: 'You were there. You filled the Banaei family garden with your voices, your dancing and your laughter, and you made the day what it was. Thank you, from the bottom of our hearts.',
+    dayTitle: 'That day',
+    essTitle: 'The garden',
+    closing: 'Thank you for celebrating this day with us.',
+    wallCta: 'See the guest wall',
+    eventKind: 'A wedding celebrated',
+    /** @type {ScheduleEntry[]} */
+    schedule: [
+      {
+        time: "3pm", title: "In the garden",
+        items: [
+          "A buffet served in several courses",
+          "Group photographs",
+          "Games",
+          "The cake",
+          "Music and dancing"
+        ]
+      }
+    ],
+    pins: [
+      { label: "1 · parking", text: "This is where the cars went, along the street and nearby." },
+      { label: "2 · the gate", text: "Everyone came in through the gate, which stayed open all day." },
+      { label: "3 · the welcome", text: "This is where we met you as you arrived." },
+      { label: "4 · the tables", text: "The tables were set on the garden side, and the seating plan was waiting there for you." },
+      { label: "5 · the buffet", text: "Under the red roof, against the house: served all afternoon." },
+      { label: "6 · the children", text: "A corner of the garden was set aside for them, right at the back." },
+      { label: "7 · the dancing", text: "Behind the house: this is where the music and the dancing happened." }
+    ]
+  },
+  ar: {
+    heroInvite: 'يشكرانكم على مشاركتكم إيّاهما هذا اليوم',
+    welcome1: 'كنتم هناك. ملأتم حديقة عائلة بنائي بأصواتكم ورقصكم وضحكاتكم، وجعلتم من ذلك اليوم ما كان عليه. شكراً لكم من أعماق قلبينا.',
+    dayTitle: 'ذلك اليوم',
+    essTitle: 'الحديقة',
+    closing: 'شكراً لأنكم احتفلتم بهذا اليوم معنا.',
+    wallCta: 'شاهدوا جدار الضيوف',
+    eventKind: 'زفاف أُقيم',
+    /** @type {ScheduleEntry[]} */
+    schedule: [
+      {
+        time: "١٥:٠٠", title: "في الحديقة",
+        items: [
+          "مائدة تُقدَّم على مراحل",
+          "صور جماعية",
+          "ألعاب",
+          "الكعكة",
+          "موسيقى ورقص"
+        ]
+      }
+    ],
+    pins: [
+      { label: "١ · مواقف السيارات", text: "هناك أُوقفت السيارات، على طول الشارع وما حوله." },
+      { label: "٢ · البوابة", text: "كان الدخول من البوابة، وقد بقيت مفتوحة طوال اليوم." },
+      { label: "٣ · الاستقبال", text: "هناك التقينا بكم عند وصولكم." },
+      { label: "٤ · الطاولات", text: "كانت الطاولات مُعدّة في جهة الحديقة، وترتيب الجلوس ينتظركم هناك." },
+      { label: "٥ · البوفيه", text: "تحت السقف الأحمر، بجانب البيت: قُدِّم طوال العصر." },
+      { label: "٦ · الأطفال", text: "كان ركن من الحديقة مخصّصاً لهم، في أقصاها." },
+      { label: "٧ · الرقص", text: "خلف البيت: هناك كانت الموسيقى والرقص." }
+    ]
+  },
+  fa: {
+    heroInvite: 'از شما سپاسگزارند که آن روز را با آنان گذراندید',
+    welcome1: 'شما آنجا بودید. باغ خانهٔ بنایی را با صدا و رقص و خندهٔ خود پر کردید و آن روز را همان کردید که شد. از صمیم دل سپاسگزاریم.',
+    dayTitle: 'آنچه در آن روز گذشت',
+    essTitle: 'باغ',
+    closing: 'سپاس که آن روز را با ما جشن گرفتید.',
+    wallCta: 'دیوار مهمانان را ببینید',
+    eventKind: 'جشن پیوندی که برگزار شد',
+    /** @type {ScheduleEntry[]} */
+    schedule: [
+      {
+        time: "۱۵:۰۰", title: "در باغ",
+        items: [
+          "سفره‌ای که کم‌کم چیده شد",
+          "عکس یادگاری، همه در یک قاب",
+          "بازی و سرگرمی",
+          "بریدن کیک",
+          "ساز و آواز و رقص"
+        ]
+      }
+    ],
+    pins: [
+      { label: "۱ · پارکینگ", text: "ماشین‌ها همان‌جا پارک شدند، در طول خیابان و گرداگرد خانه." },
+      { label: "۲ · دروازه", text: "ورود از دروازه بود؛ تمام روز باز ماند." },
+      { label: "۳ · پذیرایی", text: "همان‌جا به پیشوازتان آمدیم." },
+      { label: "۴ · میزها", text: "سمت باغ چیده شده بود و نقشهٔ نشستن همان‌جا در انتظارتان بود." },
+      { label: "۵ · بوفه", text: "زیر سقف قرمز، کنار خانه؛ تمام بعدازظهر برقرار بود." },
+      { label: "۶ · بچه‌ها", text: "گوشه‌ای از باغ برای آن‌ها کنار گذاشته شده بود، در انتهای آن." },
+      { label: "۷ · رقص", text: "پشت خانه: موسیقی و رقص همان‌جا بود." }
+    ]
   }
 };
 

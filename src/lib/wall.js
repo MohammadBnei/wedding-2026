@@ -134,6 +134,38 @@ export function safeImageType(raw) {
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**
+ * Which object a wall image URL is asking for, or null if it is asking for
+ * nothing we serve.
+ *
+ * Two suffixes, because the projector and the gallery want different bytes for
+ * the same post. `-o` is the untouched upload — the projector runs at three
+ * metres and the 1080p derivative is upscaled and re-compressed, so it looks
+ * soft there. `-t` is that derivative, and it is what a grid of thumbnails must
+ * use: a gallery of originals pulls multi-megabyte files per tile off a
+ * residential uplink.
+ *
+ * The plain `<uuid>.jpg` form is deliberately NOT accepted. That key was the
+ * derivative once and is still cached browser-side and edge-side as such under
+ * `immutable, max-age=604800`; reusing it would serve week-old bytes and look
+ * like the change had done nothing. `-t` inherits no such history.
+ *
+ * Lowercase only, for the reason UUID_RE gives above. Parsing lives here rather
+ * than in the route so it can be asserted on without a server, a bucket or a
+ * seeded row — the route's own e2e assertions are all built on a nonexistent
+ * uuid, which 404s whether the branch works, is misrouted, or was never added.
+ *
+ * @param {string} file the `[file]` route param, e.g. `<uuid>-t.jpg`
+ * @returns {{ id: string, kind: 'orig' | 'thumb' } | null}
+ */
+export function parseImageName(file) {
+  // `[0-9a-f-]{36}` first, then UUID_RE: 36 dashes matches the character class
+  // and used to reach Postgres, which raised 22P02 on every request.
+  const m = /^([0-9a-f-]{36})-([ot])\.jpg$/.exec(file);
+  if (!m || !UUID_RE.test(m[1])) return null;
+  return { id: m[1], kind: m[2] === 'o' ? 'orig' : 'thumb' };
+}
+
+/**
  * Turn a model's reply into a status.
  *
  * Returns 'approved' ONLY on a literal `ok === true`. Everything else —

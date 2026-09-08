@@ -921,8 +921,14 @@ test('the projector image route is hardened and serves the original', async ({ r
   // The plain `<id>.jpg` URL is gone. It is cached browser-side and edge-side as
   // the OLD derivative under `immutable, max-age=604800`, so reusing it would
   // have kept serving the soft picture for a week and the change would have
-  // looked like it did nothing.
+  // looked like it did nothing. The gallery's thumbnails use `-t.jpg` for that
+  // reason rather than reviving this one.
   expect((await request.get(`/api/wall/img/${bogus}.jpg`)).status()).toBe(404);
+
+  // Everything in this test is a nonexistent id, which 404s whether the route's
+  // parsing is right or absent — it is checking the hardening, not the routing.
+  // Which suffix reaches which object is asserted in src/lib/wall.test.js,
+  // against parseImageName directly, where a seeded photo is not needed.
 
   // Uppercase is the same row to Postgres but a different CDN cache key — at
   // full resolution that turns one photo into repeated multi-megabyte fetches
