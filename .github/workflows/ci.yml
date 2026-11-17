@@ -66,7 +66,8 @@ jobs:
           trap 'sudo buildah rm "$ctr" >/dev/null' EXIT
           sudo buildah run --network host -v "$PWD:$PWD" -v "$RUNNER_TEMP:$RUNNER_TEMP" --workingdir "$PWD" \
             --env PATH="$RUNNER_TEMP/bun/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-            --env WEDDING_DB_HOST --env WEDDING_DB_PORT --env WEDDING_DB_NAME --env WEDDING_DB_USER --env WEDDING_DB_PASSWORD \
+            --env WEDDING_DB_HOST="$WEDDING_DB_HOST" --env WEDDING_DB_PORT="$WEDDING_DB_PORT" --env WEDDING_DB_NAME="$WEDDING_DB_NAME" \
+            --env WEDDING_DB_USER="$WEDDING_DB_USER" --env WEDDING_DB_PASSWORD="$WEDDING_DB_PASSWORD" \
             --env CI=true --env OWNER="$(id -u):$(id -g)" \
             "$ctr" -- bash -c '
               rc=0
