@@ -45,7 +45,7 @@ concurrency:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ukubi-build]
     # Backstop to paths-ignore above. Redundant while that list is correct, kept
     # because the failure it guards is an infinite release loop rather than a
     # wasted run. head_commit is null on workflow_dispatch, which passes.
@@ -60,7 +60,15 @@ jobs:
           # would ever get built.
           token: ${{ secrets.PAT }}
 
-      - uses: oven-sh/setup-bun@v2
+      # Self-hosted runner: no node, no unzip. oven-sh/setup-bun unzips its release, so take bun from
+      # npm (same binary, same version as the Dockerfile and ci.yml).
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: bun 1.3.14
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/bun" bun@1.3.14
+          echo "$RUNNER_TEMP/bun/node_modules/.bin" >> "$GITHUB_PATH"
 
       # --frozen-lockfile errors rather than rewriting bun.lock, and `prepare`
       # only writes gitignored paths, so the tree stays clean for release-it.
