@@ -15,33 +15,69 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: weddingdb
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready --health-interval 5s
-          --health-timeout 5s --health-retries 10
+    # Self-hosted: the account's hosted minutes are billing-locked. The runner has no node, unzip,
+    # docker or apt, so: Node from setup-node, bun from npm, Postgres and Chromium through
+    # `sudo buildah run` (rootful, the one container tool the runner user has).
+    runs-on: [self-hosted, ukubi-build]
+    timeout-minutes: 30
     env:
-      WEDDING_DB_HOST: localhost
-      WEDDING_DB_PORT: '5432'
+      WEDDING_DB_HOST: 127.0.0.1
       WEDDING_DB_NAME: weddingdb
       WEDDING_DB_USER: postgres
       WEDDING_DB_PASSWORD: postgres
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      # Same bun as the Dockerfile. oven-sh/setup-bun unzips the release and the host has no unzip;
+      # the npm package ships the same binary.
+      - name: bun 1.3.14
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/bun" bun@1.3.14
+          echo "$RUNNER_TEMP/bun/node_modules/.bin" >> "$GITHUB_PATH"
+      - run: test "$(bun --version)" = 1.3.14
+      # No docker `services:` here: the same postgres:16-alpine image (from the ECR mirror, Docker Hub
+      # rate-limits the LAN's one address) runs through sudo buildah on the host network, on a loopback
+      # port picked per run, and is stopped and removed at the end.
+      - name: postgres (buildah)
+        run: |
+          port=$((20000 + GITHUB_RUN_ID % 20000))
+          ctr=$(sudo buildah from public.ecr.aws/docker/library/postgres:16-alpine)
+          echo "PG_CTR=$ctr" >> "$GITHUB_ENV"
+          nohup sudo buildah run --network host --env POSTGRES_PASSWORD=postgres --env POSTGRES_DB=weddingdb "$ctr" -- \
+            docker-entrypoint.sh postgres -c listen_addresses=127.0.0.1 -p "$port" >"$RUNNER_TEMP/pg.log" 2>&1 &
+          echo "PG_PID=$!" >> "$GITHUB_ENV"
+          echo "WEDDING_DB_PORT=$port" >> "$GITHUB_ENV"
+          for i in $(seq 60); do (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && break; sleep 2; done
+          (exec 3<>"/dev/tcp/127.0.0.1/$port") || { cat "$RUNNER_TEMP/pg.log"; exit 1; }
       - run: bun install --frozen-lockfile
       - run: bun run check         # svelte-check; jsconfig sets checkJs+strict, so this is a real gate
       - run: bun run test          # scoped to src/ — bare `bun test` also globs e2e/*.spec.js
       - run: bun run build
-      - run: bunx playwright install --with-deps chromium
-      - name: End-to-end
+      # The host has none of Chromium's system libraries and the runner user cannot apt-get, so the
+      # suite runs as root in Playwright's own image (1.62.1 = the lockfile's @playwright/test), on the
+      # host network so it reaches Postgres. The workspace and the runner temp dir (bun) are mounted at
+      # the same paths; the image's browsers match the pinned package.
+      - name: End-to-end (in the Playwright image)
         run: |
-          bun run dev --port 5188 &
-          until curl -sf -o /dev/null http://localhost:5188/; do sleep 1; done
-          bunx playwright test
+          set -euo pipefail
+          ctr=$(sudo buildah from mcr.microsoft.com/playwright:v1.62.1-noble)
+          trap 'sudo buildah rm "$ctr" >/dev/null' EXIT
+          sudo buildah run --network host -v "$PWD:$PWD" -v "$RUNNER_TEMP:$RUNNER_TEMP" --workingdir "$PWD" \
+            --env PATH="$RUNNER_TEMP/bun/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+            --env WEDDING_DB_HOST --env WEDDING_DB_PORT --env WEDDING_DB_NAME --env WEDDING_DB_USER --env WEDDING_DB_PASSWORD \
+            --env CI=true --env OWNER="$(id -u):$(id -g)" \
+            "$ctr" -- bash -c '
+              rc=0
+              bun run dev --port 5188 &
+              until curl -sf -o /dev/null http://localhost:5188/; do sleep 1; done
+              bunx playwright test || rc=$?
+              chown -R "$OWNER" "$PWD"
+              exit $rc'
+      - name: stop postgres
+        if: always()
+        run: |
+          kill "$PG_PID" 2>/dev/null || true # sudo relays the signal to buildah run, which stops the container
+          sleep 3
+          sudo buildah rm "$PG_CTR" || true
