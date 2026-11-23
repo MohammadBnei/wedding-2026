@@ -1,5 +1,8 @@
 # wedding-2026
 
+> **Dormant (2026-11-23).** The site is frozen; no active development. Ask the owner before changing it.
+
+
 The wedding site for Leïla & Mohammad-Amine — 5 September 2026, Fosses.
 
 Four languages (fr / en / ar / fa), a grounded AI chatbot for guest questions,
