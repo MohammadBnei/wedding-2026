@@ -167,8 +167,8 @@ extraManifests:
   #    a direct connection to 82.65.231.50 with a forged Host header. Order is
   #    cheapest-rejection-first, auth last.
   #
-  # authentik-forwardauth lives in `default` and is shared; see
-  # infra-bootstrap's gitops/bootstrap/authentik-forwardauth-middleware.yaml.
+  # authentik-forwardauth@file is shared, served by Traefik's file provider; see
+  # infra-bootstrap's gitops/platform/values/traefik/values.yaml.
   # This app is its first consumer. If sign-in loops, the suspect is authentik's
   # Base URL system setting, which proxy providers build redirect URLs from —
   # see docs/runbook-authentik-identity.md §8.
@@ -192,8 +192,7 @@ extraManifests:
               namespace: {{ .Release.Namespace }}
             - name: {{ .Release.Name }}-baseline-headers
               namespace: {{ .Release.Namespace }}
-            - name: authentik-forwardauth
-              namespace: default
+            - name: authentik-forwardauth@file
           services:
             - kind: Service
               name: {{ .Release.Name }}
